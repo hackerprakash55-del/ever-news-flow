@@ -6,7 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Map NewsAPI source names to categories
 const SOURCE_CATEGORY_MAP: Record<string, string> = {
   "techcrunch": "Technology",
   "the-verge": "Technology",
@@ -82,30 +81,92 @@ function extractTags(title: string, description: string): string[] {
   return [...new Set(tags)].slice(0, 5);
 }
 
-function mapNewsApiArticle(raw: any, index: number): object {
+// Use Gemini to expand article body with accurate, factual context
+async function expandArticleBody(
+  title: string,
+  description: string,
+  partialContent: string,
+  sourceName: string,
+  publishedAt: string,
+  lovableApiKey: string
+): Promise<string> {
+  const knownFacts = [
+    title,
+    description,
+    partialContent,
+  ].filter(Boolean).join("\n");
+
+  const prompt = `You are a professional news journalist writing for GAINN, a global AI-powered news network.
+
+Using ONLY the verified facts below from "${sourceName}" (published ${publishedAt}), write a detailed, informative news article body of 4-6 paragraphs.
+
+STRICT RULES:
+- Only use facts that can be directly derived from the provided information
+- Do NOT invent quotes, statistics, names, dates, or claims not present in the source material
+- Do NOT speculate or add opinion
+- If the source material is limited, expand with relevant factual background/context about the topic that is universally known (e.g., what the organization does, historical context)
+- Write in professional third-person journalistic style
+- Each paragraph should be 2-4 sentences
+- Separate paragraphs with a blank line
+
+VERIFIED SOURCE MATERIAL:
+${knownFacts}
+
+Write the article body now:`;
+
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": lovableApiKey,
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 800,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    console.error("Gemini expand error:", response.status);
+    return partialContent || description;
+  }
+
+  const json = await response.json();
+  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+  return text?.trim() || partialContent || description;
+}
+
+function mapNewsApiArticle(raw: any, index: number, expandedBody?: string): object {
   const sourceId = raw.source?.id || "unknown";
   const sourceName = raw.source?.name || "Unknown Source";
   const title = raw.title || "Untitled";
   const description = raw.description || "";
   const category = guessCategory(title, description, sourceId);
-  const bodyText = raw.content
+  const rawBody = raw.content
     ? raw.content.replace(/\[\+\d+ chars\]$/, "").trim()
     : description;
-  const credibilityScore = 75 + Math.floor(Math.random() * 22); // 75-96%
-  const biasScore = parseFloat((Math.random() * 0.2 - 0.1).toFixed(3)); // ±0.1
+  const body = expandedBody || rawBody || description;
+  const credibilityScore = 75 + Math.floor(Math.random() * 22);
+  const biasScore = parseFloat((Math.random() * 0.2 - 0.1).toFixed(3));
 
   return {
     id: `live-${Date.now()}-${index}`,
     headline: title,
     summary: description || title,
-    body: bodyText || description,
+    body,
     category,
     credibilityScore,
     sources: [sourceName],
     publishedAt: raw.publishedAt || new Date().toISOString(),
-    readTime: estimateReadTime(bodyText),
+    readTime: estimateReadTime(body),
     tags: extractTags(title, description),
-    isBreaking: index < 2, // top 2 are "breaking"
+    isBreaking: index < 2,
     region: "Global",
     imageUrl: raw.urlToImage || undefined,
     aiGenerated: false,
@@ -128,15 +189,15 @@ serve(async (req) => {
       );
     }
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
     const url = new URL(req.url);
     const category = url.searchParams.get("category") || "all";
     const pageSize = Math.min(Number(url.searchParams.get("pageSize") || "20"), 30);
 
-    // Build NewsAPI request based on category
+    // Build NewsAPI request
     let newsApiUrl: string;
-
     if (category === "all" || !category) {
-      // Top headlines across everything
       newsApiUrl = `https://newsapi.org/v2/top-headlines?language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
     } else if (category === "Technology") {
       newsApiUrl = `https://newsapi.org/v2/top-headlines?category=technology&language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
@@ -173,18 +234,47 @@ serve(async (req) => {
       );
     }
 
-    // Filter out articles with [Removed] content and map to GAINN format
-    const articles = (data.articles || [])
-      .filter((a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]")
-      .map((a: any, i: number) => mapNewsApiArticle(a, i));
+    const rawArticles = (data.articles || []).filter(
+      (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
+    );
 
-    console.log(`Returning ${articles.length} articles for category=${category}`);
+    // Expand article bodies using Gemini AI (in parallel, up to 10 articles)
+    const toExpand = rawArticles.slice(0, Math.min(rawArticles.length, 10));
+    const rest = rawArticles.slice(toExpand.length);
+
+    let expandedBodies: string[] = [];
+
+    if (LOVABLE_API_KEY) {
+      console.log(`Expanding ${toExpand.length} article bodies with Gemini...`);
+      expandedBodies = await Promise.all(
+        toExpand.map((a: any) =>
+          expandArticleBody(
+            a.title || "",
+            a.description || "",
+            a.content ? a.content.replace(/\[\+\d+ chars\]$/, "").trim() : "",
+            a.source?.name || "Unknown Source",
+            a.publishedAt || new Date().toISOString(),
+            LOVABLE_API_KEY
+          ).catch((e) => {
+            console.error("Expand failed for article:", e);
+            return a.content || a.description || "";
+          })
+        )
+      );
+    }
+
+    const articles = [
+      ...toExpand.map((a: any, i: number) => mapNewsApiArticle(a, i, expandedBodies[i])),
+      ...rest.map((a: any, i: number) => mapNewsApiArticle(a, toExpand.length + i)),
+    ];
+
+    console.log(`Returning ${articles.length} articles (${expandedBodies.length} AI-expanded)`);
 
     return new Response(
       JSON.stringify({
         articles,
         totalResults: data.totalResults,
-        source: "NewsAPI",
+        source: "NewsAPI + Gemini",
         fetchedAt: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
