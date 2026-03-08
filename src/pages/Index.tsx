@@ -160,9 +160,9 @@ const Index = () => {
               <div className="text-center py-4">
                 <span className="text-xs font-mono text-muted-foreground">
                   {articles.length} articles
-                  {location && <> • <span className="text-gainn-cyan">{location}</span></>}
+                  {location && <> • <span className="text-accent">{location}</span></>}
                   {" "}• {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
-                  <button onClick={refresh} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
+                  <button onClick={refresh} className="text-primary hover:text-accent transition-colors">
                     Refresh
                   </button>
                 </span>
