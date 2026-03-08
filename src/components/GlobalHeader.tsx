@@ -269,7 +269,7 @@ export const GlobalHeader = ({
           >
             <Search className="w-4 h-4" />
           </Button>
-          <NotificationBell />
+          <Suspense fallback={<div className="h-8 w-8" />}><NotificationBell /></Suspense>
           <UserMenu />
           <Button
             variant="ghost"
