@@ -49,7 +49,9 @@ interface VideoRecord {
 
 
 
-  title: string;
+
+
+
   category: string;
   duration: string;
   script: string;
