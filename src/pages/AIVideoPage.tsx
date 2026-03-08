@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import {
@@ -383,22 +384,38 @@ function BrowserVoicePlayer({ script, title }: { script: string; title: string }
 }
 
 export default function AIVideoPage() {
-  const [topic, setTopic] = useState("");
+  const location = useLocation();
+  const navVideo = (location.state as any)?.video as VideoRecord | undefined;
+
+  const [topic, setTopic] = useState(navVideo?.title || "");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [videoScript, setVideoScript] = useState<VideoScript | null>(null);
+  const [videoScript, setVideoScript] = useState<VideoScript | null>(
+    navVideo ? {
+      title: navVideo.title,
+      category: navVideo.category,
+      duration: navVideo.duration,
+      script: navVideo.script,
+      thumbnailPrompt: navVideo.thumbnail_prompt,
+      rawHeadlines: navVideo.raw_headlines || [],
+      generatedAt: navVideo.generated_at,
+    } : null
+  );
   const [error, setError] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
-  const [useBrowserVoice, setUseBrowserVoice] = useState(false);
+  const [useBrowserVoice, setUseBrowserVoice] = useState(!!navVideo);
   const [library, setLibrary] = useState<VideoRecord[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
   const { toast } = useToast();
 
-  // Load video library on mount
+  // Load video library on mount; if came from nav with a video, generate its assets
   useEffect(() => {
     loadLibrary();
+    if (navVideo) {
+      generateThumbnail(navVideo.thumbnail_prompt, navVideo.title);
+    }
   }, []);
 
   const loadLibrary = async () => {
