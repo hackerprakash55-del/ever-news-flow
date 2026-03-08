@@ -134,6 +134,7 @@ export const GlobalHeader = ({
   activeCategory = "All",
 }: GlobalHeaderProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
