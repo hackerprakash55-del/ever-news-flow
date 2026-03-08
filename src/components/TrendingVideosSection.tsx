@@ -1,0 +1,339 @@
+import { useEffect, useState, useRef, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNews } from "@/hooks/useNews";
+import { Play, Pause, Square, Radio, Loader2, Film, ArrowUpRight, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface VideoRecord {
+  id: string;
+  title: string;
+  category: string;
+  duration: string;
+  script: string;
+  thumbnail_prompt: string;
+  raw_headlines: any;
+  generated_at: string;
+  created_at: string;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  "AI": "text-gainn-purple border-gainn-purple/40 bg-gainn-purple/10",
+  "Technology": "text-gainn-blue border-gainn-blue/40 bg-gainn-blue/10",
+  "Economy": "text-gainn-green border-gainn-green/40 bg-gainn-green/10",
+  "Politics": "text-gainn-red border-gainn-red/40 bg-gainn-red/10",
+  "Environment": "text-gainn-green border-gainn-green/40 bg-gainn-green/10",
+  "Science": "text-gainn-cyan border-gainn-cyan/40 bg-gainn-cyan/10",
+  "Health": "text-gainn-amber border-gainn-amber/40 bg-gainn-amber/10",
+  "Global Affairs": "text-gainn-blue border-gainn-blue/40 bg-gainn-blue/10",
+  "General": "text-muted-foreground border-border bg-surface-2",
+};
+
+const CATEGORY_ICON: Record<string, string> = {
+  "AI": "🤖", "Technology": "💻", "Economy": "📈", "Politics": "🏛️",
+  "Environment": "🌿", "Science": "🔬", "Health": "🏥", "Global Affairs": "🌍", "General": "📰",
+};
+
+// Inline mini voice player for cards
+function MiniVoicePlayer({ script, title }: { script: string; title: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const cleanText = script
+    .replace(/\*\*[A-Z\s]+\*\*/g, "")
+    .replace(/#{1,3}\s+\w+/g, "")
+    .replace(/\*\*/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 5000);
+
+  const toggle = useCallback(() => {
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+    } else {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(cleanText);
+      utter.rate = 0.9;
+      utter.pitch = 0.85;
+      utter.volume = 1;
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => /male|daniel|google uk|en-gb/i.test(v.name));
+      if (preferred) utter.voice = preferred;
+      utter.onend = () => setIsPlaying(false);
+      utter.onerror = () => setIsPlaying(false);
+      uttRef.current = utter;
+      window.speechSynthesis.speak(utter);
+      setIsPlaying(true);
+    }
+  }, [isPlaying, cleanText]);
+
+  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
+
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); toggle(); }}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+        isPlaying
+          ? "bg-gainn-green/20 text-gainn-green border border-gainn-green/40"
+          : "bg-gainn-blue/15 text-gainn-blue border border-gainn-blue/30 hover:bg-gainn-blue/25"
+      }`}
+    >
+      {isPlaying ? (
+        <>
+          <Pause className="w-3 h-3" />
+          <span>Pause</span>
+          <div className="flex items-end gap-0.5 ml-1">
+            {[3,5,4,6,3].map((h,i) => (
+              <div key={i} className="w-0.5 rounded-full bg-gainn-green animate-pulse"
+                style={{ height: `${h}px`, animationDelay: `${i*0.08}s` }} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <Play className="w-3 h-3" />
+          <span>Play Report</span>
+        </>
+      )}
+    </button>
+  );
+}
+
+// Auto-generate a video script for a topic
+async function autoGenerateScript(topic: string): Promise<VideoRecord | null> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !anonKey) return null;
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${anonKey}`,
+        apikey: anonKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ topic }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.script) return null;
+
+    // Save to DB
+    const { data: inserted } = await supabase.from("generated_videos").insert({
+      title: data.title || topic,
+      category: data.category || "General",
+      duration: data.duration || "5-7 min",
+      script: data.script,
+      thumbnail_prompt: data.thumbnailPrompt || "",
+      raw_headlines: data.rawHeadlines || [],
+      generated_at: data.generatedAt || new Date().toISOString(),
+    }).select().single();
+
+    return inserted as VideoRecord;
+  } catch {
+    return null;
+  }
+}
+
+export function TrendingVideosSection() {
+  const navigate = useNavigate();
+  const { articles } = useNews({ pageSize: 10 });
+  const [videos, setVideos] = useState<VideoRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const autoGenStarted = useRef(false);
+
+  // Derive top trending topics from live articles
+  const trendingTopics = articles
+    .slice(0, 4)
+    .map(a => a.headline.replace(/ - [^-]+$/, "").slice(0, 80));
+
+  useEffect(() => {
+    loadVideos();
+  }, []);
+
+  // Once articles are loaded, auto-generate if library is empty
+  useEffect(() => {
+    if (!isLoading && videos.length === 0 && trendingTopics.length > 0 && !autoGenStarted.current) {
+      autoGenStarted.current = true;
+      generateTrendingVideos();
+    }
+  }, [isLoading, videos.length, trendingTopics.length]);
+
+  const loadVideos = async () => {
+    setIsLoading(true);
+    try {
+      const { data } = await supabase
+        .from("generated_videos")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(6);
+      if (data) setVideos(data as VideoRecord[]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateTrendingVideos = async () => {
+    if (trendingTopics.length === 0) return;
+    setIsAutoGenerating(true);
+    // Generate first 2 trending topics in parallel for speed
+    const results = await Promise.all(
+      trendingTopics.slice(0, 2).map(topic => autoGenerateScript(topic))
+    );
+    const newVideos = results.filter(Boolean) as VideoRecord[];
+    if (newVideos.length > 0) {
+      setVideos(prev => [...newVideos, ...prev].slice(0, 6));
+    }
+    setIsAutoGenerating(false);
+  };
+
+  const handleVideoClick = (video: VideoRecord) => {
+    navigate("/video", { state: { video } });
+  };
+
+  if (isLoading) {
+    return (
+      <div>
+        <SectionHeader generating={false} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card-glass rounded-xl h-52 shimmer-bg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isAutoGenerating && videos.length === 0) {
+    return (
+      <div>
+        <SectionHeader generating={true} />
+        <div className="card-glass rounded-xl p-8 flex flex-col items-center gap-3 text-center">
+          <Loader2 className="w-8 h-8 text-gainn-blue animate-spin" />
+          <p className="text-sm font-medium">Generating AI video reports for today's top stories…</p>
+          <p className="text-xs text-muted-foreground font-mono">This takes about 15 seconds per video</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (videos.length === 0) {
+    return (
+      <div>
+        <SectionHeader generating={false} />
+        <div className="card-glass rounded-xl p-6 flex flex-col items-center gap-3 text-center border border-dashed border-border">
+          <Film className="w-8 h-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No videos yet. Visit the AI Video Studio to generate your first report.</p>
+          <button onClick={() => navigate("/video")}
+            className="px-4 py-2 rounded-lg bg-gainn-blue text-background text-xs font-semibold hover:bg-gainn-blue/80 transition-colors">
+            Open AI Video Studio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionHeader generating={isAutoGenerating} onRefresh={generateTrendingVideos} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {videos.map((video) => (
+          <VideoCard key={video.id} video={video} onClick={() => handleVideoClick(video)} />
+        ))}
+      </div>
+      <div className="mt-3 text-right">
+        <button onClick={() => navigate("/video")}
+          className="inline-flex items-center gap-1.5 text-xs font-mono text-gainn-blue hover:text-gainn-cyan transition-colors">
+          Open AI Video Studio <ArrowUpRight className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ generating, onRefresh }: { generating: boolean; onRefresh?: () => void }) {
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <Film className="w-4 h-4 text-gainn-blue" />
+        <h2 className="text-sm font-semibold uppercase tracking-wider font-mono">AI Video Reports</h2>
+        {generating && (
+          <span className="flex items-center gap-1 text-[10px] font-mono text-gainn-amber px-2 py-0.5 rounded-full border border-gainn-amber/30 bg-gainn-amber/10">
+            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Generating…
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="flex items-center gap-1 text-[10px] font-mono text-gainn-red px-2 py-0.5 rounded-full border border-gainn-red/30 bg-gainn-red/10">
+          <span className="w-1.5 h-1.5 rounded-full bg-gainn-red live-dot" /> LIVE
+        </span>
+        {onRefresh && (
+          <button onClick={onRefresh}
+            className="flex items-center gap-1 text-[10px] font-mono text-gainn-blue hover:text-gainn-cyan transition-colors">
+            <Sparkles className="w-3 h-3" /> Generate New
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VideoCard({ video, onClick }: { video: VideoRecord; onClick: () => void }) {
+  const colorClass = CATEGORY_COLORS[video.category] || CATEGORY_COLORS["General"];
+  const icon = CATEGORY_ICON[video.category] || "📰";
+  const timeAgo = getTimeAgo(video.created_at);
+
+  return (
+    <div
+      onClick={onClick}
+      className="card-glass rounded-xl overflow-hidden hover:border-gainn-blue/40 transition-all cursor-pointer group"
+    >
+      {/* Thumbnail area */}
+      <div className="relative h-36 bg-gradient-to-br from-surface-2 to-surface-0 flex items-center justify-center overflow-hidden">
+        <div className="text-5xl opacity-30 group-hover:opacity-50 transition-opacity">{icon}</div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+
+        {/* Play overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="w-12 h-12 rounded-full bg-gainn-blue/90 flex items-center justify-center shadow-lg">
+            <Play className="w-5 h-5 text-white ml-0.5" />
+          </div>
+        </div>
+
+        {/* Category badge */}
+        <div className="absolute top-2 left-2">
+          <span className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded border ${colorClass}`}>
+            {video.category.toUpperCase()}
+          </span>
+        </div>
+
+        {/* Duration */}
+        <div className="absolute bottom-2 right-2 text-[10px] font-mono text-white/80 bg-black/40 px-1.5 py-0.5 rounded">
+          {video.duration}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-3 space-y-2">
+        <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-gainn-cyan transition-colors">
+          {video.title}
+        </h3>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-mono text-muted-foreground">{timeAgo}</span>
+          <MiniVoicePlayer script={video.script} title={video.title} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
