@@ -256,7 +256,7 @@ serve(async (req) => {
       newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
     }
 
-    console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}`);
+    console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
     const response = await fetch(newsApiUrl);
     const data = await response.json();
 
