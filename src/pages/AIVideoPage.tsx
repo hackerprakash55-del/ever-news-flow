@@ -440,6 +440,82 @@ export default function AIVideoPage() {
     }
   };
 
+  // Auto-generate all 8 suggested topics sequentially when library is empty
+  const autoGenerateAllTopics = async () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!supabaseUrl || !anonKey) return;
+
+    for (const t of SUGGESTED_TOPICS) {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ topic: t.label }),
+        });
+        if (!res.ok) continue;
+        const data: VideoScript = await res.json();
+        if (!data?.script) continue;
+
+        // Save to DB
+        const { data: inserted } = await supabase.from("generated_videos").insert({
+          title: data.title,
+          category: data.category,
+          duration: data.duration,
+          script: data.script,
+          thumbnail_prompt: data.thumbnailPrompt,
+          raw_headlines: data.rawHeadlines,
+          generated_at: data.generatedAt,
+        }).select("id").single();
+
+        // Generate & save thumbnail
+        if (inserted?.id && data.thumbnailPrompt) {
+          try {
+            const thumbRes = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ thumbnailPrompt: data.thumbnailPrompt, title: data.title }),
+            });
+            if (thumbRes.ok) {
+              const thumbData = await thumbRes.json();
+              if (thumbData.imageUrl) {
+                await supabase.from("generated_videos")
+                  .update({ thumbnail_url: thumbData.imageUrl })
+                  .eq("id", inserted.id);
+              }
+            }
+          } catch (e) {
+            console.error("Auto thumbnail failed:", e);
+          }
+        }
+      } catch (e) {
+        console.error("Auto-generate failed for topic:", t.label, e);
+      }
+    }
+    // Refresh library after all are generated
+    loadLibrary();
+  };
+
+  const saveVideoToDb = async (video: VideoScript) => {
+    try {
+      const { data: inserted } = await supabase.from("generated_videos").insert({
+        title: video.title,
+        category: video.category,
+        duration: video.duration,
+        script: video.script,
+        thumbnail_prompt: video.thumbnailPrompt,
+        raw_headlines: video.rawHeadlines,
+        generated_at: video.generatedAt,
+      }).select("id").single();
+      // Refresh library
+      loadLibrary();
+      return inserted?.id ?? null;
+    } catch (e) {
+      console.error("Failed to save video:", e);
+      return null;
+    }
+  };
+
 
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
