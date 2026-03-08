@@ -125,6 +125,13 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
               {item.label}
             </Link>
           ))}
+          <Link
+            to="/video"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md"
+            onClick={() => setMobileOpen(false)}
+          >
+            <Video className="w-3.5 h-3.5" /> AI Video
+          </Link>
         </div>
       )}
     </header>
