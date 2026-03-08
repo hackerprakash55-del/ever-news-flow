@@ -8,6 +8,7 @@ export const AIAnchorPanel = () => {
   const [playing, setPlaying] = useState(false);
   const [selected, setSelected] = useState(0);
   const { articles, isLoading } = useNews({ pageSize: 6 });
+  const navigate = useNavigate();
 
   const segments = articles.slice(0, 6).map((a, i) => ({
     id: a.id,
