@@ -65,6 +65,9 @@ export default function ArticlePage() {
     } catch {}
   }
 
+  // Fetch live news for related articles across all categories
+  const { articles: liveArticles } = useNews({ category: "all", pageSize: 20 });
+
   if (!article) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -81,9 +84,15 @@ export default function ArticlePage() {
     );
   }
 
-  const related = MOCK_ARTICLES.filter((a) => a.id !== article!.id && a.category === article!.category).slice(0, 3);
+  // Related: same category + region match (all sources: mock + live)
+  const allArticles = [...MOCK_ARTICLES, ...liveArticles.filter((a) => !MOCK_ARTICLES.find((m) => m.id === a.id))];
+  const sameCategory = allArticles.filter((a) => a.id !== article!.id && a.category === article!.category).slice(0, 3);
+  const sameRegion = allArticles.filter((a) => a.id !== article!.id && a.region && article!.region && a.region !== "Global" && a.region === article!.region && a.category !== article!.category).slice(0, 2);
+  const breaking = allArticles.filter((a) => a.id !== article!.id && a.isBreaking && a.category !== article!.category).slice(0, 2);
+  
   const biasLabel = Math.abs(article.biasScore) < 0.1 ? "Neutral" : article.biasScore > 0 ? "Slight Right" : "Slight Left";
   const isLiveArticle = article.id.startsWith("live-");
+  const paragraphs = article.body ? article.body.split("\n\n").filter(Boolean) : [];
 
   return (
     <div className="min-h-screen bg-background">
