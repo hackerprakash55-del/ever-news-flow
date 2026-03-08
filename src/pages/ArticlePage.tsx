@@ -1,9 +1,10 @@
-import { useParams, Link } from "react-router-dom";
-import { MOCK_ARTICLES } from "@/data/mockData";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { MOCK_ARTICLES, Article } from "@/data/mockData";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { ArticleCard } from "@/components/ArticleCards";
-import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, ChevronRight } from "lucide-react";
+import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, ChevronRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const CredibilityMeter = ({ score }: { score: number }) => {
@@ -27,26 +28,57 @@ const CredibilityMeter = ({ score }: { score: number }) => {
   );
 };
 
+// Pull the article from react-query cache (set by useNews) or mock data
+function useArticle(id: string): Article | null {
+  // Check all cached news queries for this article
+  const { data } = useQuery({
+    queryKey: ["article-lookup", id],
+    queryFn: () => {
+      // First try mock data
+      const mock = MOCK_ARTICLES.find((a) => a.id === id);
+      if (mock) return mock;
+      return null;
+    },
+    staleTime: Infinity,
+  });
+
+  return data ?? null;
+}
+
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>();
-  const article = MOCK_ARTICLES.find((a) => a.id === id);
+  const navigate = useNavigate();
+
+  // Try mock data first, then check sessionStorage for live articles
+  let article: Article | null = MOCK_ARTICLES.find((a) => a.id === id) ?? null;
+
+  // Check sessionStorage for live articles stored when navigating
+  if (!article && id) {
+    try {
+      const stored = sessionStorage.getItem(`article-${id}`);
+      if (stored) article = JSON.parse(stored);
+    } catch {}
+  }
 
   if (!article) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <GlobalHeader />
+        <NewsTickerBar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center space-y-4">
             <h1 className="text-2xl font-display mb-2">Article not found</h1>
-            <Link to="/" className="text-gainn-blue text-sm">← Back to GAINN</Link>
+            <p className="text-muted-foreground text-sm">This article may have expired from the live feed.</p>
+            <Button variant="outline" onClick={() => navigate("/")}>← Back to GAINN</Button>
           </div>
         </div>
       </div>
     );
   }
 
-  const related = MOCK_ARTICLES.filter((a) => a.id !== article.id && a.category === article.category).slice(0, 3);
+  const related = MOCK_ARTICLES.filter((a) => a.id !== article!.id && a.category === article!.category).slice(0, 3);
   const biasLabel = Math.abs(article.biasScore) < 0.1 ? "Neutral" : article.biasScore > 0 ? "Slight Right" : "Slight Left";
+  const isLiveArticle = article.id.startsWith("live-");
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,6 +113,11 @@ export default function ArticlePage() {
                     BREAKING NEWS
                   </div>
                 )}
+                {isLiveArticle && (
+                  <div className="absolute top-4 right-4 px-2.5 py-1 bg-gainn-green/90 text-white text-[10px] font-bold rounded-md font-mono">
+                    LIVE SOURCE
+                  </div>
+                )}
               </div>
             )}
 
@@ -103,8 +140,9 @@ export default function ArticlePage() {
 
             {/* Meta row */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
-              <span className="flex items-center gap-1.5 text-gainn-cyan font-mono text-xs">
-                <CheckCircle className="w-3.5 h-3.5" /> AI Generated & Verified
+              <span className={`flex items-center gap-1.5 font-mono text-xs ${isLiveArticle ? "text-gainn-green" : "text-gainn-cyan"}`}>
+                <CheckCircle className="w-3.5 h-3.5" />
+                {isLiveArticle ? "Live News" : "AI Generated & Verified"}
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
@@ -125,10 +163,31 @@ export default function ArticlePage() {
 
             {/* Article body */}
             <div className="article-body">
-              {article.body.split("\n\n").map((para, i) => (
-                <p key={i}>{para}</p>
-              ))}
+              {article.body
+                ? article.body.split("\n\n").map((para, i) => <p key={i}>{para}</p>)
+                : <p className="text-muted-foreground">{article.summary}</p>
+              }
             </div>
+
+            {/* Live article — link to original */}
+            {isLiveArticle && (article as any).url && (
+              <div className="mt-6 p-4 rounded-lg border border-gainn-blue/30 bg-gainn-blue/5">
+                <div className="flex items-center gap-2 text-sm text-gainn-cyan mb-1">
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="font-semibold">Read Full Story</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">This article is sourced from the original publisher. Click below to read the complete story.</p>
+                <a
+                  href={(article as any).url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-mono text-gainn-blue hover:text-gainn-cyan transition-colors border border-gainn-blue/30 rounded px-3 py-1.5"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {article.sources[0] || "Original Source"}
+                </a>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex items-center gap-3 mt-8 pt-6 border-t border-border">
@@ -178,7 +237,7 @@ export default function ArticlePage() {
               </div>
 
               <div>
-                <div className="text-xs text-muted-foreground mb-2">Verified Sources</div>
+                <div className="text-xs text-muted-foreground mb-2">Sources</div>
                 <div className="space-y-1.5">
                   {article.sources.map((src) => (
                     <div key={src} className="flex items-center gap-2 text-xs">
@@ -193,11 +252,15 @@ export default function ArticlePage() {
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="bg-surface-2 rounded p-2">
                     <div className="text-sm font-bold font-mono text-gainn-green">✓</div>
-                    <div className="text-[10px] text-muted-foreground">No Fake News</div>
+                    <div className="text-[10px] text-muted-foreground">Verified</div>
                   </div>
                   <div className="bg-surface-2 rounded p-2">
-                    <div className="text-sm font-bold font-mono text-gainn-cyan">AI</div>
-                    <div className="text-[10px] text-muted-foreground">AI Authored</div>
+                    <div className="text-sm font-bold font-mono text-gainn-cyan">
+                      {isLiveArticle ? "🌐" : "AI"}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {isLiveArticle ? "Live Source" : "AI Authored"}
+                    </div>
                   </div>
                 </div>
               </div>
