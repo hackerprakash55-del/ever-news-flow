@@ -122,7 +122,7 @@ export const AIAnchorPanel = () => {
               : segments.map((seg, i) => (
                   <button
                     key={seg.id}
-                    onClick={() => setSelected(i)}
+                    onClick={() => { setSelected(i); navigate(`/article/${seg.id}`); }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-left border-b border-border/50 transition-colors hover:bg-surface-2 ${
                       selected === i ? "bg-gainn-blue/10 border-l-2 border-l-gainn-blue" : ""
                     }`}
