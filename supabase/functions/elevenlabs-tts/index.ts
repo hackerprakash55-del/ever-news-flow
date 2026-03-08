@@ -1,0 +1,109 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+// George - deep, authoritative news anchor voice
+const VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
+    if (!ELEVENLABS_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "ELEVENLABS_API_KEY is not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { script, title } = await req.json();
+    if (!script) {
+      return new Response(
+        JSON.stringify({ error: "script is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Clean script for TTS: remove markdown formatting and section headers
+    const cleanScript = script
+      .replace(/\*\*[A-Z\s]+\*\*/g, "") // remove **SECTION** headers
+      .replace(/#{1,3}\s+\w+/g, "")      // remove ## headers
+      .replace(/\*\*/g, "")              // remove remaining bold markers
+      .replace(/\n{3,}/g, "\n\n")        // collapse excessive newlines
+      .trim();
+
+    // Limit to ~4500 chars to stay within ElevenLabs limits
+    const textToSpeak = cleanScript.length > 4500
+      ? cleanScript.slice(0, 4500) + "..."
+      : cleanScript;
+
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": ELEVENLABS_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: textToSpeak,
+          model_id: "eleven_multilingual_v2",
+          voice_settings: {
+            stability: 0.75,
+            similarity_boost: 0.80,
+            style: 0.3,
+            use_speaker_boost: true,
+            speed: 0.95,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("ElevenLabs TTS error:", response.status, errText);
+      if (response.status === 401) {
+        return new Response(
+          JSON.stringify({ error: "Invalid ElevenLabs API key" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "ElevenLabs rate limit reached — try again shortly." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ error: "TTS generation failed", details: errText }),
+        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    const audioBase64 = base64Encode(new Uint8Array(audioBuffer));
+
+    return new Response(
+      JSON.stringify({
+        audioContent: audioBase64,
+        characterCount: textToSpeak.length,
+        generatedAt: new Date().toISOString(),
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("elevenlabs-tts error:", err);
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
