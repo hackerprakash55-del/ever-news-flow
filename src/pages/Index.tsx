@@ -214,7 +214,7 @@ const Index = () => {
                       <span className="text-muted-foreground">{cap.label}</span>
                       <span className="font-mono text-gainn-green">{cap.pct}%</span>
                     </div>
-                    <div className="h-1 rounded-full bg-surface-3 overflow-hidden">
+                    <div className="h-1 rounded-full bg-muted overflow-hidden">
                       <div
                         className="h-full rounded-full bg-gradient-primary"
                         style={{ width: `${cap.pct}%` }}
