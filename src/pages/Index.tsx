@@ -104,7 +104,7 @@ const Index = () => {
 
         {/* Error banner (non-blocking) */}
         {isError && error && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gainn-amber/30 bg-gainn-amber/5 text-xs text-gainn-amber">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-destructive/30 bg-destructive/5 text-xs text-destructive">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
             <span>Live feed unavailable ({error}) — showing demo articles. <button onClick={refresh} className="underline">Retry</button></span>
           </div>
