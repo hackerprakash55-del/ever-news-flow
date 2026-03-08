@@ -1,6 +1,7 @@
-import { BREAKING_ALERTS } from "@/data/mockData";
-import { Zap, AlertTriangle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { BREAKING_ALERTS, BreakingAlert } from "@/data/mockData";
+import { useNews } from "@/hooks/useNews";
+import { Zap } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
 
 const severityStyles = {
   breaking: "border-gainn-red/40 bg-gainn-red/5",
@@ -16,15 +17,36 @@ const severityLabel = {
 
 export const BreakingNewsBanner = () => {
   const [currentIdx, setCurrentIdx] = useState(0);
+  const { articles, isLive } = useNews({ pageSize: 20 });
+
+  // Derive alerts from live breaking articles, fall back to mock
+  const alerts: BreakingAlert[] = useMemo(() => {
+    if (!isLive || articles.length === 0) return BREAKING_ALERTS;
+
+    const breaking = articles.filter((a) => a.isBreaking);
+    const pool = breaking.length > 0 ? breaking : articles.slice(0, 5);
+
+    return pool.slice(0, 6).map((a, i) => ({
+      id: a.id,
+      text: a.headline,
+      region: a.region || "Global",
+      severity: (i === 0 ? "breaking" : i === 1 ? "urgent" : "developing") as BreakingAlert["severity"],
+    }));
+  }, [articles, isLive]);
 
   useEffect(() => {
+    setCurrentIdx(0);
+  }, [alerts]);
+
+  useEffect(() => {
+    if (alerts.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentIdx((i) => (i + 1) % BREAKING_ALERTS.length);
+      setCurrentIdx((i) => (i + 1) % alerts.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [alerts]);
 
-  const alert = BREAKING_ALERTS[currentIdx];
+  const alert = alerts[currentIdx] ?? alerts[0];
 
   return (
     <div className={`rounded-lg border p-3 flex items-start gap-3 transition-all duration-500 ${severityStyles[alert.severity]}`}>
@@ -40,14 +62,19 @@ export const BreakingNewsBanner = () => {
           <span className="text-[10px] text-gainn-cyan font-mono">AI Verified</span>
         </div>
       </div>
-      <div className="flex gap-1 flex-shrink-0">
-        {BREAKING_ALERTS.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIdx(i)}
-            className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIdx ? "bg-gainn-red w-3" : "bg-muted-foreground/30"}`}
-          />
-        ))}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {isLive && (
+          <span className="text-[10px] font-mono text-gainn-green hidden sm:inline">● Live</span>
+        )}
+        <div className="flex gap-1">
+          {alerts.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentIdx(i)}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIdx ? "bg-gainn-red w-3" : "bg-muted-foreground/30"}`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
