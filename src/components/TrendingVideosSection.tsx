@@ -137,7 +137,7 @@ async function autoGenerateScript(topic: string): Promise<VideoRecord | null> {
 
 export function TrendingVideosSection() {
   const navigate = useNavigate();
-  const { articles } = useNews({ pageSize: 10 });
+  const { articles, isLoading: newsLoading } = useNews({ pageSize: 10 });
   const [videos, setVideos] = useState<VideoRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
@@ -151,14 +151,6 @@ export function TrendingVideosSection() {
   useEffect(() => {
     loadVideos();
   }, []);
-
-  // Once articles are loaded, auto-generate if library is empty
-  useEffect(() => {
-    if (!isLoading && videos.length === 0 && trendingTopics.length > 0 && !autoGenStarted.current) {
-      autoGenStarted.current = true;
-      generateTrendingVideos();
-    }
-  }, [isLoading, videos.length, trendingTopics.length]);
 
   const loadVideos = async () => {
     setIsLoading(true);
@@ -174,12 +166,11 @@ export function TrendingVideosSection() {
     }
   };
 
-  const generateTrendingVideos = async () => {
-    if (trendingTopics.length === 0) return;
+  const generateTrendingVideos = async (topics: string[]) => {
+    if (topics.length === 0) return;
     setIsAutoGenerating(true);
-    // Generate first 2 trending topics in parallel for speed
     const results = await Promise.all(
-      trendingTopics.slice(0, 2).map(topic => autoGenerateScript(topic))
+      topics.slice(0, 2).map(topic => autoGenerateScript(topic))
     );
     const newVideos = results.filter(Boolean) as VideoRecord[];
     if (newVideos.length > 0) {
@@ -187,6 +178,20 @@ export function TrendingVideosSection() {
     }
     setIsAutoGenerating(false);
   };
+
+  // Once BOTH the DB load and news articles are ready, auto-generate if library is empty
+  useEffect(() => {
+    if (
+      !isLoading &&
+      !newsLoading &&
+      videos.length === 0 &&
+      trendingTopics.length > 0 &&
+      !autoGenStarted.current
+    ) {
+      autoGenStarted.current = true;
+      generateTrendingVideos(trendingTopics);
+    }
+  }, [isLoading, newsLoading, videos.length, trendingTopics.length]);
 
   const handleVideoClick = (video: VideoRecord) => {
     navigate("/video", { state: { video } });
@@ -236,7 +241,7 @@ export function TrendingVideosSection() {
 
   return (
     <div>
-      <SectionHeader generating={isAutoGenerating} onRefresh={generateTrendingVideos} />
+      <SectionHeader generating={isAutoGenerating} onRefresh={() => generateTrendingVideos(trendingTopics)} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {videos.map((video) => (
           <VideoCard key={video.id} video={video} onClick={() => handleVideoClick(video)} />
