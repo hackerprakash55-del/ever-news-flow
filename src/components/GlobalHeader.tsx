@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import gainnLogo from "@/assets/gainn-logo.png";
 import { cn } from "@/lib/utils";
-import { SearchOverlay } from "@/components/SearchOverlay";
-import { NotificationBell } from "@/components/NotificationPanel";
+
+// Lazy-load heavy overlay components — only downloaded when the user opens them
+const SearchOverlay    = lazy(() => import("@/components/SearchOverlay").then(m => ({ default: m.SearchOverlay })));
+const NotificationBell = lazy(() => import("@/components/NotificationPanel").then(m => ({ default: m.NotificationBell })));
 
 const CATEGORIES = [
   { label: "Home",        cat: null },
