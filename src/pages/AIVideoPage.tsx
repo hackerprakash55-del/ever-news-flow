@@ -37,6 +37,18 @@ interface VideoScript {
 interface VideoRecord {
   id: string;
   title: string;
+  category: string | null;
+  duration: string | null;
+  script: string;
+  thumbnail_prompt: string | null;
+  thumbnail_url: string | null;
+  raw_headlines: string[] | null;
+  generated_at: string | null;
+  created_at: string | null;
+}
+
+  id: string;
+  title: string;
   category: string;
   duration: string;
   script: string;
