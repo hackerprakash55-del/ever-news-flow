@@ -4,8 +4,9 @@ import { MOCK_ARTICLES, Article } from "@/data/mockData";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { ArticleCard } from "@/components/ArticleCards";
-import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, ChevronRight, ExternalLink } from "lucide-react";
+import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, ChevronRight, ExternalLink, MapPin, Layers, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNews } from "@/hooks/useNews";
 
 const CredibilityMeter = ({ score }: { score: number }) => {
   const segments = 10;
