@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, Search, User, Radio, Menu, X, Globe, ChevronDown } from "lucide-react";
+import { Bell, Search, User, Radio, Menu, X, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import gainnLogo from "@/assets/gainn-logo.png";
 
 const NAV_ITEMS = [
@@ -81,6 +80,13 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
               {item.label}
             </Link>
           ))}
+          <Link
+            to="/video"
+            className="ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gainn-purple hover:bg-gainn-purple/10 rounded-md transition-colors border border-gainn-purple/25 hover:border-gainn-purple/50"
+          >
+            <Video className="w-3.5 h-3.5" />
+            AI Video
+          </Link>
         </nav>
 
         {/* Right actions */}
@@ -119,6 +125,13 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
               {item.label}
             </Link>
           ))}
+          <Link
+            to="/video"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md"
+            onClick={() => setMobileOpen(false)}
+          >
+            <Video className="w-3.5 h-3.5" /> AI Video
+          </Link>
         </div>
       )}
     </header>
