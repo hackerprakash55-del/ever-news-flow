@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Bell, Search, User, Radio, Menu, X, Video, Library } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Bell, Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import gainnLogo from "@/assets/gainn-logo.png";
 
 const NAV_ITEMS = [
@@ -15,17 +16,102 @@ const NAV_ITEMS = [
   { label: "Global", href: "/?cat=Global Affairs" },
 ];
 
+// ── User Menu Dropdown ─────────────────────────────────────────────────────
+
+function UserMenu() {
+  const { user, profile, signOut } = useAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
+
+  if (!user) {
+    return (
+      <Link to="/auth">
+        <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground">
+          <LogIn className="w-3.5 h-3.5" /> Sign In
+        </Button>
+      </Link>
+    );
+  }
+
+  const initials = (profile?.display_name || user.email || "?").slice(0, 2).toUpperCase();
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 h-8 px-1.5 rounded-lg hover:bg-surface-2 transition-colors"
+      >
+        <div className="w-7 h-7 rounded-lg bg-gainn-blue/20 border border-gainn-blue/30 overflow-hidden flex items-center justify-center text-xs font-bold text-gainn-blue">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            initials
+          )}
+        </div>
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-2 w-56 card-glass rounded-xl shadow-2xl border border-border overflow-hidden z-50">
+          {/* User info */}
+          <div className="px-4 py-3 border-b border-border bg-surface-1">
+            <p className="text-sm font-semibold text-foreground truncate">{profile?.display_name || "GAINN User"}</p>
+            <p className="text-xs text-muted-foreground font-mono truncate">{user.email}</p>
+          </div>
+
+          {/* Menu items */}
+          <div className="py-1">
+            {[
+              { icon: User, label: "Profile & Settings", href: "/settings" },
+              { icon: Bookmark, label: "Saved Articles", href: "/settings?tab=saved" },
+            ].map(({ icon: Icon, label, href }) => (
+              <Link
+                key={label}
+                to={href}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-surface-2 transition-colors"
+              >
+                <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                {label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="border-t border-border py-1">
+            <button
+              onClick={async () => { setOpen(false); await signOut(); navigate("/"); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gainn-red hover:bg-gainn-red/10 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Header ─────────────────────────────────────────────────────────────────
+
 interface GlobalHeaderProps {
   onNewsroomClick?: () => void;
 }
 
 export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const location = useLocation();
+  const { user } = useAuth();
 
   const now = new Date().toLocaleTimeString("en-US", {
-    hour: "2-digit", minute: "2-digit", hour12: false,
-    timeZoneName: "short"
+    hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short"
   });
 
   return (
@@ -105,9 +191,7 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
             <Bell className="w-4 h-4" />
             <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-gainn-red" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-            <User className="w-4 h-4" />
-          </Button>
+          <UserMenu />
           <Button
             variant="ghost"
             size="icon"
@@ -132,20 +216,23 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
               {item.label}
             </Link>
           ))}
-          <Link
-            to="/video"
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md"
-            onClick={() => setMobileOpen(false)}
-          >
+          <Link to="/video" className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md" onClick={() => setMobileOpen(false)}>
             <Video className="w-3.5 h-3.5" /> AI Video
           </Link>
-          <Link
-            to="/videos"
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-cyan rounded-md"
-            onClick={() => setMobileOpen(false)}
-          >
+          <Link to="/videos" className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-cyan rounded-md" onClick={() => setMobileOpen(false)}>
             <Library className="w-3.5 h-3.5" /> Video Library
           </Link>
+          <div className="border-t border-border/50 mt-2 pt-2">
+            {user ? (
+              <Link to="/settings" className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground rounded-md" onClick={() => setMobileOpen(false)}>
+                <Settings className="w-3.5 h-3.5" /> Settings
+              </Link>
+            ) : (
+              <Link to="/auth" className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-blue rounded-md" onClick={() => setMobileOpen(false)}>
+                <LogIn className="w-3.5 h-3.5" /> Sign In
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </header>
