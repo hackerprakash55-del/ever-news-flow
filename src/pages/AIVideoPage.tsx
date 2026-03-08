@@ -47,7 +47,8 @@ interface VideoRecord {
   created_at: string | null;
 }
 
-  id: string;
+
+
   title: string;
   category: string;
   duration: string;
