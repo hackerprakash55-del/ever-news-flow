@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { MOCK_ARTICLES, Article } from "@/data/mockData";
 import { GlobalHeader } from "@/components/GlobalHeader";
@@ -48,11 +48,15 @@ function useArticle(id: string): Article | null {
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Try mock data first, then check sessionStorage for live articles
-  let article: Article | null = MOCK_ARTICLES.find((a) => a.id === id) ?? null;
+  // First try article passed via navigation state (from AI Anchor Panel / live feed)
+  let article: Article | null = (location.state as any)?.article ?? null;
 
-  // Check sessionStorage for live articles stored when navigating
+  // Then try mock data
+  if (!article) article = MOCK_ARTICLES.find((a) => a.id === id) ?? null;
+
+  // Then try sessionStorage for previously stored live articles
   if (!article && id) {
     try {
       const stored = sessionStorage.getItem(`article-${id}`);
