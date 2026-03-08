@@ -74,37 +74,20 @@ const Index = () => {
         <BreakingNewsBanner />
         <StatsBar />
 
-        {/* Category Filter + Geo Filter + status bar */}
+        {/* Geo Filter + status bar */}
         <div className="space-y-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
-                    activeCategory === cat
-                      ? "bg-gainn-blue text-background"
-                      : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground border border-border"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <GeoFilter value={geo} onChange={setGeo} />
-              <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-7 w-7 ${isLoading ? "animate-spin" : ""}`}
-                onClick={refresh}
-                disabled={isLoading}
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </Button>
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <GeoFilter value={geo} onChange={setGeo} />
+            <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 text-muted-foreground hover:text-foreground ${isLoading ? "animate-spin" : ""}`}
+              onClick={refresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </Button>
           </div>
 
           {/* Active geo breadcrumb */}
