@@ -37,25 +37,27 @@ interface VideoScript {
 interface VideoRecord {
   id: string;
   title: string;
-  category: string;
-  duration: string;
+  category: string | null;
+  duration: string | null;
   script: string;
-  thumbnail_prompt: string;
-  raw_headlines: string[];
-  generated_at: string;
-  created_at: string;
+  thumbnail_prompt: string | null;
+  thumbnail_url: string | null;
+  raw_headlines: string[] | null;
+  generated_at: string | null;
+  created_at: string | null;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "AI": "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/30",
-  "Technology": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
-  "Economy": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
-  "Politics": "bg-gainn-red/20 text-gainn-red border-gainn-red/30",
-  "Environment": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
-  "Science": "bg-gainn-cyan/20 text-gainn-cyan border-gainn-cyan/30",
-  "Health": "bg-gainn-amber/20 text-gainn-amber border-gainn-amber/30",
+  "AI":             "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/30",
+  "Technology":     "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
+  "Economy":        "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Politics":       "bg-gainn-red/20 text-gainn-red border-gainn-red/30",
+  "Environment":    "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Science":        "bg-gainn-cyan/20 text-gainn-cyan border-gainn-cyan/30",
+  "Health":         "bg-gainn-amber/20 text-gainn-amber border-gainn-amber/30",
   "Global Affairs": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
 };
+
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
   "AI": "from-gainn-purple/30 to-gainn-blue/10",
@@ -424,10 +426,15 @@ export default function AIVideoPage() {
     try {
       const { data } = await supabase
         .from("generated_videos")
-        .select("id, title, category, duration, thumbnail_prompt, raw_headlines, generated_at, created_at")
-        .order("created_at", { ascending: false })
-        .limit(24);
-      if (data) setLibrary(data as VideoRecord[]);
+        .select("id, title, category, duration, thumbnail_prompt, thumbnail_url, raw_headlines, generated_at, created_at, script")
+        .order("created_at", { ascending: false });
+      if (data) {
+        setLibrary(data as VideoRecord[]);
+        // Auto-generate all 8 suggested topics if the library is empty on first load
+        if (data.length === 0) {
+          autoGenerateAllTopics();
+        }
+      }
     } catch (e) {
       console.error("Failed to load library:", e);
     } finally {
@@ -435,9 +442,65 @@ export default function AIVideoPage() {
     }
   };
 
+  // Auto-generate all 8 suggested topics sequentially when library is empty
+  const autoGenerateAllTopics = async () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!supabaseUrl || !anonKey) return;
+
+    for (const t of SUGGESTED_TOPICS) {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ topic: t.label }),
+        });
+        if (!res.ok) continue;
+        const data: VideoScript = await res.json();
+        if (!data?.script) continue;
+
+        // Save to DB
+        const { data: inserted } = await supabase.from("generated_videos").insert({
+          title: data.title,
+          category: data.category,
+          duration: data.duration,
+          script: data.script,
+          thumbnail_prompt: data.thumbnailPrompt,
+          raw_headlines: data.rawHeadlines,
+          generated_at: data.generatedAt,
+        }).select("id").single();
+
+        // Generate & save thumbnail
+        if (inserted?.id && data.thumbnailPrompt) {
+          try {
+            const thumbRes = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ thumbnailPrompt: data.thumbnailPrompt, title: data.title }),
+            });
+            if (thumbRes.ok) {
+              const thumbData = await thumbRes.json();
+              if (thumbData.imageUrl) {
+                await supabase.from("generated_videos")
+                  .update({ thumbnail_url: thumbData.imageUrl })
+                  .eq("id", inserted.id);
+              }
+            }
+          } catch (e) {
+            console.error("Auto thumbnail failed:", e);
+          }
+        }
+      } catch (e) {
+        console.error("Auto-generate failed for topic:", t.label, e);
+      }
+    }
+    // Refresh library after all are generated
+    loadLibrary();
+  };
+
   const saveVideoToDb = async (video: VideoScript) => {
     try {
-      await supabase.from("generated_videos").insert({
+      const { data: inserted } = await supabase.from("generated_videos").insert({
         title: video.title,
         category: video.category,
         duration: video.duration,
@@ -445,32 +508,34 @@ export default function AIVideoPage() {
         thumbnail_prompt: video.thumbnailPrompt,
         raw_headlines: video.rawHeadlines,
         generated_at: video.generatedAt,
-      });
-      // Refresh library to show the new video
+      }).select("id").single();
+      // Refresh library
       loadLibrary();
+      return inserted?.id ?? null;
     } catch (e) {
       console.error("Failed to save video:", e);
+      return null;
     }
   };
 
   const loadVideoFromLibrary = (record: VideoRecord) => {
-    const script: VideoScript = {
+    setVideoScript({
       title: record.title,
-      category: record.category,
-      duration: record.duration,
-      script: record.script,
-      thumbnailPrompt: record.thumbnail_prompt,
-      rawHeadlines: record.raw_headlines || [],
-      generatedAt: record.generated_at,
-    };
-    setVideoScript(script);
-    setThumbnailUrl(null);
-    setAudioUrl(null);
-    setUseBrowserVoice(false);
+      duration: record.duration ?? "6-8 min",
+      category: record.category ?? "Global Affairs",
+      thumbnailPrompt: record.thumbnail_prompt ?? "",
+      script: record.script ?? "",
+      rawHeadlines: Array.isArray(record.raw_headlines) ? record.raw_headlines : [],
+      generatedAt: record.generated_at ?? new Date().toISOString(),
+    });
     setError(null);
     setTopic(record.title);
-    generateThumbnail(record.thumbnail_prompt, record.title);
-    generateAudio(record.script, record.title);
+    // Use the already-generated thumbnail if available
+    if (record.thumbnail_url) {
+      setThumbnailUrl(record.thumbnail_url);
+    } else if (record.thumbnail_prompt) {
+      generateThumbnail(record.thumbnail_prompt, record.title);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
