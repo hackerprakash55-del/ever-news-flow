@@ -119,6 +119,9 @@ const Index = () => {
             {/* AI Anchor */}
             <AIAnchorPanel />
 
+            {/* Trending Video Reports */}
+            <TrendingVideosSection />
+
             {/* World Map */}
             <WorldNewsMap />
 
