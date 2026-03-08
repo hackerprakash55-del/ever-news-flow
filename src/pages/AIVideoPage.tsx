@@ -646,6 +646,8 @@ export default function AIVideoPage() {
                   </div>
                 ) : audioUrl ? (
                   <AudioPlayer audioUrl={audioUrl} title={videoScript.title} />
+                ) : useBrowserVoice ? (
+                  <BrowserVoicePlayer script={videoScript.script} title={videoScript.title} />
                 ) : (
                   <div className="flex items-center gap-3 bg-surface-1 border border-border rounded-xl p-4">
                     <Headphones className="w-4 h-4 text-muted-foreground flex-shrink-0" />
