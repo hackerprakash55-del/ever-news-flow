@@ -7,6 +7,7 @@ import { WorldNewsMap } from "@/components/WorldNewsMap";
 import { DepartmentOverview } from "@/components/AgentCard";
 import { PipelineLog } from "@/components/PipelineLog";
 import { AIAnchorPanel } from "@/components/AIAnchorPanel";
+import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
 import { useNavigate } from "react-router-dom";
