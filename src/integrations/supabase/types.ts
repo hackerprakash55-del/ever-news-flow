@@ -53,6 +53,111 @@ export type Database = {
         }
         Relationships: []
       }
+      news_preferences: {
+        Row: {
+          categories: string[]
+          created_at: string
+          id: string
+          regions: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          categories?: string[]
+          created_at?: string
+          id?: string
+          regions?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          categories?: string[]
+          created_at?: string
+          id?: string
+          regions?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      saved_articles: {
+        Row: {
+          article_id: string
+          category: string | null
+          headline: string
+          id: string
+          image_url: string | null
+          published_at: string | null
+          read_time: number | null
+          region: string | null
+          saved_at: string
+          source_url: string | null
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          category?: string | null
+          headline: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          read_time?: number | null
+          region?: string | null
+          saved_at?: string
+          source_url?: string | null
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          category?: string | null
+          headline?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          read_time?: number | null
+          region?: string | null
+          saved_at?: string
+          source_url?: string | null
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
