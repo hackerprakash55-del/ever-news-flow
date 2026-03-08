@@ -28,10 +28,12 @@ export default function AuthPage() {
     setIsLoading(true);
     setErrorMsg("");
 
+    const redirectTo = `${window.location.origin}/`;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectTo,
+        shouldCreateUser: true,
       },
     });
 
