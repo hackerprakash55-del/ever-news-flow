@@ -81,7 +81,8 @@ function extractTags(title: string, description: string): string[] {
   return [...new Set(tags)].slice(0, 5);
 }
 
-// Use Gemini to expand article body with accurate, factual context
+// ── Gemini article body expansion ─────────────────────────────────────────
+
 async function expandArticleBody(
   title: string,
   description: string,
@@ -90,11 +91,7 @@ async function expandArticleBody(
   publishedAt: string,
   lovableApiKey: string
 ): Promise<string> {
-  const knownFacts = [
-    title,
-    description,
-    partialContent,
-  ].filter(Boolean).join("\n");
+  const knownFacts = [title, description, partialContent].filter(Boolean).join("\n");
 
   const prompt = `You are a professional news journalist writing for GAINN, a global AI-powered news network.
 
@@ -124,10 +121,7 @@ Write the article body now:`;
       },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 800,
-        },
+        generationConfig: { temperature: 0.2, maxOutputTokens: 800 },
       }),
     }
   );
@@ -142,7 +136,9 @@ Write the article body now:`;
   return text?.trim() || partialContent || description;
 }
 
-function mapNewsApiArticle(raw: any, index: number, expandedBody?: string): object {
+// ── Map raw NewsAPI article ────────────────────────────────────────────────
+
+function mapNewsApiArticle(raw: any, index: number, location: string, expandedBody?: string): object {
   const sourceId = raw.source?.id || "unknown";
   const sourceName = raw.source?.name || "Unknown Source";
   const title = raw.title || "Untitled";
@@ -167,13 +163,66 @@ function mapNewsApiArticle(raw: any, index: number, expandedBody?: string): obje
     readTime: estimateReadTime(body),
     tags: extractTags(title, description),
     isBreaking: index < 2,
-    region: "Global",
+    region: location || "Global",
     imageUrl: raw.urlToImage || undefined,
     aiGenerated: false,
     biasScore,
     url: raw.url,
   };
 }
+
+// ── Build NewsAPI URL ──────────────────────────────────────────────────────
+
+function buildNewsApiUrl(
+  category: string,
+  location: string,
+  pageSize: number,
+  apiKey: string
+): string {
+  const base = "https://newsapi.org/v2";
+  const sizeParam = `pageSize=${pageSize}`;
+  const langParam = "language=en";
+
+  // Location-based query takes priority — use /everything with geo query
+  if (location && location !== "" && location !== "Global") {
+    const locQuery = encodeURIComponent(`"${location}"`);
+    let catExtra = "";
+    if (category === "AI") catExtra = `+OR+(artificial+intelligence+OR+ChatGPT+OR+OpenAI)`;
+    else if (category === "Technology") catExtra = `+OR+technology`;
+    else if (category === "Economy") catExtra = `+OR+economy+OR+business`;
+    else if (category === "Politics") catExtra = `+OR+politics+OR+government`;
+    else if (category === "Science") catExtra = `+OR+science+OR+research`;
+    else if (category === "Environment") catExtra = `+OR+environment+OR+climate`;
+    else if (category === "Health") catExtra = `+OR+health+OR+medical`;
+    return `${base}/everything?q=${locQuery}${catExtra}&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
+  }
+
+  // Category-only (no location)
+  if (category === "all" || !category) {
+    return `${base}/top-headlines?${langParam}&${sizeParam}&apiKey=${apiKey}`;
+  }
+  if (category === "Technology") {
+    return `${base}/top-headlines?category=technology&${langParam}&${sizeParam}&apiKey=${apiKey}`;
+  }
+  if (category === "Economy") {
+    return `${base}/top-headlines?category=business&${langParam}&${sizeParam}&apiKey=${apiKey}`;
+  }
+  if (category === "Science" || category === "Health") {
+    return `${base}/top-headlines?category=${category.toLowerCase()}&${langParam}&${sizeParam}&apiKey=${apiKey}`;
+  }
+  if (category === "AI") {
+    return `${base}/everything?q=artificial+intelligence+OR+ChatGPT+OR+OpenAI+OR+LLM&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
+  }
+  if (category === "Environment") {
+    return `${base}/everything?q=climate+change+OR+environment+OR+renewable+energy&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
+  }
+  if (category === "Politics") {
+    return `${base}/top-headlines?category=politics&${langParam}&${sizeParam}&apiKey=${apiKey}`;
+  }
+  return `${base}/top-headlines?${langParam}&${sizeParam}&apiKey=${apiKey}`;
+}
+
+// ── Serve ──────────────────────────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -193,29 +242,12 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const category = url.searchParams.get("category") || "all";
+    const location = url.searchParams.get("location") || "";
     const pageSize = Math.min(Number(url.searchParams.get("pageSize") || "20"), 30);
 
-    // Build NewsAPI request
-    let newsApiUrl: string;
-    if (category === "all" || !category) {
-      newsApiUrl = `https://newsapi.org/v2/top-headlines?language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else if (category === "Technology") {
-      newsApiUrl = `https://newsapi.org/v2/top-headlines?category=technology&language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else if (category === "Economy") {
-      newsApiUrl = `https://newsapi.org/v2/top-headlines?category=business&language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else if (category === "Science" || category === "Health") {
-      newsApiUrl = `https://newsapi.org/v2/top-headlines?category=${category.toLowerCase()}&language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else if (category === "AI") {
-      newsApiUrl = `https://newsapi.org/v2/everything?q=artificial+intelligence+OR+ChatGPT+OR+OpenAI+OR+LLM&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else if (category === "Environment") {
-      newsApiUrl = `https://newsapi.org/v2/everything?q=climate+change+OR+environment+OR+renewable+energy&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else if (category === "Politics") {
-      newsApiUrl = `https://newsapi.org/v2/top-headlines?category=politics&language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else {
-      newsApiUrl = `https://newsapi.org/v2/top-headlines?language=en&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    }
+    const newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
 
-    console.log(`Fetching NewsAPI: category=${category}, pageSize=${pageSize}`);
+    console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}`);
     const response = await fetch(newsApiUrl);
     const data = await response.json();
 
@@ -238,10 +270,9 @@ serve(async (req) => {
       (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
     );
 
-    // Expand article bodies using Gemini AI (in parallel, up to 10 articles)
+    // Expand up to 10 article bodies with Gemini
     const toExpand = rawArticles.slice(0, Math.min(rawArticles.length, 10));
     const rest = rawArticles.slice(toExpand.length);
-
     let expandedBodies: string[] = [];
 
     if (LOVABLE_API_KEY) {
@@ -256,19 +287,20 @@ serve(async (req) => {
             a.publishedAt || new Date().toISOString(),
             LOVABLE_API_KEY
           ).catch((e) => {
-            console.error("Expand failed for article:", e);
+            console.error("Expand failed:", e);
             return a.content || a.description || "";
           })
         )
       );
     }
 
+    const displayLocation = location || (category !== "all" ? category : "Global");
     const articles = [
-      ...toExpand.map((a: any, i: number) => mapNewsApiArticle(a, i, expandedBodies[i])),
-      ...rest.map((a: any, i: number) => mapNewsApiArticle(a, toExpand.length + i)),
+      ...toExpand.map((a: any, i: number) => mapNewsApiArticle(a, i, displayLocation, expandedBodies[i])),
+      ...rest.map((a: any, i: number) => mapNewsApiArticle(a, toExpand.length + i, displayLocation)),
     ];
 
-    console.log(`Returning ${articles.length} articles (${expandedBodies.length} AI-expanded)`);
+    console.log(`Returning ${articles.length} articles (${expandedBodies.length} AI-expanded, location="${location}")`);
 
     return new Response(
       JSON.stringify({
@@ -276,6 +308,7 @@ serve(async (req) => {
         totalResults: data.totalResults,
         source: "NewsAPI + Gemini",
         fetchedAt: new Date().toISOString(),
+        location: location || null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
