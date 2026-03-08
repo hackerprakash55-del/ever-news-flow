@@ -791,7 +791,7 @@ export default function AIVideoPage() {
                   <BookOpen className="w-4 h-4 text-gainn-cyan" />
                   <h3 className="text-sm font-semibold">Full Video Script</h3>
                   <span className="text-[10px] font-mono text-muted-foreground ml-auto">
-                    ~{Math.round(videoScript.script.split(" ").length / 150)} min read-through
+                    ~{Math.round((videoScript.script ?? "").split(" ").length / 150)} min read-through
                   </span>
                 </div>
                 <div className="prose-sm max-w-none">
