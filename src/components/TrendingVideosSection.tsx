@@ -152,20 +152,6 @@ export function TrendingVideosSection() {
     loadVideos();
   }, []);
 
-  // Once BOTH the DB load and news articles are ready, auto-generate if library is empty
-  useEffect(() => {
-    if (
-      !isLoading &&
-      !newsLoading &&
-      videos.length === 0 &&
-      trendingTopics.length > 0 &&
-      !autoGenStarted.current
-    ) {
-      autoGenStarted.current = true;
-      generateTrendingVideos();
-    }
-  }, [isLoading, newsLoading, videos.length, trendingTopics.length]);
-
   const loadVideos = async () => {
     setIsLoading(true);
     try {
@@ -180,12 +166,11 @@ export function TrendingVideosSection() {
     }
   };
 
-  const generateTrendingVideos = async () => {
-    if (trendingTopics.length === 0) return;
+  const generateTrendingVideos = async (topics: string[]) => {
+    if (topics.length === 0) return;
     setIsAutoGenerating(true);
-    // Generate first 2 trending topics in parallel for speed
     const results = await Promise.all(
-      trendingTopics.slice(0, 2).map(topic => autoGenerateScript(topic))
+      topics.slice(0, 2).map(topic => autoGenerateScript(topic))
     );
     const newVideos = results.filter(Boolean) as VideoRecord[];
     if (newVideos.length > 0) {
@@ -193,6 +178,20 @@ export function TrendingVideosSection() {
     }
     setIsAutoGenerating(false);
   };
+
+  // Once BOTH the DB load and news articles are ready, auto-generate if library is empty
+  useEffect(() => {
+    if (
+      !isLoading &&
+      !newsLoading &&
+      videos.length === 0 &&
+      trendingTopics.length > 0 &&
+      !autoGenStarted.current
+    ) {
+      autoGenStarted.current = true;
+      generateTrendingVideos(trendingTopics);
+    }
+  }, [isLoading, newsLoading, videos.length, trendingTopics.length]);
 
   const handleVideoClick = (video: VideoRecord) => {
     navigate("/video", { state: { video } });
