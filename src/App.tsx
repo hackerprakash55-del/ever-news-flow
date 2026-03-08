@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
 import ArticlePage from "./pages/ArticlePage";
 import NewsroomPage from "./pages/NewsroomPage";
@@ -23,13 +24,17 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/article/:id" element={<ArticlePage />} />
-            <Route path="/newsroom" element={<NewsroomPage />} />
-            <Route path="/video" element={<AIVideoPage />} />
-            <Route path="/videos" element={<VideoLibraryPage />} />
+            {/* Public — auth only */}
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+
+            {/* Protected — must be signed in */}
+            <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+            <Route path="/article/:id" element={<AuthGuard><ArticlePage /></AuthGuard>} />
+            <Route path="/newsroom" element={<AuthGuard><NewsroomPage /></AuthGuard>} />
+            <Route path="/video" element={<AuthGuard><AIVideoPage /></AuthGuard>} />
+            <Route path="/videos" element={<AuthGuard><VideoLibraryPage /></AuthGuard>} />
+            <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
