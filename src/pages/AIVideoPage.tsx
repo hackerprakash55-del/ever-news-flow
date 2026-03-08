@@ -5,10 +5,12 @@ import {
   Video, Sparkles, Play, Pause, Clock, Globe, ChevronRight,
   Loader2, RefreshCw, Download, AlertCircle,
   Mic, Film, BookOpen, Zap, TrendingUp, Image as ImageIcon,
-  PlayCircle, Volume2, VolumeX, Headphones, Square, Radio
+  PlayCircle, Volume2, VolumeX, Headphones, Square, Radio,
+  Library, CalendarDays, ArrowUpRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
@@ -30,6 +32,41 @@ interface VideoScript {
   rawHeadlines: string[];
   generatedAt: string;
 }
+
+interface VideoRecord {
+  id: string;
+  title: string;
+  category: string;
+  duration: string;
+  script: string;
+  thumbnail_prompt: string;
+  raw_headlines: string[];
+  generated_at: string;
+  created_at: string;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  "AI": "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/30",
+  "Technology": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
+  "Economy": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Politics": "bg-gainn-red/20 text-gainn-red border-gainn-red/30",
+  "Environment": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Science": "bg-gainn-cyan/20 text-gainn-cyan border-gainn-cyan/30",
+  "Health": "bg-gainn-amber/20 text-gainn-amber border-gainn-amber/30",
+  "Global Affairs": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
+};
+
+const CATEGORY_GRADIENTS: Record<string, string> = {
+  "AI": "from-gainn-purple/30 to-gainn-blue/10",
+  "Technology": "from-gainn-blue/30 to-gainn-cyan/10",
+  "Economy": "from-gainn-green/30 to-gainn-cyan/10",
+  "Politics": "from-gainn-red/30 to-gainn-amber/10",
+  "Environment": "from-gainn-green/30 to-gainn-blue/10",
+  "Science": "from-gainn-cyan/30 to-gainn-blue/10",
+  "Health": "from-gainn-amber/30 to-gainn-green/10",
+  "Global Affairs": "from-gainn-blue/30 to-gainn-purple/10",
+};
+
 
 function formatScript(script: string) {
   return script
@@ -355,7 +392,71 @@ export default function AIVideoPage() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [useBrowserVoice, setUseBrowserVoice] = useState(false);
+  const [library, setLibrary] = useState<VideoRecord[]>([]);
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
   const { toast } = useToast();
+
+  // Load video library on mount
+  useEffect(() => {
+    loadLibrary();
+  }, []);
+
+  const loadLibrary = async () => {
+    setIsLoadingLibrary(true);
+    try {
+      const { data } = await supabase
+        .from("generated_videos")
+        .select("id, title, category, duration, thumbnail_prompt, raw_headlines, generated_at, created_at")
+        .order("created_at", { ascending: false })
+        .limit(24);
+      if (data) setLibrary(data as VideoRecord[]);
+    } catch (e) {
+      console.error("Failed to load library:", e);
+    } finally {
+      setIsLoadingLibrary(false);
+    }
+  };
+
+  const saveVideoToDb = async (video: VideoScript) => {
+    try {
+      await supabase.from("generated_videos").insert({
+        title: video.title,
+        category: video.category,
+        duration: video.duration,
+        script: video.script,
+        thumbnail_prompt: video.thumbnailPrompt,
+        raw_headlines: video.rawHeadlines,
+        generated_at: video.generatedAt,
+      });
+      // Refresh library to show the new video
+      loadLibrary();
+    } catch (e) {
+      console.error("Failed to save video:", e);
+    }
+  };
+
+  const loadVideoFromLibrary = (record: VideoRecord) => {
+    const script: VideoScript = {
+      title: record.title,
+      category: record.category,
+      duration: record.duration,
+      script: record.script,
+      thumbnailPrompt: record.thumbnail_prompt,
+      rawHeadlines: record.raw_headlines || [],
+      generatedAt: record.generated_at,
+    };
+    setVideoScript(script);
+    setThumbnailUrl(null);
+    setAudioUrl(null);
+    setUseBrowserVoice(false);
+    setError(null);
+    setTopic(record.title);
+    generateThumbnail(record.thumbnail_prompt, record.title);
+    generateAudio(record.script, record.title);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -397,6 +498,10 @@ export default function AIVideoPage() {
 
       setVideoScript(data);
       if (topicOverride) setTopic(topicOverride);
+
+      // Save to library DB
+      saveVideoToDb(data);
+
 
       generateThumbnail(data.thumbnailPrompt, data.title);
       generateAudio(data.script, data.title);
@@ -799,6 +904,68 @@ export default function AIVideoPage() {
           </div>
         )}
       </main>
+
+      {/* VIDEO LIBRARY */}
+      <section className="max-w-screen-xl mx-auto px-4 md:px-6 pb-16 mt-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Library className="w-5 h-5 text-gainn-blue" />
+          <h2 className="text-lg font-display font-semibold">Video Library</h2>
+          <span className="text-xs font-mono text-muted-foreground bg-surface-2 border border-border px-2 py-0.5 rounded-full">
+            {library.length} videos
+          </span>
+          <button onClick={loadLibrary} className="ml-auto text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" /> Refresh
+          </button>
+        </div>
+
+        {isLoadingLibrary ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading library...
+          </div>
+        ) : library.length === 0 ? (
+          <div className="card-glass rounded-xl p-8 text-center border border-border">
+            <Film className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+            <p className="text-sm text-muted-foreground">No videos yet — generate your first one above!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {library.map((record) => {
+              const gradient = CATEGORY_GRADIENTS[record.category] || "from-gainn-blue/20 to-gainn-purple/10";
+              const badge = CATEGORY_COLORS[record.category] || "bg-surface-2 text-muted-foreground border-border";
+              return (
+                <button
+                  key={record.id}
+                  onClick={() => loadVideoFromLibrary(record)}
+                  className="card-glass rounded-xl overflow-hidden border border-border hover:border-gainn-blue/40 hover:shadow-lg transition-all text-left group"
+                >
+                  {/* Thumbnail placeholder */}
+                  <div className={`relative h-32 bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                    <PlayCircle className="w-10 h-10 text-white/30 group-hover:text-white/60 transition-colors" />
+                    <div className="absolute top-2 left-2">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge} uppercase tracking-wider`}>
+                        {record.category}
+                      </span>
+                    </div>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowUpRight className="w-4 h-4 text-white/70" />
+                    </div>
+                  </div>
+                  {/* Meta */}
+                  <div className="p-3">
+                    <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2 mb-2">{record.title}</p>
+                    <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+                      <span className="flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {record.duration}</span>
+                      <span className="flex items-center gap-0.5 ml-auto"><CalendarDays className="w-2.5 h-2.5" />
+                        {new Date(record.created_at).toLocaleDateString([], { month: "short", day: "numeric" })}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
