@@ -103,16 +103,21 @@ function VideoCard({ video }: { video: VideoRecord }) {
     >
       {/* Thumbnail area */}
       <div className={`relative h-44 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
-        {/* Decorative grid */}
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(hsl(var(--gainn-blue)) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
-        />
-        <div className="relative flex flex-col items-center gap-3 text-center px-4">
-          <span className="text-4xl">{icon}</span>
-          <div className="w-10 h-10 rounded-full bg-foreground/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-gainn-blue/30 transition-colors">
-            <Play className="w-5 h-5 text-foreground/80 group-hover:text-gainn-cyan transition-colors ml-0.5" />
-          </div>
-        </div>
+        {video.thumbnail_url ? (
+          <img src={video.thumbnail_url} alt={video.title} className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <>
+            <div className="absolute inset-0 opacity-10"
+              style={{ backgroundImage: "radial-gradient(hsl(var(--gainn-blue)) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
+            />
+            <div className="relative flex flex-col items-center gap-3 text-center px-4">
+              <span className="text-4xl">{icon}</span>
+              <div className="w-10 h-10 rounded-full bg-foreground/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-gainn-blue/30 transition-colors">
+                <Play className="w-5 h-5 text-foreground/80 group-hover:text-gainn-cyan transition-colors ml-0.5" />
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Duration badge */}
         {video.duration && (
