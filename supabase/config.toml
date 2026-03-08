@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-video-script]
 verify_jwt = false
+
+[functions.generate-video-thumbnail]
+verify_jwt = false
