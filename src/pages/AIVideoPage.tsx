@@ -424,54 +424,20 @@ export default function AIVideoPage() {
     try {
       const { data } = await supabase
         .from("generated_videos")
-        .select("id, title, category, duration, thumbnail_prompt, raw_headlines, generated_at, created_at")
-        .order("created_at", { ascending: false })
-        .limit(24);
-      if (data) setLibrary(data as VideoRecord[]);
+        .select("id, title, category, duration, thumbnail_prompt, thumbnail_url, raw_headlines, generated_at, created_at, script")
+        .order("created_at", { ascending: false });
+      if (data) {
+        setLibrary(data as VideoRecord[]);
+        // Auto-generate all 8 suggested topics if the library is empty on first load
+        if (data.length === 0) {
+          autoGenerateAllTopics();
+        }
+      }
     } catch (e) {
       console.error("Failed to load library:", e);
     } finally {
       setIsLoadingLibrary(false);
     }
-  };
-
-  const saveVideoToDb = async (video: VideoScript) => {
-    try {
-      await supabase.from("generated_videos").insert({
-        title: video.title,
-        category: video.category,
-        duration: video.duration,
-        script: video.script,
-        thumbnail_prompt: video.thumbnailPrompt,
-        raw_headlines: video.rawHeadlines,
-        generated_at: video.generatedAt,
-      });
-      // Refresh library to show the new video
-      loadLibrary();
-    } catch (e) {
-      console.error("Failed to save video:", e);
-    }
-  };
-
-  const loadVideoFromLibrary = (record: VideoRecord) => {
-    const script: VideoScript = {
-      title: record.title,
-      category: record.category,
-      duration: record.duration,
-      script: record.script,
-      thumbnailPrompt: record.thumbnail_prompt,
-      rawHeadlines: record.raw_headlines || [],
-      generatedAt: record.generated_at,
-    };
-    setVideoScript(script);
-    setThumbnailUrl(null);
-    setAudioUrl(null);
-    setUseBrowserVoice(false);
-    setError(null);
-    setTopic(record.title);
-    generateThumbnail(record.thumbnail_prompt, record.title);
-    generateAudio(record.script, record.title);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
 
