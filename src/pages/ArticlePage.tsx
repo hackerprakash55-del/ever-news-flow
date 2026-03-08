@@ -177,8 +177,8 @@ export default function ArticlePage() {
 
             {/* Article body */}
             <div className="article-body">
-              {article.body
-                ? article.body.split("\n\n").map((para, i) => <p key={i}>{para}</p>)
+              {paragraphs.length > 0
+                ? paragraphs.map((para, i) => <p key={i}>{para}</p>)
                 : <p className="text-muted-foreground">{article.summary}</p>
               }
             </div>
