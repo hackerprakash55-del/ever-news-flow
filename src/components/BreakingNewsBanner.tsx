@@ -62,14 +62,19 @@ export const BreakingNewsBanner = () => {
           <span className="text-[10px] text-gainn-cyan font-mono">AI Verified</span>
         </div>
       </div>
-      <div className="flex gap-1 flex-shrink-0">
-        {BREAKING_ALERTS.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIdx(i)}
-            className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIdx ? "bg-gainn-red w-3" : "bg-muted-foreground/30"}`}
-          />
-        ))}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {isLive && (
+          <span className="text-[10px] font-mono text-gainn-green hidden sm:inline">● Live</span>
+        )}
+        <div className="flex gap-1">
+          {alerts.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentIdx(i)}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIdx ? "bg-gainn-red w-3" : "bg-muted-foreground/30"}`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
