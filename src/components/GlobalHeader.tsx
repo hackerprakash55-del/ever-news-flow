@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, Search, User, Radio, Menu, X, Video } from "lucide-react";
+import { Bell, Search, User, Radio, Menu, X, Video, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import gainnLogo from "@/assets/gainn-logo.png";
 
