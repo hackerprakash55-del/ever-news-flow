@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, Search, User, Radio, Menu, X, Video } from "lucide-react";
+import { Bell, Search, User, Radio, Menu, X, Video, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import gainnLogo from "@/assets/gainn-logo.png";
 
@@ -87,6 +87,13 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
             <Video className="w-3.5 h-3.5" />
             AI Video
           </Link>
+          <Link
+            to="/videos"
+            className="ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gainn-cyan hover:bg-gainn-cyan/10 rounded-md transition-colors border border-gainn-cyan/25 hover:border-gainn-cyan/50"
+          >
+            <Library className="w-3.5 h-3.5" />
+            Video Library
+          </Link>
         </nav>
 
         {/* Right actions */}
@@ -131,6 +138,13 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
             onClick={() => setMobileOpen(false)}
           >
             <Video className="w-3.5 h-3.5" /> AI Video
+          </Link>
+          <Link
+            to="/videos"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-cyan rounded-md"
+            onClick={() => setMobileOpen(false)}
+          >
+            <Library className="w-3.5 h-3.5" /> Video Library
           </Link>
         </div>
       )}
