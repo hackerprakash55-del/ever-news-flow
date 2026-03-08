@@ -4,8 +4,6 @@ import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner, StatsBar } from "@/components/BreakingNewsBanner";
 import { HeroArticleCard, ArticleCard, ArticleListItem } from "@/components/ArticleCards";
 import { WorldNewsMap } from "@/components/WorldNewsMap";
-import { DepartmentOverview } from "@/components/AgentCard";
-import { PipelineLog } from "@/components/PipelineLog";
 import { AIAnchorPanel } from "@/components/AIAnchorPanel";
 import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { useNews } from "@/hooks/useNews";
