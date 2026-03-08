@@ -92,11 +92,11 @@ const Index = () => {
 
           {/* Active geo breadcrumb */}
           {(geo.country || geo.state || geo.city) && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-blue/10 border border-gainn-blue/20 text-xs font-mono w-fit">
-              <MapPin className="w-3 h-3 text-gainn-blue" />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-mono w-fit">
+              <MapPin className="w-3 h-3 text-primary" />
               <span className="text-muted-foreground">Showing news from:</span>
-              {geo.country && <span className="text-gainn-cyan font-semibold">{geo.country}</span>}
-              {geo.state && <><span className="text-muted-foreground">›</span><span className="text-gainn-cyan font-semibold">{geo.state}</span></>}
+              {geo.country && <span className="text-accent font-semibold">{geo.country}</span>}
+              {geo.state && <><span className="text-muted-foreground">›</span><span className="text-accent font-semibold">{geo.state}</span></>}
               {geo.city && <><span className="text-muted-foreground">›</span><span className="text-gainn-green font-semibold">{geo.city}</span></>}
             </div>
           )}
