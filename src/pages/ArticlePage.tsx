@@ -4,8 +4,9 @@ import { MOCK_ARTICLES, Article } from "@/data/mockData";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { ArticleCard } from "@/components/ArticleCards";
-import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, ChevronRight, ExternalLink } from "lucide-react";
+import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, ChevronRight, ExternalLink, MapPin, Layers, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNews } from "@/hooks/useNews";
 
 const CredibilityMeter = ({ score }: { score: number }) => {
   const segments = 10;
@@ -64,6 +65,9 @@ export default function ArticlePage() {
     } catch {}
   }
 
+  // Fetch live news for related articles across all categories
+  const { articles: liveArticles } = useNews({ category: "all", pageSize: 20 });
+
   if (!article) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -80,9 +84,15 @@ export default function ArticlePage() {
     );
   }
 
-  const related = MOCK_ARTICLES.filter((a) => a.id !== article!.id && a.category === article!.category).slice(0, 3);
+  // Related: same category + region match (all sources: mock + live)
+  const allArticles = [...MOCK_ARTICLES, ...liveArticles.filter((a) => !MOCK_ARTICLES.find((m) => m.id === a.id))];
+  const sameCategory = allArticles.filter((a) => a.id !== article!.id && a.category === article!.category).slice(0, 3);
+  const sameRegion = allArticles.filter((a) => a.id !== article!.id && a.region && article!.region && a.region !== "Global" && a.region === article!.region && a.category !== article!.category).slice(0, 2);
+  const breaking = allArticles.filter((a) => a.id !== article!.id && a.isBreaking && a.category !== article!.category).slice(0, 2);
+  
   const biasLabel = Math.abs(article.biasScore) < 0.1 ? "Neutral" : article.biasScore > 0 ? "Slight Right" : "Slight Left";
   const isLiveArticle = article.id.startsWith("live-");
+  const paragraphs = article.body ? article.body.split("\n\n").filter(Boolean) : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -167,8 +177,8 @@ export default function ArticlePage() {
 
             {/* Article body */}
             <div className="article-body">
-              {article.body
-                ? article.body.split("\n\n").map((para, i) => <p key={i}>{para}</p>)
+              {paragraphs.length > 0
+                ? paragraphs.map((para, i) => <p key={i}>{para}</p>)
                 : <p className="text-muted-foreground">{article.summary}</p>
               }
             </div>
@@ -270,29 +280,78 @@ export default function ArticlePage() {
               </div>
             </div>
 
-            {/* Related articles */}
-            {related.length > 0 && (
+            {/* Related articles — same category */}
+            {sameCategory.length > 0 && (
               <div className="card-glass rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-border">
+                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-gainn-blue" />
                   <span className="text-sm font-semibold">Related Stories</span>
+                  <span className="ml-auto text-[10px] font-mono text-gainn-cyan bg-gainn-blue/10 px-1.5 py-0.5 rounded">{article.category}</span>
                 </div>
                 <div className="p-3 space-y-3">
-                  {related.map((a) => (
-                    <Link to={`/article/${a.id}`} key={a.id} className="flex gap-3 group">
+                  {sameCategory.map((a) => (
+                    <Link to={`/article/${a.id}`} state={{ article: a }} key={a.id} className="flex gap-3 group">
                       {a.imageUrl && (
-                        <img
-                          src={a.imageUrl}
-                          alt=""
-                          className="w-14 h-12 object-cover rounded opacity-70 group-hover:opacity-100 flex-shrink-0 transition-opacity"
-                        />
+                        <img src={a.imageUrl} alt="" className="w-14 h-12 object-cover rounded opacity-70 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
                       )}
                       <div>
-                        <p className="text-xs font-medium text-foreground group-hover:text-gainn-cyan transition-colors line-clamp-2 leading-snug">
-                          {a.headline}
-                        </p>
-                        <span className="text-[10px] font-mono text-muted-foreground">
-                          {a.readTime}m read
-                        </span>
+                        <p className="text-xs font-medium text-foreground group-hover:text-gainn-cyan transition-colors line-clamp-2 leading-snug">{a.headline}</p>
+                        <span className="text-[10px] font-mono text-muted-foreground">{a.readTime}m read</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Same region news */}
+            {sameRegion.length > 0 && (
+              <div className="card-glass rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-gainn-green" />
+                  <span className="text-sm font-semibold">More from {article.region?.split(",")[0]}</span>
+                </div>
+                <div className="p-3 space-y-3">
+                  {sameRegion.map((a) => (
+                    <Link to={`/article/${a.id}`} state={{ article: a }} key={a.id} className="flex gap-3 group">
+                      {a.imageUrl && (
+                        <img src={a.imageUrl} alt="" className="w-14 h-12 object-cover rounded opacity-70 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground group-hover:text-gainn-green transition-colors line-clamp-2 leading-snug">{a.headline}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono text-muted-foreground">{a.readTime}m</span>
+                          <span className="text-[10px] font-mono px-1 rounded bg-surface-2 text-muted-foreground">{a.category}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Breaking news from other categories */}
+            {breaking.length > 0 && (
+              <div className="card-glass rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+                  <TrendingUp className="w-3.5 h-3.5 text-gainn-red" />
+                  <span className="text-sm font-semibold">Breaking Now</span>
+                  <span className="ml-auto flex items-center gap-1 text-[10px] font-mono text-gainn-red">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gainn-red animate-pulse" /> Live
+                  </span>
+                </div>
+                <div className="p-3 space-y-3">
+                  {breaking.map((a) => (
+                    <Link to={`/article/${a.id}`} state={{ article: a }} key={a.id} className="flex gap-3 group">
+                      {a.imageUrl && (
+                        <img src={a.imageUrl} alt="" className="w-14 h-12 object-cover rounded opacity-70 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground group-hover:text-gainn-red transition-colors line-clamp-2 leading-snug">{a.headline}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono text-muted-foreground">{a.readTime}m</span>
+                          <span className="text-[10px] font-mono px-1 rounded bg-gainn-red/10 text-gainn-red border border-gainn-red/20">{a.category}</span>
+                        </div>
                       </div>
                     </Link>
                   ))}

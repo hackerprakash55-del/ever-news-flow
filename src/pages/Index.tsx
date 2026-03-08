@@ -11,8 +11,9 @@ import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, AlertCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
 
 const SkeletonCard = () => (
   <div className="card-glass rounded-lg overflow-hidden h-48 shimmer-bg" />
@@ -39,12 +40,15 @@ const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string |
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState("All");
+  const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
   const navigate = useNavigate();
 
   const newsCategory = activeCategory === "All" ? "all" : activeCategory;
+  const location = geoToQuery(geo);
   const { articles, isLive, isLoading, isError, error, fetchedAt, refresh } = useNews({
     category: newsCategory,
     pageSize: 20,
+    location,
   });
 
   return (
@@ -58,35 +62,49 @@ const Index = () => {
         <BreakingNewsBanner />
         <StatsBar />
 
-        {/* Category Filter + status bar */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
-                  activeCategory === cat
-                    ? "bg-gainn-blue text-background"
-                    : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground border border-border"
-                }`}
+        {/* Category Filter + Geo Filter + status bar */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
+                    activeCategory === cat
+                      ? "bg-gainn-blue text-background"
+                      : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground border border-border"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <GeoFilter value={geo} onChange={setGeo} />
+              <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-7 w-7 ${isLoading ? "animate-spin" : ""}`}
+                onClick={refresh}
+                disabled={isLoading}
               >
-                {cat}
-              </button>
-            ))}
+                <RefreshCw className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-7 w-7 ${isLoading ? "animate-spin" : ""}`}
-              onClick={refresh}
-              disabled={isLoading}
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </Button>
-          </div>
+
+          {/* Active geo breadcrumb */}
+          {(geo.country || geo.state || geo.city) && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-blue/10 border border-gainn-blue/20 text-xs font-mono w-fit">
+              <MapPin className="w-3 h-3 text-gainn-blue" />
+              <span className="text-muted-foreground">Showing news from:</span>
+              {geo.country && <span className="text-gainn-cyan font-semibold">{geo.country}</span>}
+              {geo.state && <><span className="text-muted-foreground">›</span><span className="text-gainn-cyan font-semibold">{geo.state}</span></>}
+              {geo.city && <><span className="text-muted-foreground">›</span><span className="text-gainn-green font-semibold">{geo.city}</span></>}
+            </div>
+          )}
         </div>
 
         {/* Error banner (non-blocking) */}
@@ -129,7 +147,10 @@ const Index = () => {
             {!isLoading && articles.length > 4 && (
               <div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono mb-3">
-                  More Stories — {activeCategory === "All" ? "Top Headlines" : activeCategory}
+                  More Stories —{" "}
+                  {geo.city ?? geo.state ?? geo.country
+                    ? `${geo.city ?? geo.state ?? geo.country} · ${activeCategory === "All" ? "All Topics" : activeCategory}`
+                    : activeCategory === "All" ? "Top Headlines" : activeCategory}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {articles.slice(4).map((a) => (
@@ -143,7 +164,9 @@ const Index = () => {
             {!isLoading && articles.length > 0 && (
               <div className="text-center py-4">
                 <span className="text-xs font-mono text-muted-foreground">
-                  {articles.length} articles • {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
+                  {articles.length} articles
+                  {location && <> • <span className="text-gainn-cyan">{location}</span></>}
+                  {" "}• {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
                   <button onClick={refresh} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
                     Refresh
                   </button>

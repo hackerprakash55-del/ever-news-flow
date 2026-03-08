@@ -26,6 +26,7 @@ function mapToArticle(raw: any): Article {
 interface UseNewsOptions {
   category?: string;
   pageSize?: number;
+  location?: string; // city / state / country string
 }
 
 interface NewsResult {
@@ -39,7 +40,7 @@ interface NewsResult {
   refresh: () => void;
 }
 
-async function fetchLiveNews(category: string, pageSize: number) {
+async function fetchLiveNews(category: string, pageSize: number, location: string) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -51,6 +52,7 @@ async function fetchLiveNews(category: string, pageSize: number) {
     category: category || "all",
     pageSize: String(pageSize),
   });
+  if (location) params.set("location", location);
 
   const response = await fetch(
     `${supabaseUrl}/functions/v1/fetch-news?${params}`,
@@ -78,9 +80,9 @@ async function fetchLiveNews(category: string, pageSize: number) {
   };
 }
 
-export function useNews({ category = "all", pageSize = 20 }: UseNewsOptions = {}): NewsResult {
+export function useNews({ category = "all", pageSize = 20, location = "" }: UseNewsOptions = {}): NewsResult {
   const queryClient = useQueryClient();
-  const queryKey = ["news", category, pageSize];
+  const queryKey = ["news", category, pageSize, location];
 
   const {
     data,
@@ -90,10 +92,10 @@ export function useNews({ category = "all", pageSize = 20 }: UseNewsOptions = {}
     refetch,
   } = useQuery({
     queryKey,
-    queryFn: () => fetchLiveNews(category, pageSize),
+    queryFn: () => fetchLiveNews(category, pageSize, location),
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,       // silent background refresh every 5 min
-    refetchIntervalInBackground: false,     // pause when tab is hidden
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
     retry: 1,
     retryDelay: 2000,
   });
