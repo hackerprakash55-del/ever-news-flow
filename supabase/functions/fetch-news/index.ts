@@ -244,8 +244,17 @@ serve(async (req) => {
     const category = url.searchParams.get("category") || "all";
     const location = url.searchParams.get("location") || "";
     const pageSize = Math.min(Number(url.searchParams.get("pageSize") || "20"), 30);
+    const searchQuery = url.searchParams.get("q") || ""; // free-text keyword search
 
-    const newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
+    // If a free-text search query is provided, override category routing
+    // and use NewsAPI /everything with the keyword
+    let newsApiUrl: string;
+    if (searchQuery) {
+      const encoded = encodeURIComponent(searchQuery);
+      newsApiUrl = `https://newsapi.org/v2/everything?q=${encoded}&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
+    } else {
+      newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
+    }
 
     console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}`);
     const response = await fetch(newsApiUrl);
