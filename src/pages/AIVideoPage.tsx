@@ -69,7 +69,8 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
 };
 
 
-function formatScript(script: string) {
+function formatScript(script: string | undefined | null) {
+  if (!script) return null;
   return script
     .split("\n")
     .map((line, i) => {
