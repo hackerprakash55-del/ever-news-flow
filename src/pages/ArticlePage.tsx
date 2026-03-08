@@ -249,8 +249,15 @@ export default function ArticlePage() {
               <Button variant="outline" size="sm" className="gap-2">
                 <Share2 className="w-3.5 h-3.5" /> Share
               </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Bookmark className="w-3.5 h-3.5" /> Save
+              <Button
+                variant="outline"
+                size="sm"
+                className={`gap-2 transition-colors ${isSaved ? "text-gainn-cyan border-gainn-cyan/40 bg-gainn-cyan/10" : ""}`}
+                onClick={toggleSave}
+                disabled={savingArticle}
+              >
+                {isSaved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+                {isSaved ? "Saved" : "Save"}
               </Button>
               <Link to="/">
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
