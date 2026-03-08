@@ -47,18 +47,18 @@ interface VideoRecord {
   created_at: string | null;
 }
 
-
-  "AI": "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/30",
-  "Technology": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
-  "Economy": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
-  "Politics": "bg-gainn-red/20 text-gainn-red border-gainn-red/30",
-  "Environment": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
-  "Science": "bg-gainn-cyan/20 text-gainn-cyan border-gainn-cyan/30",
-  "Health": "bg-gainn-amber/20 text-gainn-amber border-gainn-amber/30",
+const CATEGORY_COLORS: Record<string, string> = {
+  "AI":             "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/30",
+  "Technology":     "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
+  "Economy":        "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Politics":       "bg-gainn-red/20 text-gainn-red border-gainn-red/30",
+  "Environment":    "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Science":        "bg-gainn-cyan/20 text-gainn-cyan border-gainn-cyan/30",
+  "Health":         "bg-gainn-amber/20 text-gainn-amber border-gainn-amber/30",
   "Global Affairs": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
 };
 
-const CATEGORY_GRADIENTS: Record<string, string> = {
+
   "AI": "from-gainn-purple/30 to-gainn-blue/10",
   "Technology": "from-gainn-blue/30 to-gainn-cyan/10",
   "Economy": "from-gainn-green/30 to-gainn-cyan/10",
