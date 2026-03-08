@@ -428,36 +428,13 @@ export default function AIVideoPage() {
     }
   };
 
-  const generateAudio = async (script: string, title: string) => {
-    setIsGeneratingAudio(true);
+  const generateAudio = (script: string, _title: string) => {
+    // Use browser Web Speech API directly — ElevenLabs free tier is blocked
+    // from server environments. When a paid ElevenLabs key is available the
+    // edge function will return audioContent and we'll use that instead.
     setAudioUrl(null);
-    setUseBrowserVoice(false);
-    try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/elevenlabs-tts`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${anonKey}`,
-          apikey: anonKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ script, title }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        // Fall back to browser voice if ElevenLabs fails (free tier blocked)
-        console.warn("ElevenLabs TTS failed, falling back to browser voice:", data.error);
-        setUseBrowserVoice(true);
-        return;
-      }
-      if (data.audioContent) {
-        setAudioUrl(`data:audio/mpeg;base64,${data.audioContent}`);
-      }
-    } catch (e) {
-      console.error("Audio generation failed, using browser fallback");
-      setUseBrowserVoice(true);
-    } finally {
-      setIsGeneratingAudio(false);
-    }
+    setUseBrowserVoice(true);
+    setIsGeneratingAudio(false);
   };
 
   const copyScript = () => {
