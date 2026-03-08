@@ -53,6 +53,10 @@ export default function ArticlePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isSaved, setIsSaved] = useState(false);
+  const [savingArticle, setSavingArticle] = useState(false);
 
   // First try article passed via navigation state (from AI Anchor Panel / live feed)
   let article: Article | null = (location.state as any)?.article ?? null;
@@ -70,6 +74,40 @@ export default function ArticlePage() {
 
   // Fetch live news for related articles across all categories
   const { articles: liveArticles } = useNews({ category: "all", pageSize: 20 });
+
+  // Check if already saved
+  useEffect(() => {
+    if (!user || !article) return;
+    supabase.from("saved_articles").select("id").eq("user_id", user.id).eq("article_id", article.id).single()
+      .then(({ data }) => setIsSaved(!!data));
+  }, [user, article?.id]);
+
+  async function toggleSave() {
+    if (!user) { navigate("/auth", { state: { from: location.pathname } }); return; }
+    if (!article) return;
+    setSavingArticle(true);
+    if (isSaved) {
+      await supabase.from("saved_articles").delete().eq("user_id", user.id).eq("article_id", article.id);
+      setIsSaved(false);
+      toast({ title: "Removed from saved" });
+    } else {
+      await supabase.from("saved_articles").insert({
+        user_id: user.id,
+        article_id: article.id,
+        headline: article.headline,
+        summary: article.summary,
+        category: article.category,
+        image_url: article.imageUrl,
+        source_url: (article as any).url,
+        region: article.region,
+        read_time: article.readTime,
+        published_at: article.publishedAt,
+      });
+      setIsSaved(true);
+      toast({ title: "Saved!", description: "Find it in Settings → Saved Articles" });
+    }
+    setSavingArticle(false);
+  }
 
   if (!article) {
     return (
