@@ -5,16 +5,30 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
+import { lazy, Suspense } from "react";
+
+// Eagerly load only the auth page and the main index — everything else is lazy
 import Index from "./pages/Index";
-import ArticlePage from "./pages/ArticlePage";
-import NewsroomPage from "./pages/NewsroomPage";
-import AIVideoPage from "./pages/AIVideoPage";
-import VideoLibraryPage from "./pages/VideoLibraryPage";
 import AuthPage from "./pages/AuthPage";
-import SettingsPage from "./pages/SettingsPage";
-import NotFound from "./pages/NotFound";
+
+const ArticlePage      = lazy(() => import("./pages/ArticlePage"));
+const NewsroomPage     = lazy(() => import("./pages/NewsroomPage"));
+const AIVideoPage      = lazy(() => import("./pages/AIVideoPage"));
+const VideoLibraryPage = lazy(() => import("./pages/VideoLibraryPage"));
+const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
+const NotFound         = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+// Minimal skeleton shown while a lazy page chunk is downloading
+const PageLoader = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <span className="text-xs font-mono text-muted-foreground">Loading…</span>
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -23,21 +37,23 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            {/* Public — auth only */}
-            <Route path="/auth" element={<AuthPage />} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public — auth only */}
+              <Route path="/auth" element={<AuthPage />} />
 
-            {/* Protected — must be signed in */}
-            <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
-            <Route path="/article/:id" element={<AuthGuard><ArticlePage /></AuthGuard>} />
-            <Route path="/newsroom" element={<AuthGuard><NewsroomPage /></AuthGuard>} />
-            <Route path="/video" element={<AuthGuard><AIVideoPage /></AuthGuard>} />
-            <Route path="/videos" element={<AuthGuard><VideoLibraryPage /></AuthGuard>} />
-            <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
+              {/* Protected — must be signed in */}
+              <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+              <Route path="/article/:id" element={<AuthGuard><ArticlePage /></AuthGuard>} />
+              <Route path="/newsroom" element={<AuthGuard><NewsroomPage /></AuthGuard>} />
+              <Route path="/video" element={<AuthGuard><AIVideoPage /></AuthGuard>} />
+              <Route path="/videos" element={<AuthGuard><VideoLibraryPage /></AuthGuard>} />
+              <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
 
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
