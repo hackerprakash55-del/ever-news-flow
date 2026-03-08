@@ -92,6 +92,8 @@ export function useNews({ category = "all", pageSize = 20 }: UseNewsOptions = {}
     queryKey,
     queryFn: () => fetchLiveNews(category, pageSize),
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,       // silent background refresh every 5 min
+    refetchIntervalInBackground: false,     // pause when tab is hidden
     retry: 1,
     retryDelay: 2000,
   });
