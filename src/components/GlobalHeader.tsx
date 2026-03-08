@@ -336,6 +336,9 @@ export const GlobalHeader = ({
           </div>
         </div>
       )}
+
+      {/* Search overlay */}
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 };
