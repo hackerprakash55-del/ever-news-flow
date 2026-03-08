@@ -5,7 +5,7 @@ import {
   Video, Sparkles, Play, Pause, Clock, Globe, ChevronRight,
   Loader2, RefreshCw, Download, AlertCircle,
   Mic, Film, BookOpen, Zap, TrendingUp, Image as ImageIcon,
-  PlayCircle, Volume2, VolumeX, Headphones, Square
+  PlayCircle, Volume2, VolumeX, Headphones, Square, Radio
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
