@@ -81,7 +81,7 @@ function extractTags(title: string, description: string): string[] {
   return [...new Set(tags)].slice(0, 5);
 }
 
-// ── Gemini article body expansion ─────────────────────────────────────────
+// ── Article body expansion via Lovable AI Gateway ─────────────────────────
 
 async function expandArticleBody(
   title: string,
@@ -93,46 +93,54 @@ async function expandArticleBody(
 ): Promise<string> {
   const knownFacts = [title, description, partialContent].filter(Boolean).join("\n");
 
-  const prompt = `You are a professional news journalist writing for GAINN, a global AI-powered news network.
-
-Using ONLY the verified facts below from "${sourceName}" (published ${publishedAt}), write a detailed, informative news article body of 4-6 paragraphs.
-
-STRICT RULES:
-- Only use facts that can be directly derived from the provided information
-- Do NOT invent quotes, statistics, names, dates, or claims not present in the source material
-- Do NOT speculate or add opinion
-- If the source material is limited, expand with relevant factual background/context about the topic that is universally known (e.g., what the organization does, historical context)
-- Write in professional third-person journalistic style
-- Each paragraph should be 2-4 sentences
-- Separate paragraphs with a blank line
-
-VERIFIED SOURCE MATERIAL:
-${knownFacts}
-
-Write the article body now:`;
-
   const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+    "https://ai.gateway.lovable.dev/v1/chat/completions",
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": lovableApiKey,
+        "Authorization": `Bearer ${lovableApiKey}`,
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 800 },
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional news journalist writing for GAINN, a global AI-powered news network.
+Write detailed, informative news article bodies using ONLY verified facts provided.
+STRICT RULES:
+- Only use facts directly derived from the provided information
+- Do NOT invent quotes, statistics, names, dates, or claims not in the source material
+- Do NOT speculate or add opinion
+- Expand with universally-known factual background/context if source material is limited
+- Write in professional third-person journalistic style
+- 4-6 paragraphs, 2-4 sentences each
+- Separate paragraphs with a blank line`,
+          },
+          {
+            role: "user",
+            content: `Source: "${sourceName}" (published ${publishedAt})
+
+VERIFIED SOURCE MATERIAL:
+${knownFacts}
+
+Write the article body now:`,
+          },
+        ],
+        temperature: 0.2,
+        max_tokens: 800,
       }),
     }
   );
 
   if (!response.ok) {
-    console.error("Gemini expand error:", response.status);
+    const errText = await response.text().catch(() => "");
+    console.error("AI Gateway expand error:", response.status, errText);
     return partialContent || description;
   }
 
   const json = await response.json();
-  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = json?.choices?.[0]?.message?.content;
   return text?.trim() || partialContent || description;
 }
 
