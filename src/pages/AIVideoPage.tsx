@@ -48,6 +48,55 @@ interface VideoRecord {
 }
 
 
+import { useLocation } from "react-router-dom";
+import { GlobalHeader } from "@/components/GlobalHeader";
+import { NewsTickerBar } from "@/components/NewsTickerBar";
+import {
+  Video, Sparkles, Play, Pause, Clock, Globe, ChevronRight,
+  Loader2, RefreshCw, Download, AlertCircle,
+  Mic, Film, BookOpen, Zap, TrendingUp, Image as ImageIcon,
+  PlayCircle, Volume2, VolumeX, Headphones, Square, Radio,
+  Library, CalendarDays, ArrowUpRight
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+const SUGGESTED_TOPICS = [
+  { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
+  { label: "AI Revolution in 2026", icon: "🤖", category: "AI" },
+  { label: "Global Economy & Tariffs", icon: "📈", category: "Economy" },
+  { label: "Climate Emergency Updates", icon: "🌿", category: "Environment" },
+  { label: "US Politics & Policy", icon: "🏛️", category: "Politics" },
+  { label: "Space Exploration Breakthroughs", icon: "🚀", category: "Science" },
+  { label: "Cybersecurity & Tech Giants", icon: "💻", category: "Technology" },
+  { label: "Health & Pandemic Preparedness", icon: "🏥", category: "Health" },
+];
+
+interface VideoScript {
+  title: string;
+  duration: string;
+  category: string;
+  thumbnailPrompt: string;
+  script: string;
+  rawHeadlines: string[];
+  generatedAt: string;
+}
+
+interface VideoRecord {
+  id: string;
+  title: string;
+  category: string | null;
+  duration: string | null;
+  script: string;
+  thumbnail_prompt: string | null;
+  thumbnail_url: string | null;
+  raw_headlines: string[] | null;
+  generated_at: string | null;
+  created_at: string | null;
+}
+
+
 
 
 
