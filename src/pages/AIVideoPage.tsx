@@ -516,6 +516,27 @@ export default function AIVideoPage() {
     }
   };
 
+  const loadVideoFromLibrary = (record: VideoRecord) => {
+    setVideoScript({
+      title: record.title,
+      duration: record.duration ?? "6-8 min",
+      category: record.category ?? "Global Affairs",
+      thumbnailPrompt: record.thumbnail_prompt ?? "",
+      script: record.script ?? "",
+      rawHeadlines: Array.isArray(record.raw_headlines) ? record.raw_headlines : [],
+      generatedAt: record.generated_at ?? new Date().toISOString(),
+    });
+    setError(null);
+    setTopic(record.title);
+    // Use the already-generated thumbnail if available
+    if (record.thumbnail_url) {
+      setThumbnailUrl(record.thumbnail_url);
+    } else if (record.thumbnail_prompt) {
+      generateThumbnail(record.thumbnail_prompt, record.title);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
 
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
