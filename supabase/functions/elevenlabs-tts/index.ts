@@ -70,20 +70,21 @@ serve(async (req) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error("ElevenLabs TTS error:", response.status, errText);
-      if (response.status === 401) {
-        return new Response(
-          JSON.stringify({ error: "Invalid ElevenLabs API key" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "ElevenLabs rate limit reached — try again shortly." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+
+      // Parse the actual ElevenLabs error detail
+      let userMessage = "TTS generation failed";
+      try {
+        const parsed = JSON.parse(errText);
+        const detail = parsed?.detail?.message || parsed?.detail?.status;
+        if (detail?.includes("unusual_activity") || detail?.includes("Free Tier")) {
+          userMessage = "ElevenLabs Free Tier is blocked from server environments. Please upgrade to a paid ElevenLabs plan, or use the browser voice-over below.";
+        } else if (detail) {
+          userMessage = detail;
+        }
+      } catch (_) { /* ignore parse errors */ }
+
       return new Response(
-        JSON.stringify({ error: "TTS generation failed", details: errText }),
+        JSON.stringify({ error: userMessage, useClientFallback: true }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
