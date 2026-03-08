@@ -238,6 +238,113 @@ function AudioPlayer({
   );
 }
 
+// Browser Web Speech API voice player (free fallback)
+function BrowserVoicePlayer({ script, title }: { script: string; title: string }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const cleanText = script
+    .replace(/\*\*[A-Z\s]+\*\*/g, "")
+    .replace(/#{1,3}\s+\w+/g, "")
+    .replace(/\*\*/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 5000);
+
+  const play = useCallback(() => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(cleanText);
+    utter.rate = 0.9;
+    utter.pitch = 0.85;
+    utter.volume = 1;
+    // Pick a deep male voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => /male|daniel|google uk|en-gb/i.test(v.name));
+    if (preferred) utter.voice = preferred;
+    utter.onend = () => { setIsPlaying(false); setIsPaused(false); };
+    utter.onerror = () => { setIsPlaying(false); setIsPaused(false); };
+    uttRef.current = utter;
+    window.speechSynthesis.speak(utter);
+    setIsPlaying(true);
+    setIsPaused(false);
+  }, [cleanText]);
+
+  const pause = useCallback(() => {
+    window.speechSynthesis.pause();
+    setIsPaused(true);
+  }, []);
+
+  const resume = useCallback(() => {
+    window.speechSynthesis.resume();
+    setIsPaused(false);
+  }, []);
+
+  const stop = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setIsPlaying(false);
+    setIsPaused(false);
+  }, []);
+
+  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
+
+  return (
+    <div className="bg-surface-1 border border-border rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-7 h-7 rounded-lg bg-gainn-green/15 border border-gainn-green/30 flex items-center justify-center flex-shrink-0">
+          <Radio className="w-3.5 h-3.5 text-gainn-green" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground truncate">{title}</p>
+          <p className="text-[10px] font-mono text-muted-foreground">Browser Voice-Over · Web Speech API</p>
+        </div>
+        {isPlaying && !isPaused && (
+          <div className="flex items-center gap-0.5">
+            {[0,1,2,3].map(i => (
+              <div key={i} className="w-0.5 bg-gainn-green rounded-full animate-pulse"
+                style={{ height: `${8+(i%3)*4}px`, animationDelay: `${i*0.1}s` }} />
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        {!isPlaying ? (
+          <button onClick={play}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-green text-background text-xs font-semibold hover:bg-gainn-green/80 transition-colors">
+            <Play className="w-3 h-3" /> Play Voice-Over
+          </button>
+        ) : isPaused ? (
+          <>
+            <button onClick={resume}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-green text-background text-xs font-semibold hover:bg-gainn-green/80 transition-colors">
+              <Play className="w-3 h-3" /> Resume
+            </button>
+            <button onClick={stop}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-border text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Square className="w-3 h-3" /> Stop
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={pause}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-amber/15 border border-gainn-amber/30 text-gainn-amber text-xs font-semibold hover:bg-gainn-amber/25 transition-colors">
+              <Pause className="w-3 h-3" /> Pause
+            </button>
+            <button onClick={stop}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-border text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Square className="w-3 h-3" /> Stop
+            </button>
+          </>
+        )}
+        <span className="text-[10px] font-mono text-muted-foreground ml-auto">
+          ~{Math.round(cleanText.split(" ").length / 140)} min
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function AIVideoPage() {
   const [topic, setTopic] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -247,6 +354,7 @@ export default function AIVideoPage() {
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [useBrowserVoice, setUseBrowserVoice] = useState(false);
   const { toast } = useToast();
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -261,6 +369,7 @@ export default function AIVideoPage() {
     setVideoScript(null);
     setThumbnailUrl(null);
     setAudioUrl(null);
+    setUseBrowserVoice(false);
 
     try {
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
@@ -289,7 +398,6 @@ export default function AIVideoPage() {
       setVideoScript(data);
       if (topicOverride) setTopic(topicOverride);
 
-      // Fire thumbnail + audio generation in parallel
       generateThumbnail(data.thumbnailPrompt, data.title);
       generateAudio(data.script, data.title);
     } catch (e) {
@@ -312,9 +420,7 @@ export default function AIVideoPage() {
         body: JSON.stringify({ thumbnailPrompt: prompt, title }),
       });
       const data = await res.json();
-      if (res.ok && data.imageUrl) {
-        setThumbnailUrl(data.imageUrl);
-      }
+      if (res.ok && data.imageUrl) setThumbnailUrl(data.imageUrl);
     } catch (e) {
       console.error("Thumbnail generation failed:", e);
     } finally {
@@ -325,6 +431,7 @@ export default function AIVideoPage() {
   const generateAudio = async (script: string, title: string) => {
     setIsGeneratingAudio(true);
     setAudioUrl(null);
+    setUseBrowserVoice(false);
     try {
       const res = await fetch(`${supabaseUrl}/functions/v1/elevenlabs-tts`, {
         method: "POST",
@@ -337,20 +444,17 @@ export default function AIVideoPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({
-          title: "Voice-over failed",
-          description: data.error || "Could not generate audio",
-          variant: "destructive",
-        });
+        // Fall back to browser voice if ElevenLabs fails (free tier blocked)
+        console.warn("ElevenLabs TTS failed, falling back to browser voice:", data.error);
+        setUseBrowserVoice(true);
         return;
       }
       if (data.audioContent) {
-        const url = `data:audio/mpeg;base64,${data.audioContent}`;
-        setAudioUrl(url);
+        setAudioUrl(`data:audio/mpeg;base64,${data.audioContent}`);
       }
     } catch (e) {
-      console.error("Audio generation failed:", e);
-      toast({ title: "Voice-over error", description: "Network error generating audio", variant: "destructive" });
+      console.error("Audio generation failed, using browser fallback");
+      setUseBrowserVoice(true);
     } finally {
       setIsGeneratingAudio(false);
     }
