@@ -70,17 +70,42 @@ serve(async (req) => {
     }
 
     const aiData = await aiRes.json();
-    const imageB64 = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    console.log("AI response keys:", JSON.stringify(Object.keys(aiData)));
+    const message = aiData.choices?.[0]?.message;
+    console.log("Message keys:", JSON.stringify(message ? Object.keys(message) : null));
 
-    if (!imageB64) {
-      console.error("No image in response:", JSON.stringify(aiData));
+    // Try multiple possible response shapes
+    let finalUrl: string | null = null;
+
+    // Shape 1: images array (documented format)
+    if (message?.images?.[0]?.image_url?.url) {
+      finalUrl = message.images[0].image_url.url;
+    }
+    // Shape 2: content as array of parts
+    else if (Array.isArray(message?.content)) {
+      for (const part of message.content) {
+        if (part?.type === "image_url" && part?.image_url?.url) {
+          finalUrl = part.image_url.url;
+          break;
+        }
+        if (part?.inline_data?.data) {
+          finalUrl = `data:${part.inline_data.mime_type || "image/png"};base64,${part.inline_data.data}`;
+          break;
+        }
+      }
+    }
+    // Shape 3: content is a base64 string directly
+    else if (typeof message?.content === "string" && message.content.startsWith("data:image")) {
+      finalUrl = message.content;
+    }
+
+    if (!finalUrl) {
+      console.error("No image in response. Full response:", JSON.stringify(aiData).slice(0, 500));
       return new Response(
         JSON.stringify({ error: "No image returned from AI" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const finalUrl = imageB64;
 
     return new Response(
       JSON.stringify({ imageUrl: finalUrl, generatedAt: new Date().toISOString() }),
