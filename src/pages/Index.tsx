@@ -40,12 +40,15 @@ const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string |
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState("All");
+  const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
   const navigate = useNavigate();
 
   const newsCategory = activeCategory === "All" ? "all" : activeCategory;
+  const location = geoToQuery(geo);
   const { articles, isLive, isLoading, isError, error, fetchedAt, refresh } = useNews({
     category: newsCategory,
     pageSize: 20,
+    location,
   });
 
   return (
