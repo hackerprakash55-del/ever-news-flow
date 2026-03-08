@@ -190,13 +190,6 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Department Overview */}
-            <DepartmentOverview />
-
-            {/* Pipeline Log */}
-            <div style={{ height: 400 }}>
-              <PipelineLog />
-            </div>
 
             {/* AI Capabilities Card */}
             <div className="card-glass rounded-lg p-4">
