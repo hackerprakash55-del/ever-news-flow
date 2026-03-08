@@ -33,6 +33,41 @@ interface VideoScript {
   generatedAt: string;
 }
 
+interface VideoRecord {
+  id: string;
+  title: string;
+  category: string;
+  duration: string;
+  script: string;
+  thumbnail_prompt: string;
+  raw_headlines: string[];
+  generated_at: string;
+  created_at: string;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  "AI": "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/30",
+  "Technology": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
+  "Economy": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Politics": "bg-gainn-red/20 text-gainn-red border-gainn-red/30",
+  "Environment": "bg-gainn-green/20 text-gainn-green border-gainn-green/30",
+  "Science": "bg-gainn-cyan/20 text-gainn-cyan border-gainn-cyan/30",
+  "Health": "bg-gainn-amber/20 text-gainn-amber border-gainn-amber/30",
+  "Global Affairs": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
+};
+
+const CATEGORY_GRADIENTS: Record<string, string> = {
+  "AI": "from-gainn-purple/30 to-gainn-blue/10",
+  "Technology": "from-gainn-blue/30 to-gainn-cyan/10",
+  "Economy": "from-gainn-green/30 to-gainn-cyan/10",
+  "Politics": "from-gainn-red/30 to-gainn-amber/10",
+  "Environment": "from-gainn-green/30 to-gainn-blue/10",
+  "Science": "from-gainn-cyan/30 to-gainn-blue/10",
+  "Health": "from-gainn-amber/30 to-gainn-green/10",
+  "Global Affairs": "from-gainn-blue/30 to-gainn-purple/10",
+};
+
+
 function formatScript(script: string) {
   return script
     .split("\n")
