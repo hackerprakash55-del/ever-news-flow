@@ -1,12 +1,14 @@
 import aiAnchorImg from "@/assets/ai-anchor.jpg";
 import { Play, Radio, Volume2 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useNews } from "@/hooks/useNews";
 
 export const AIAnchorPanel = () => {
   const [playing, setPlaying] = useState(false);
   const [selected, setSelected] = useState(0);
   const { articles, isLoading } = useNews({ pageSize: 6 });
+  const navigate = useNavigate();
 
   const segments = articles.slice(0, 6).map((a, i) => ({
     id: a.id,
@@ -120,7 +122,7 @@ export const AIAnchorPanel = () => {
               : segments.map((seg, i) => (
                   <button
                     key={seg.id}
-                    onClick={() => setSelected(i)}
+                    onClick={() => { setSelected(i); navigate(`/article/${seg.id}`); }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-left border-b border-border/50 transition-colors hover:bg-surface-2 ${
                       selected === i ? "bg-gainn-blue/10 border-l-2 border-l-gainn-blue" : ""
                     }`}
