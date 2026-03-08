@@ -3,8 +3,9 @@ import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import {
   Video, Sparkles, Play, Clock, Globe, ChevronRight,
-  Loader2, RefreshCw, Download, Share2, AlertCircle,
-  Mic, Film, BookOpen, Zap, TrendingUp
+  Loader2, RefreshCw, Download, AlertCircle,
+  Mic, Film, BookOpen, Zap, TrendingUp, Image as ImageIcon,
+  PlayCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +38,6 @@ function formatScript(script: string) {
     .map((line, i) => {
       const trimmed = line.trim();
       if (!trimmed) return null;
-      // Section headers like **OPENING** or ## BACKGROUND
       if (/^\*\*[A-Z\s]+\*\*$/.test(trimmed) || /^#{1,3}\s/.test(trimmed)) {
         const label = trimmed.replace(/\*\*/g, "").replace(/^#+\s/, "");
         return (
@@ -62,6 +62,8 @@ export default function AIVideoPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [videoScript, setVideoScript] = useState<VideoScript | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const { toast } = useToast();
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -74,6 +76,7 @@ export default function AIVideoPage() {
     setIsGenerating(true);
     setError(null);
     setVideoScript(null);
+    setThumbnailUrl(null);
 
     try {
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
@@ -101,10 +104,36 @@ export default function AIVideoPage() {
 
       setVideoScript(data);
       if (topicOverride) setTopic(topicOverride);
+
+      // Auto-generate thumbnail after script is ready
+      generateThumbnail(data.thumbnailPrompt, data.title);
     } catch (e) {
       setError("Network error — please try again.");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const generateThumbnail = async (prompt: string, title: string) => {
+    setIsGeneratingThumbnail(true);
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ thumbnailPrompt: prompt, title }),
+      });
+      const data = await res.json();
+      if (res.ok && data.imageUrl) {
+        setThumbnailUrl(data.imageUrl);
+      }
+    } catch (e) {
+      console.error("Thumbnail generation failed:", e);
+    } finally {
+      setIsGeneratingThumbnail(false);
     }
   };
 
@@ -130,7 +159,7 @@ export default function AIVideoPage() {
             AI Video News Channel
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
-            Generate long-form, balanced news video scripts on any global topic — AI-researched, fact-checked, and delivered from all perspectives.
+            Generate long-form, balanced news videos on any global topic — AI-researched, fact-checked, and delivered from all perspectives.
           </p>
         </div>
 
@@ -157,7 +186,7 @@ export default function AIVideoPage() {
                 {isGenerating ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <><Sparkles className="w-4 h-4 mr-1.5" /> Generate</>
+                  <><Video className="w-4 h-4 mr-1.5" /> Generate</>
                 )}
               </Button>
             </div>
@@ -191,13 +220,13 @@ export default function AIVideoPage() {
               <div className="w-16 h-16 rounded-full bg-gainn-blue/10 border border-gainn-blue/30 flex items-center justify-center mx-auto mb-4">
                 <Loader2 className="w-7 h-7 text-gainn-blue animate-spin" />
               </div>
-              <h3 className="text-base font-semibold mb-2">AI Newsroom at Work</h3>
+              <h3 className="text-base font-semibold mb-2">GAINN Newsroom at Work</h3>
               <div className="space-y-1.5 text-xs font-mono text-muted-foreground">
                 {[
                   "📡 Pulling latest headlines from global feeds...",
                   "🔍 Researching all perspectives and viewpoints...",
-                  "✍️ Writing balanced, long-form script...",
-                  "🎬 Formatting for video production...",
+                  "✍️ Writing balanced, long-form news script...",
+                  "🎬 Generating cinematic video thumbnail...",
                 ].map((step) => (
                   <div key={step} className="flex items-center gap-2 justify-center">
                     <div className="w-1.5 h-1.5 rounded-full bg-gainn-blue animate-pulse" />
@@ -227,36 +256,99 @@ export default function AIVideoPage() {
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 mt-2">
             {/* Script Panel */}
             <div className="card-glass rounded-xl overflow-hidden border border-border">
-              {/* Video Header */}
-              <div className="relative bg-gradient-to-br from-surface-1 to-surface-2 p-6 border-b border-border">
-                <div className="absolute inset-0 opacity-5 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--gainn-blue)),transparent)]" />
-                <div className="relative">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gainn-red/15 text-gainn-red border border-gainn-red/30 uppercase tracking-wider">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gainn-red animate-pulse" />
-                      GAINN Video
-                    </span>
-                    <span className="text-[10px] font-mono text-muted-foreground border border-border px-2 py-0.5 rounded-full">
-                      {videoScript.category}
-                    </span>
+
+              {/* VIDEO PLAYER */}
+              <div className="relative w-full bg-black" style={{ aspectRatio: "16/9" }}>
+                {isGeneratingThumbnail ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-1">
+                    <Loader2 className="w-8 h-8 text-gainn-blue animate-spin" />
+                    <span className="text-xs font-mono text-muted-foreground">Generating cinematic thumbnail...</span>
                   </div>
-                  <h2 className="text-xl md:text-2xl font-display text-foreground mb-3 leading-tight">
-                    {videoScript.title}
-                  </h2>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1.5 font-mono">
-                      <Clock className="w-3 h-3" /> {videoScript.duration}
-                    </span>
-                    <span className="flex items-center gap-1.5 font-mono">
-                      <Globe className="w-3 h-3" /> All perspectives
-                    </span>
-                    <span className="flex items-center gap-1.5 font-mono">
-                      <Film className="w-3 h-3" /> AI-generated script
-                    </span>
-                    <span className="text-gainn-green font-mono">
-                      {new Date(videoScript.generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </span>
+                ) : thumbnailUrl ? (
+                  <>
+                    <img
+                      src={thumbnailUrl}
+                      alt={videoScript.title}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Video overlay controls */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 flex flex-col justify-between p-4 md:p-6">
+                      {/* Top bar */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gainn-red text-white uppercase tracking-wider">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                            GAINN LIVE
+                          </span>
+                          <span className="text-[10px] font-mono text-white/70 bg-black/40 px-2 py-0.5 rounded-full">
+                            {videoScript.category}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-white/60 bg-black/40 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {videoScript.duration}
+                        </span>
+                      </div>
+                      {/* Center play button */}
+                      <div className="flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors">
+                          <PlayCircle className="w-10 h-10 text-white" />
+                        </div>
+                      </div>
+                      {/* Bottom title */}
+                      <div>
+                        <h2 className="text-white font-display text-lg md:text-xl leading-tight drop-shadow-lg">
+                          {videoScript.title}
+                        </h2>
+                        <div className="flex items-center gap-3 mt-1 text-white/60 text-[10px] font-mono">
+                          <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> All perspectives</span>
+                          <span className="flex items-center gap-1"><Film className="w-3 h-3" /> AI-generated</span>
+                          <span className="text-gainn-green">
+                            {new Date(videoScript.generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-1">
+                    <div className="w-14 h-14 rounded-full bg-surface-2 border border-border flex items-center justify-center">
+                      <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <span className="text-xs font-mono text-muted-foreground">Thumbnail unavailable</span>
+                    <button
+                      onClick={() => generateThumbnail(videoScript.thumbnailPrompt, videoScript.title)}
+                      className="text-xs text-gainn-blue underline"
+                    >
+                      Retry generation
+                    </button>
                   </div>
+                )}
+              </div>
+
+              {/* Video Header Meta */}
+              <div className="px-6 pt-4 pb-2 border-b border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gainn-red/15 text-gainn-red border border-gainn-red/30 uppercase tracking-wider">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gainn-red animate-pulse" />
+                    GAINN Video
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground border border-border px-2 py-0.5 rounded-full">
+                    {videoScript.category}
+                  </span>
+                </div>
+                <h2 className="text-xl md:text-2xl font-display text-foreground leading-tight">
+                  {videoScript.title}
+                </h2>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                  <span className="flex items-center gap-1.5 font-mono">
+                    <Clock className="w-3 h-3" /> {videoScript.duration}
+                  </span>
+                  <span className="flex items-center gap-1.5 font-mono">
+                    <Globe className="w-3 h-3" /> All perspectives
+                  </span>
+                  <span className="flex items-center gap-1.5 font-mono">
+                    <Film className="w-3 h-3" /> AI-generated script
+                  </span>
                 </div>
               </div>
 
@@ -292,6 +384,20 @@ export default function AIVideoPage() {
                 >
                   <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Regenerate
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateThumbnail(videoScript.thumbnailPrompt, videoScript.title)}
+                  disabled={isGeneratingThumbnail}
+                  className="border-gainn-purple/30 text-gainn-purple hover:bg-gainn-purple/10"
+                >
+                  {isGeneratingThumbnail ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  New Thumbnail
+                </Button>
               </div>
             </div>
 
@@ -301,7 +407,7 @@ export default function AIVideoPage() {
               <div className="card-glass rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-2 mb-3">
                   <Film className="w-4 h-4 text-gainn-purple" />
-                  <h4 className="text-sm font-semibold">Thumbnail Concept</h4>
+                  <h4 className="text-sm font-semibold">Visual Concept</h4>
                 </div>
                 <div className="bg-surface-2 rounded-lg p-3 border border-border">
                   <p className="text-xs text-muted-foreground italic leading-relaxed">
@@ -380,7 +486,7 @@ export default function AIVideoPage() {
             {[
               { icon: Globe, title: "Live Global News", desc: "Scripts sourced from real-time headlines across 12,000+ publications worldwide.", color: "text-gainn-blue" },
               { icon: Play, title: "Balanced Reporting", desc: "Every script presents 3+ perspectives — no political bias, no sensationalism.", color: "text-gainn-green" },
-              { icon: Film, title: "Video-Ready Format", desc: "Structured scripts with timed sections, ready for AI voice-over or anchor recording.", color: "text-gainn-purple" },
+              { icon: Film, title: "Video-Ready Format", desc: "Structured scripts with timed sections plus AI-generated cinematic thumbnails.", color: "text-gainn-purple" },
             ].map(({ icon: Icon, title, desc, color }) => (
               <div key={title} className="card-glass rounded-xl p-5 text-center border border-border">
                 <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center mx-auto mb-3 border border-border">
