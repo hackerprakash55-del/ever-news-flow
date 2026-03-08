@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import {
-  Video, Sparkles, Play, Clock, Globe, ChevronRight,
+  Video, Sparkles, Play, Pause, Clock, Globe, ChevronRight,
   Loader2, RefreshCw, Download, AlertCircle,
   Mic, Film, BookOpen, Zap, TrendingUp, Image as ImageIcon,
-  PlayCircle
+  PlayCircle, Volume2, VolumeX, Headphones, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +31,6 @@ interface VideoScript {
   generatedAt: string;
 }
 
-// Format script sections for readable display
 function formatScript(script: string) {
   return script
     .split("\n")
@@ -57,6 +56,188 @@ function formatScript(script: string) {
     .filter(Boolean);
 }
 
+function formatTime(seconds: number) {
+  if (!isFinite(seconds)) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// Audio Player Component
+function AudioPlayer({
+  audioUrl,
+  title,
+}: {
+  audioUrl: string;
+  title: string;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onLoaded = () => setDuration(audio.duration);
+    const onEnded = () => setIsPlaying(false);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoaded);
+    audio.addEventListener("ended", onEnded);
+    return () => {
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoaded);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [audioUrl]);
+
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      audio.play();
+      setIsPlaying(true);
+    }
+  }, [isPlaying]);
+
+  const stop = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setIsPlaying(false);
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.muted = !isMuted;
+    setIsMuted(!isMuted);
+  }, [isMuted]);
+
+  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    const bar = progressRef.current;
+    if (!audio || !bar || !duration) return;
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = ratio * duration;
+  }, [duration]);
+
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current;
+    const val = parseFloat(e.target.value);
+    if (audio) audio.volume = val;
+    setVolume(val);
+    if (val === 0) setIsMuted(true);
+    else setIsMuted(false);
+  }, []);
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="bg-surface-1 border border-gainn-blue/20 rounded-xl p-4">
+      <audio ref={audioRef} src={audioUrl} preload="auto" />
+
+      {/* Player header */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-7 h-7 rounded-lg bg-gainn-blue/15 border border-gainn-blue/30 flex items-center justify-center flex-shrink-0">
+          <Headphones className="w-3.5 h-3.5 text-gainn-blue" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground truncate">{title}</p>
+          <p className="text-[10px] font-mono text-muted-foreground">AI Anchor Voice-Over · George (ElevenLabs)</p>
+        </div>
+        {isPlaying && (
+          <div className="flex items-center gap-0.5">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="w-0.5 bg-gainn-blue rounded-full animate-pulse"
+                style={{
+                  height: `${8 + (i % 3) * 4}px`,
+                  animationDelay: `${i * 0.1}s`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div
+        ref={progressRef}
+        onClick={handleProgressClick}
+        className="relative h-1.5 bg-surface-3 rounded-full cursor-pointer mb-3 group"
+      >
+        <div
+          className="h-full bg-gainn-blue rounded-full transition-all"
+          style={{ width: `${progress}%` }}
+        />
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-gainn-blue border-2 border-background shadow opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ left: `calc(${progress}% - 6px)` }}
+        />
+      </div>
+
+      {/* Time + controls */}
+      <div className="flex items-center gap-3">
+        {/* Transport controls */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={togglePlay}
+            className="w-8 h-8 rounded-full bg-gainn-blue flex items-center justify-center hover:bg-gainn-blue/80 transition-colors"
+          >
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 text-background" />
+            ) : (
+              <Play className="w-3.5 h-3.5 text-background ml-0.5" />
+            )}
+          </button>
+          <button
+            onClick={stop}
+            className="w-7 h-7 rounded-full bg-surface-2 border border-border flex items-center justify-center hover:bg-surface-3 transition-colors"
+          >
+            <Square className="w-3 h-3 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Time */}
+        <span className="text-[10px] font-mono text-muted-foreground flex-1">
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </span>
+
+        {/* Volume */}
+        <div className="flex items-center gap-1.5">
+          <button onClick={toggleMute} className="text-muted-foreground hover:text-foreground transition-colors">
+            {isMuted || volume === 0 ? (
+              <VolumeX className="w-3.5 h-3.5" />
+            ) : (
+              <Volume2 className="w-3.5 h-3.5" />
+            )}
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={isMuted ? 0 : volume}
+            onChange={handleVolumeChange}
+            className="w-16 h-1 accent-gainn-blue cursor-pointer"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AIVideoPage() {
   const [topic, setTopic] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -64,6 +245,8 @@ export default function AIVideoPage() {
   const [error, setError] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const { toast } = useToast();
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -77,6 +260,7 @@ export default function AIVideoPage() {
     setError(null);
     setVideoScript(null);
     setThumbnailUrl(null);
+    setAudioUrl(null);
 
     try {
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
@@ -105,8 +289,9 @@ export default function AIVideoPage() {
       setVideoScript(data);
       if (topicOverride) setTopic(topicOverride);
 
-      // Auto-generate thumbnail after script is ready
+      // Fire thumbnail + audio generation in parallel
       generateThumbnail(data.thumbnailPrompt, data.title);
+      generateAudio(data.script, data.title);
     } catch (e) {
       setError("Network error — please try again.");
     } finally {
@@ -134,6 +319,40 @@ export default function AIVideoPage() {
       console.error("Thumbnail generation failed:", e);
     } finally {
       setIsGeneratingThumbnail(false);
+    }
+  };
+
+  const generateAudio = async (script: string, title: string) => {
+    setIsGeneratingAudio(true);
+    setAudioUrl(null);
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/elevenlabs-tts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ script, title }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          title: "Voice-over failed",
+          description: data.error || "Could not generate audio",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (data.audioContent) {
+        const url = `data:audio/mpeg;base64,${data.audioContent}`;
+        setAudioUrl(url);
+      }
+    } catch (e) {
+      console.error("Audio generation failed:", e);
+      toast({ title: "Voice-over error", description: "Network error generating audio", variant: "destructive" });
+    } finally {
+      setIsGeneratingAudio(false);
     }
   };
 
@@ -191,7 +410,6 @@ export default function AIVideoPage() {
               </Button>
             </div>
 
-            {/* Suggested Topics */}
             <div className="mt-4">
               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">
                 Trending topics — click to generate instantly
@@ -226,7 +444,7 @@ export default function AIVideoPage() {
                   "📡 Pulling latest headlines from global feeds...",
                   "🔍 Researching all perspectives and viewpoints...",
                   "✍️ Writing balanced, long-form news script...",
-                  "🎬 Generating cinematic video thumbnail...",
+                  "🎬 Generating cinematic thumbnail + AI voice-over...",
                 ].map((step) => (
                   <div key={step} className="flex items-center gap-2 justify-center">
                     <div className="w-1.5 h-1.5 rounded-full bg-gainn-blue animate-pulse" />
@@ -244,9 +462,7 @@ export default function AIVideoPage() {
             <div className="flex items-center gap-3 p-4 rounded-lg border border-destructive/30 bg-destructive/5 text-destructive">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span className="text-sm">{error}</span>
-              <button onClick={() => generate()} className="ml-auto text-xs underline">
-                Retry
-              </button>
+              <button onClick={() => generate()} className="ml-auto text-xs underline">Retry</button>
             </div>
           </div>
         )}
@@ -254,7 +470,7 @@ export default function AIVideoPage() {
         {/* Result */}
         {videoScript && !isGenerating && (
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 mt-2">
-            {/* Script Panel */}
+            {/* Main Panel */}
             <div className="card-glass rounded-xl overflow-hidden border border-border">
 
               {/* VIDEO PLAYER */}
@@ -266,14 +482,8 @@ export default function AIVideoPage() {
                   </div>
                 ) : thumbnailUrl ? (
                   <>
-                    <img
-                      src={thumbnailUrl}
-                      alt={videoScript.title}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Video overlay controls */}
+                    <img src={thumbnailUrl} alt={videoScript.title} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 flex flex-col justify-between p-4 md:p-6">
-                      {/* Top bar */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gainn-red text-white uppercase tracking-wider">
@@ -288,13 +498,11 @@ export default function AIVideoPage() {
                           <Clock className="w-3 h-3" /> {videoScript.duration}
                         </span>
                       </div>
-                      {/* Center play button */}
                       <div className="flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors">
+                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
                           <PlayCircle className="w-10 h-10 text-white" />
                         </div>
                       </div>
-                      {/* Bottom title */}
                       <div>
                         <h2 className="text-white font-display text-lg md:text-xl leading-tight drop-shadow-lg">
                           {videoScript.title}
@@ -315,12 +523,37 @@ export default function AIVideoPage() {
                       <ImageIcon className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <span className="text-xs font-mono text-muted-foreground">Thumbnail unavailable</span>
-                    <button
-                      onClick={() => generateThumbnail(videoScript.thumbnailPrompt, videoScript.title)}
-                      className="text-xs text-gainn-blue underline"
-                    >
+                    <button onClick={() => generateThumbnail(videoScript.thumbnailPrompt, videoScript.title)} className="text-xs text-gainn-blue underline">
                       Retry generation
                     </button>
+                  </div>
+                )}
+              </div>
+
+              {/* AUDIO PLAYER */}
+              <div className="px-4 pt-4 pb-2 border-b border-border">
+                {isGeneratingAudio ? (
+                  <div className="flex items-center gap-3 bg-surface-1 border border-gainn-blue/20 rounded-xl p-4">
+                    <Loader2 className="w-4 h-4 text-gainn-blue animate-spin flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Generating AI Voice-Over...</p>
+                      <p className="text-[10px] font-mono text-muted-foreground">ElevenLabs · George voice · ~60s</p>
+                    </div>
+                  </div>
+                ) : audioUrl ? (
+                  <AudioPlayer audioUrl={audioUrl} title={videoScript.title} />
+                ) : (
+                  <div className="flex items-center gap-3 bg-surface-1 border border-border rounded-xl p-4">
+                    <Headphones className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <p className="text-xs text-muted-foreground flex-1">Voice-over unavailable</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateAudio(videoScript.script, videoScript.title)}
+                      className="border-gainn-blue/30 text-gainn-blue hover:bg-gainn-blue/10 text-xs h-7"
+                    >
+                      <Mic className="w-3 h-3 mr-1" /> Generate
+                    </Button>
                   </div>
                 )}
               </div>
@@ -340,15 +573,9 @@ export default function AIVideoPage() {
                   {videoScript.title}
                 </h2>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                  <span className="flex items-center gap-1.5 font-mono">
-                    <Clock className="w-3 h-3" /> {videoScript.duration}
-                  </span>
-                  <span className="flex items-center gap-1.5 font-mono">
-                    <Globe className="w-3 h-3" /> All perspectives
-                  </span>
-                  <span className="flex items-center gap-1.5 font-mono">
-                    <Film className="w-3 h-3" /> AI-generated script
-                  </span>
+                  <span className="flex items-center gap-1.5 font-mono"><Clock className="w-3 h-3" /> {videoScript.duration}</span>
+                  <span className="flex items-center gap-1.5 font-mono"><Globe className="w-3 h-3" /> All perspectives</span>
+                  <span className="flex items-center gap-1.5 font-mono"><Film className="w-3 h-3" /> AI-generated</span>
                 </div>
               </div>
 
@@ -368,20 +595,10 @@ export default function AIVideoPage() {
 
               {/* Actions */}
               <div className="px-6 pb-6 flex gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-gainn-blue/30 text-gainn-blue hover:bg-gainn-blue/10"
-                  onClick={copyScript}
-                >
+                <Button variant="outline" size="sm" className="border-gainn-blue/30 text-gainn-blue hover:bg-gainn-blue/10" onClick={copyScript}>
                   <Download className="w-3.5 h-3.5 mr-1.5" /> Copy Script
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generate()}
-                  className="border-border text-muted-foreground hover:text-foreground"
-                >
+                <Button variant="outline" size="sm" onClick={() => generate()} className="border-border text-muted-foreground hover:text-foreground">
                   <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Regenerate
                 </Button>
                 <Button
@@ -391,32 +608,34 @@ export default function AIVideoPage() {
                   disabled={isGeneratingThumbnail}
                   className="border-gainn-purple/30 text-gainn-purple hover:bg-gainn-purple/10"
                 >
-                  {isGeneratingThumbnail ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
-                  )}
+                  {isGeneratingThumbnail ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5 mr-1.5" />}
                   New Thumbnail
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateAudio(videoScript.script, videoScript.title)}
+                  disabled={isGeneratingAudio}
+                  className="border-gainn-green/30 text-gainn-green hover:bg-gainn-green/10"
+                >
+                  {isGeneratingAudio ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Mic className="w-3.5 h-3.5 mr-1.5" />}
+                  New Voice-Over
                 </Button>
               </div>
             </div>
 
             {/* Sidebar */}
             <div className="space-y-4">
-              {/* Thumbnail Prompt */}
               <div className="card-glass rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-2 mb-3">
                   <Film className="w-4 h-4 text-gainn-purple" />
                   <h4 className="text-sm font-semibold">Visual Concept</h4>
                 </div>
                 <div className="bg-surface-2 rounded-lg p-3 border border-border">
-                  <p className="text-xs text-muted-foreground italic leading-relaxed">
-                    "{videoScript.thumbnailPrompt}"
-                  </p>
+                  <p className="text-xs text-muted-foreground italic leading-relaxed">"{videoScript.thumbnailPrompt}"</p>
                 </div>
               </div>
 
-              {/* Live Sources used */}
               {videoScript.rawHeadlines.length > 0 && (
                 <div className="card-glass rounded-xl p-4 border border-border">
                   <div className="flex items-center gap-2 mb-3">
@@ -435,7 +654,6 @@ export default function AIVideoPage() {
                 </div>
               )}
 
-              {/* Editorial Standards */}
               <div className="card-glass rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-4 h-4 text-gainn-amber" />
@@ -447,7 +665,7 @@ export default function AIVideoPage() {
                     { label: "Perspectives Covered", value: "3+ sides", good: true },
                     { label: "Source Attribution", value: "Included", good: true },
                     { label: "Fact-Checked", value: "AI Verified", good: true },
-                    { label: "Content Type", value: "Long-form", good: true },
+                    { label: "Voice Model", value: "ElevenLabs", good: true },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">{item.label}</span>
@@ -459,7 +677,6 @@ export default function AIVideoPage() {
                 </div>
               </div>
 
-              {/* Generate another */}
               <div className="card-glass rounded-xl p-4 border border-border">
                 <p className="text-xs text-muted-foreground mb-3">Generate another video on a different topic</p>
                 <div className="space-y-1.5">
@@ -485,7 +702,7 @@ export default function AIVideoPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mt-4">
             {[
               { icon: Globe, title: "Live Global News", desc: "Scripts sourced from real-time headlines across 12,000+ publications worldwide.", color: "text-gainn-blue" },
-              { icon: Play, title: "Balanced Reporting", desc: "Every script presents 3+ perspectives — no political bias, no sensationalism.", color: "text-gainn-green" },
+              { icon: Headphones, title: "AI Voice-Over", desc: "Every script is read aloud by a professional AI anchor voice powered by ElevenLabs.", color: "text-gainn-green" },
               { icon: Film, title: "Video-Ready Format", desc: "Structured scripts with timed sections plus AI-generated cinematic thumbnails.", color: "text-gainn-purple" },
             ].map(({ icon: Icon, title, desc, color }) => (
               <div key={title} className="card-glass rounded-xl p-5 text-center border border-border">
