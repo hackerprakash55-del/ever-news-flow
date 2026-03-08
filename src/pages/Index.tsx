@@ -7,17 +7,44 @@ import { WorldNewsMap } from "@/components/WorldNewsMap";
 import { DepartmentOverview } from "@/components/AgentCard";
 import { PipelineLog } from "@/components/PipelineLog";
 import { AIAnchorPanel } from "@/components/AIAnchorPanel";
-import { MOCK_ARTICLES, CATEGORIES } from "@/data/mockData";
+import { useNews } from "@/hooks/useNews";
+import { CATEGORIES } from "@/data/mockData";
 import { useNavigate } from "react-router-dom";
+import { RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const SkeletonCard = () => (
+  <div className="card-glass rounded-lg overflow-hidden h-48 shimmer-bg" />
+);
+
+const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string | null }) => (
+  <div className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border ${
+    isLive
+      ? "text-gainn-green border-gainn-green/30 bg-gainn-green/10"
+      : "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10"
+  }`}>
+    {isLive ? (
+      <><Wifi className="w-3 h-3" /> Live News</>
+    ) : (
+      <><WifiOff className="w-3 h-3" /> Demo Mode</>
+    )}
+    {fetchedAt && (
+      <span className="opacity-60 ml-1">
+        {new Date(fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      </span>
+    )}
+  </div>
+);
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [showNewsroom, setShowNewsroom] = useState(false);
   const navigate = useNavigate();
 
-  const filtered = activeCategory === "All"
-    ? MOCK_ARTICLES
-    : MOCK_ARTICLES.filter((a) => a.category === activeCategory);
+  const newsCategory = activeCategory === "All" ? "all" : activeCategory;
+  const { articles, isLive, isLoading, isError, error, fetchedAt, refresh } = useNews({
+    category: newsCategory,
+    pageSize: 20,
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,38 +57,63 @@ const Index = () => {
         <BreakingNewsBanner />
         <StatsBar />
 
-        {/* Category Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
-                activeCategory === cat
-                  ? "bg-gainn-blue text-background"
-                  : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground border border-border"
-              }`}
+        {/* Category Filter + status bar */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
+                  activeCategory === cat
+                    ? "bg-gainn-blue text-background"
+                    : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground border border-border"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 ${isLoading ? "animate-spin" : ""}`}
+              onClick={refresh}
+              disabled={isLoading}
             >
-              {cat}
-            </button>
-          ))}
+              <RefreshCw className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
+
+        {/* Error banner (non-blocking) */}
+        {isError && error && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gainn-amber/30 bg-gainn-amber/5 text-xs text-gainn-amber">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>Live feed unavailable ({error}) — showing demo articles. <button onClick={refresh} className="underline">Retry</button></span>
+          </div>
+        )}
 
         {/* Main content grid */}
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
           {/* Left column */}
           <div className="space-y-6">
             {/* Hero */}
-            {filtered[0] && <HeroArticleCard article={filtered[0]} />}
+            {isLoading ? (
+              <div className="rounded-lg shimmer-bg" style={{ minHeight: 480 }} />
+            ) : articles[0] ? (
+              <HeroArticleCard article={articles[0]} />
+            ) : null}
 
             {/* 3-col grid */}
-            {filtered.length > 1 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filtered.slice(1, 4).map((a) => (
-                  <ArticleCard key={a.id} article={a} />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {isLoading
+                ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+                : articles.slice(1, 4).map((a) => <ArticleCard key={a.id} article={a} />)
+              }
+            </div>
 
             {/* AI Anchor */}
             <AIAnchorPanel />
@@ -70,16 +122,28 @@ const Index = () => {
             <WorldNewsMap />
 
             {/* More articles */}
-            {filtered.length > 4 && (
+            {!isLoading && articles.length > 4 && (
               <div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono mb-3">
-                  More Stories
+                  More Stories — {activeCategory === "All" ? "Top Headlines" : activeCategory}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {filtered.slice(4).map((a) => (
+                  {articles.slice(4).map((a) => (
                     <ArticleCard key={a.id} article={a} />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Load more indicator */}
+            {!isLoading && articles.length > 0 && (
+              <div className="text-center py-4">
+                <span className="text-xs font-mono text-muted-foreground">
+                  {articles.length} articles • {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
+                  <button onClick={refresh} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
+                    Refresh
+                  </button>
+                </span>
               </div>
             )}
           </div>
@@ -88,13 +152,19 @@ const Index = () => {
           <div className="space-y-4">
             {/* Trending */}
             <div className="card-glass rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-border">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                 <span className="text-sm font-semibold">Trending Now</span>
+                {isLive && <span className="text-[10px] font-mono text-gainn-green">● Live</span>}
               </div>
               <div className="p-2 space-y-1">
-                {MOCK_ARTICLES.map((a, i) => (
-                  <ArticleListItem key={a.id} article={a} index={i} />
-                ))}
+                {isLoading
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="h-14 rounded shimmer-bg mx-2 mb-1" />
+                    ))
+                  : articles.slice(0, 8).map((a, i) => (
+                      <ArticleListItem key={a.id} article={a} index={i} />
+                    ))
+                }
               </div>
             </div>
 
@@ -143,7 +213,7 @@ const Index = () => {
             © 2026 GAINN — Global AI News Network. Powered by 100+ autonomous AI agents.
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>All articles AI-generated and fact-verified</span>
+            <span>{isLive ? "Live news via NewsAPI" : "Demo mode"}</span>
             <span className="text-border">|</span>
             <span className="text-gainn-green">All systems operational</span>
           </div>
