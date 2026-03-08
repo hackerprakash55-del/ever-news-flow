@@ -11,8 +11,9 @@ import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, AlertCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
 
 const SkeletonCard = () => (
   <div className="card-glass rounded-lg overflow-hidden h-48 shimmer-bg" />
