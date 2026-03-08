@@ -26,6 +26,7 @@ function mapToArticle(raw: any): Article {
 interface UseNewsOptions {
   category?: string;
   pageSize?: number;
+  location?: string; // city / state / country string
 }
 
 interface NewsResult {
@@ -39,7 +40,7 @@ interface NewsResult {
   refresh: () => void;
 }
 
-async function fetchLiveNews(category: string, pageSize: number) {
+async function fetchLiveNews(category: string, pageSize: number, location: string) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -51,6 +52,7 @@ async function fetchLiveNews(category: string, pageSize: number) {
     category: category || "all",
     pageSize: String(pageSize),
   });
+  if (location) params.set("location", location);
 
   const response = await fetch(
     `${supabaseUrl}/functions/v1/fetch-news?${params}`,
