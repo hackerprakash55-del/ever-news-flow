@@ -1,12 +1,15 @@
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MOCK_ARTICLES, Article } from "@/data/mockData";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
-import { ArticleCard } from "@/components/ArticleCards";
-import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, ChevronRight, ExternalLink, MapPin, Layers, TrendingUp } from "lucide-react";
+import { Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark, BookmarkCheck, ChevronRight, ExternalLink, MapPin, Layers, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNews } from "@/hooks/useNews";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const CredibilityMeter = ({ score }: { score: number }) => {
   const segments = 10;
