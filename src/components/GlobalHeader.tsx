@@ -339,8 +339,10 @@ export const GlobalHeader = ({
         </div>
       )}
 
-      {/* Search overlay */}
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {/* Search overlay — lazy loaded */}
+      <Suspense fallback={null}>
+        <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      </Suspense>
     </header>
   );
 };
