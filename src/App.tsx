@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import ArticlePage from "./pages/ArticlePage";
 import NewsroomPage from "./pages/NewsroomPage";
 import AIVideoPage from "./pages/AIVideoPage";
+import VideoLibraryPage from "./pages/VideoLibraryPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
