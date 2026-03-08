@@ -1,7 +1,15 @@
 import { Article } from "@/data/mockData";
 import { Shield, Clock, ExternalLink, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
+// Store live article in sessionStorage so the article page can retrieve it
+function storeAndNavigate(article: Article, navigate: (path: string) => void) {
+  try {
+    sessionStorage.setItem(`article-${article.id}`, JSON.stringify(article));
+  } catch {}
+  navigate(`/article/${article.id}`);
+}
 
 const CredibilityBadge = ({ score }: { score: number }) => {
   const cls = score >= 90 ? "credibility-high" : score >= 70 ? "credibility-medium" : "credibility-low";
