@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, Search, User, Radio, Menu, X, Globe, ChevronDown } from "lucide-react";
+import { Bell, Search, User, Radio, Menu, X, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import gainnLogo from "@/assets/gainn-logo.png";
 
 const NAV_ITEMS = [
