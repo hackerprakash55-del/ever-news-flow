@@ -80,9 +80,9 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   };
 }
 
-export function useNews({ category = "all", pageSize = 20 }: UseNewsOptions = {}): NewsResult {
+export function useNews({ category = "all", pageSize = 20, location = "" }: UseNewsOptions = {}): NewsResult {
   const queryClient = useQueryClient();
-  const queryKey = ["news", category, pageSize];
+  const queryKey = ["news", category, pageSize, location];
 
   const {
     data,
@@ -92,10 +92,10 @@ export function useNews({ category = "all", pageSize = 20 }: UseNewsOptions = {}
     refetch,
   } = useQuery({
     queryKey,
-    queryFn: () => fetchLiveNews(category, pageSize),
+    queryFn: () => fetchLiveNews(category, pageSize, location),
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,       // silent background refresh every 5 min
-    refetchIntervalInBackground: false,     // pause when tab is hidden
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
     retry: 1,
     retryDelay: 2000,
   });
