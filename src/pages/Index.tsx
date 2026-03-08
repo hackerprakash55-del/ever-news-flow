@@ -26,9 +26,9 @@ const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string |
       : "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10"
   }`}>
     {isLive ? (
-      <><Wifi className="w-3 h-3" /> Live News</>
+      <><Wifi className="w-3 h-3" /> Live</>
     ) : (
-      <><WifiOff className="w-3 h-3" /> Demo Mode</>
+      <><WifiOff className="w-3 h-3" /> Demo</>
     )}
     {fetchedAt && (
       <span className="opacity-60 ml-1">
