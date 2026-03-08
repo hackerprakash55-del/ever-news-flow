@@ -80,6 +80,13 @@ export const GlobalHeader = ({ onNewsroomClick }: GlobalHeaderProps) => {
               {item.label}
             </Link>
           ))}
+          <Link
+            to="/video"
+            className="ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gainn-purple hover:bg-gainn-purple/10 rounded-md transition-colors border border-gainn-purple/25 hover:border-gainn-purple/50"
+          >
+            <Video className="w-3.5 h-3.5" />
+            AI Video
+          </Link>
         </nav>
 
         {/* Right actions */}
