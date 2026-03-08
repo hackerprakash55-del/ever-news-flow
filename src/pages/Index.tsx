@@ -147,7 +147,10 @@ const Index = () => {
             {!isLoading && articles.length > 4 && (
               <div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono mb-3">
-                  More Stories — {activeCategory === "All" ? "Top Headlines" : activeCategory}
+                  More Stories —{" "}
+                  {geo.city ?? geo.state ?? geo.country
+                    ? `${geo.city ?? geo.state ?? geo.country} · ${activeCategory === "All" ? "All Topics" : activeCategory}`
+                    : activeCategory === "All" ? "Top Headlines" : activeCategory}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {articles.slice(4).map((a) => (
@@ -161,7 +164,9 @@ const Index = () => {
             {!isLoading && articles.length > 0 && (
               <div className="text-center py-4">
                 <span className="text-xs font-mono text-muted-foreground">
-                  {articles.length} articles • {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
+                  {articles.length} articles
+                  {location && <> • <span className="text-gainn-cyan">{location}</span></>}
+                  {" "}• {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
                   <button onClick={refresh} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
                     Refresh
                   </button>
