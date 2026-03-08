@@ -200,7 +200,7 @@ const Index = () => {
 
             {/* AI Capabilities Card */}
             <div className="card-glass rounded-lg p-4">
-              <h4 className="text-sm font-semibold mb-3 text-gainn-cyan">AI Capabilities</h4>
+              <h4 className="text-sm font-semibold mb-3 text-accent">AI Capabilities</h4>
               <div className="space-y-2">
                 {[
                   { label: "Fake News Detection", pct: 98 },
