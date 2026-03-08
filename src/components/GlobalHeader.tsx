@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Bell, Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown } from "lucide-react";
+import { Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import gainnLogo from "@/assets/gainn-logo.png";
 import { cn } from "@/lib/utils";
+import { SearchOverlay } from "@/components/SearchOverlay";
+import { NotificationBell } from "@/components/NotificationPanel";
 
 const CATEGORIES = [
   { label: "Home",        cat: null },
@@ -132,6 +134,7 @@ export const GlobalHeader = ({
   activeCategory = "All",
 }: GlobalHeaderProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -259,18 +262,12 @@ export const GlobalHeader = ({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => setSearchOpen(true)}
           >
             <Search className="w-4 h-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground relative"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive" />
-          </Button>
+          <NotificationBell />
           <UserMenu />
           <Button
             variant="ghost"
@@ -339,6 +336,9 @@ export const GlobalHeader = ({
           </div>
         </div>
       )}
+
+      {/* Search overlay */}
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </header>
   );
 };
