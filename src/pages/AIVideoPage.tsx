@@ -60,7 +60,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+
+
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
