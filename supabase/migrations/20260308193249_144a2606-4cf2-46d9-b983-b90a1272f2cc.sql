@@ -1,0 +1,1 @@
+ALTER TABLE public.generated_videos ADD COLUMN IF NOT EXISTS thumbnail_url TEXT DEFAULT NULL;

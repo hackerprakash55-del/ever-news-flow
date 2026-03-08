@@ -24,6 +24,7 @@ export type Database = {
           raw_headlines: Json | null
           script: string
           thumbnail_prompt: string | null
+          thumbnail_url: string | null
           title: string
         }
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           raw_headlines?: Json | null
           script: string
           thumbnail_prompt?: string | null
+          thumbnail_url?: string | null
           title: string
         }
         Update: {
@@ -46,6 +48,7 @@ export type Database = {
           raw_headlines?: Json | null
           script?: string
           thumbnail_prompt?: string | null
+          thumbnail_url?: string | null
           title?: string
         }
         Relationships: []
