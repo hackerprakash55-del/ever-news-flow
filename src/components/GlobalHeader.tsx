@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Bell, Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown } from "lucide-react";
+import { Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import gainnLogo from "@/assets/gainn-logo.png";
 import { cn } from "@/lib/utils";
+import { SearchOverlay } from "@/components/SearchOverlay";
+import { NotificationBell } from "@/components/NotificationPanel";
 
 const CATEGORIES = [
   { label: "Home",        cat: null },
