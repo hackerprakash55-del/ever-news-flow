@@ -137,7 +137,7 @@ async function autoGenerateScript(topic: string): Promise<VideoRecord | null> {
 
 export function TrendingVideosSection() {
   const navigate = useNavigate();
-  const { articles } = useNews({ pageSize: 10 });
+  const { articles, isLoading: newsLoading } = useNews({ pageSize: 10 });
   const [videos, setVideos] = useState<VideoRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
@@ -152,13 +152,19 @@ export function TrendingVideosSection() {
     loadVideos();
   }, []);
 
-  // Once articles are loaded, auto-generate if library is empty
+  // Once BOTH the DB load and news articles are ready, auto-generate if library is empty
   useEffect(() => {
-    if (!isLoading && videos.length === 0 && trendingTopics.length > 0 && !autoGenStarted.current) {
+    if (
+      !isLoading &&
+      !newsLoading &&
+      videos.length === 0 &&
+      trendingTopics.length > 0 &&
+      !autoGenStarted.current
+    ) {
       autoGenStarted.current = true;
       generateTrendingVideos();
     }
-  }, [isLoading, videos.length, trendingTopics.length]);
+  }, [isLoading, newsLoading, videos.length, trendingTopics.length]);
 
   const loadVideos = async () => {
     setIsLoading(true);
