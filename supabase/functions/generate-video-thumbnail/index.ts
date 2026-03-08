@@ -29,24 +29,40 @@ serve(async (req) => {
       );
     }
 
-    // Use AI gateway image generation
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+    // Use AI gateway chat completions with image modality
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        prompt: `${thumbnailPrompt}. Cinematic 16:9 news broadcast thumbnail, dramatic professional lighting, photorealistic, no text, no watermarks, ultra detailed.`,
-        n: 1,
-        size: "1920x1080",
+        model: "google/gemini-2.5-flash-image",
+        messages: [
+          {
+            role: "user",
+            content: `${thumbnailPrompt}. Cinematic 16:9 news broadcast thumbnail, dramatic professional lighting, photorealistic, no text overlays, no watermarks, ultra detailed, high quality.`,
+          },
+        ],
+        modalities: ["image", "text"],
       }),
     });
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
       console.error("Image generation error:", aiRes.status, errText);
+      if (aiRes.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit reached — please wait a moment and try again." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (aiRes.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits required — please add funds to your workspace." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: "Image generation failed", details: errText }),
         { status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -54,17 +70,17 @@ serve(async (req) => {
     }
 
     const aiData = await aiRes.json();
-    const imageUrl = aiData.data?.[0]?.url || aiData.data?.[0]?.b64_json;
+    const imageB64 = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    if (!imageUrl) {
+    if (!imageB64) {
+      console.error("No image in response:", JSON.stringify(aiData));
       return new Response(
         JSON.stringify({ error: "No image returned from AI" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // If b64_json, return as data URL
-    const finalUrl = imageUrl.startsWith("http") ? imageUrl : `data:image/png;base64,${imageUrl}`;
+    const finalUrl = imageB64;
 
     return new Response(
       JSON.stringify({ imageUrl: finalUrl, generatedAt: new Date().toISOString() }),
