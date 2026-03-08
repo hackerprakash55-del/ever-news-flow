@@ -392,7 +392,71 @@ export default function AIVideoPage() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [useBrowserVoice, setUseBrowserVoice] = useState(false);
+  const [library, setLibrary] = useState<VideoRecord[]>([]);
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
   const { toast } = useToast();
+
+  // Load video library on mount
+  useEffect(() => {
+    loadLibrary();
+  }, []);
+
+  const loadLibrary = async () => {
+    setIsLoadingLibrary(true);
+    try {
+      const { data } = await supabase
+        .from("generated_videos")
+        .select("id, title, category, duration, thumbnail_prompt, raw_headlines, generated_at, created_at")
+        .order("created_at", { ascending: false })
+        .limit(24);
+      if (data) setLibrary(data as VideoRecord[]);
+    } catch (e) {
+      console.error("Failed to load library:", e);
+    } finally {
+      setIsLoadingLibrary(false);
+    }
+  };
+
+  const saveVideoToDb = async (video: VideoScript) => {
+    try {
+      await supabase.from("generated_videos").insert({
+        title: video.title,
+        category: video.category,
+        duration: video.duration,
+        script: video.script,
+        thumbnail_prompt: video.thumbnailPrompt,
+        raw_headlines: video.rawHeadlines,
+        generated_at: video.generatedAt,
+      });
+      // Refresh library to show the new video
+      loadLibrary();
+    } catch (e) {
+      console.error("Failed to save video:", e);
+    }
+  };
+
+  const loadVideoFromLibrary = (record: VideoRecord) => {
+    const script: VideoScript = {
+      title: record.title,
+      category: record.category,
+      duration: record.duration,
+      script: record.script,
+      thumbnailPrompt: record.thumbnail_prompt,
+      rawHeadlines: record.raw_headlines || [],
+      generatedAt: record.generated_at,
+    };
+    setVideoScript(script);
+    setThumbnailUrl(null);
+    setAudioUrl(null);
+    setUseBrowserVoice(false);
+    setError(null);
+    setTopic(record.title);
+    generateThumbnail(record.thumbnail_prompt, record.title);
+    generateAudio(record.script, record.title);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
