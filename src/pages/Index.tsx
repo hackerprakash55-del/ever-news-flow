@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner, StatsBar } from "@/components/BreakingNewsBanner";
@@ -10,7 +10,7 @@ import { AIAnchorPanel } from "@/components/AIAnchorPanel";
 import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { RefreshCw, Wifi, WifiOff, AlertCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
