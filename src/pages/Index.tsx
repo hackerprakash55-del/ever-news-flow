@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner, StatsBar } from "@/components/BreakingNewsBanner";
@@ -10,7 +10,7 @@ import { AIAnchorPanel } from "@/components/AIAnchorPanel";
 import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { RefreshCw, Wifi, WifiOff, AlertCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
@@ -26,9 +26,9 @@ const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string |
       : "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10"
   }`}>
     {isLive ? (
-      <><Wifi className="w-3 h-3" /> Live News</>
+      <><Wifi className="w-3 h-3" /> Live</>
     ) : (
-      <><WifiOff className="w-3 h-3" /> Demo Mode</>
+      <><WifiOff className="w-3 h-3" /> Demo</>
     )}
     {fetchedAt && (
       <span className="opacity-60 ml-1">
@@ -39,9 +39,17 @@ const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string |
 );
 
 const Index = () => {
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const catFromUrl = searchParams.get("cat") ?? "All";
+  const [activeCategory, setActiveCategory] = useState(catFromUrl);
+  const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
+
+  // Sync if URL param changes (e.g. back/forward)
+  useEffect(() => {
+    setActiveCategory(searchParams.get("cat") ?? "All");
+  }, [searchParams]);
 
   const newsCategory = activeCategory === "All" ? "all" : activeCategory;
   const location = geoToQuery(geo);
@@ -53,7 +61,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <GlobalHeader onNewsroomClick={() => navigate("/newsroom")} />
+      <GlobalHeader
+        onNewsroomClick={() => navigate("/newsroom")}
+        onCategoryChange={setActiveCategory}
+        activeCategory={activeCategory}
+      />
       <NewsTickerBar />
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
@@ -62,46 +74,29 @@ const Index = () => {
         <BreakingNewsBanner />
         <StatsBar />
 
-        {/* Category Filter + Geo Filter + status bar */}
+        {/* Geo Filter + status bar */}
         <div className="space-y-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-medium font-mono transition-all ${
-                    activeCategory === cat
-                      ? "bg-gainn-blue text-background"
-                      : "bg-surface-2 text-muted-foreground hover:bg-surface-3 hover:text-foreground border border-border"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <GeoFilter value={geo} onChange={setGeo} />
-              <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-7 w-7 ${isLoading ? "animate-spin" : ""}`}
-                onClick={refresh}
-                disabled={isLoading}
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </Button>
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <GeoFilter value={geo} onChange={setGeo} />
+            <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 text-muted-foreground hover:text-foreground ${isLoading ? "animate-spin" : ""}`}
+              onClick={refresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </Button>
           </div>
 
           {/* Active geo breadcrumb */}
           {(geo.country || geo.state || geo.city) && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-blue/10 border border-gainn-blue/20 text-xs font-mono w-fit">
-              <MapPin className="w-3 h-3 text-gainn-blue" />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-mono w-fit">
+              <MapPin className="w-3 h-3 text-primary" />
               <span className="text-muted-foreground">Showing news from:</span>
-              {geo.country && <span className="text-gainn-cyan font-semibold">{geo.country}</span>}
-              {geo.state && <><span className="text-muted-foreground">›</span><span className="text-gainn-cyan font-semibold">{geo.state}</span></>}
+              {geo.country && <span className="text-accent font-semibold">{geo.country}</span>}
+              {geo.state && <><span className="text-muted-foreground">›</span><span className="text-accent font-semibold">{geo.state}</span></>}
               {geo.city && <><span className="text-muted-foreground">›</span><span className="text-gainn-green font-semibold">{geo.city}</span></>}
             </div>
           )}
@@ -109,7 +104,7 @@ const Index = () => {
 
         {/* Error banner (non-blocking) */}
         {isError && error && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gainn-amber/30 bg-gainn-amber/5 text-xs text-gainn-amber">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-destructive/30 bg-destructive/5 text-xs text-destructive">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
             <span>Live feed unavailable ({error}) — showing demo articles. <button onClick={refresh} className="underline">Retry</button></span>
           </div>
@@ -165,9 +160,9 @@ const Index = () => {
               <div className="text-center py-4">
                 <span className="text-xs font-mono text-muted-foreground">
                   {articles.length} articles
-                  {location && <> • <span className="text-gainn-cyan">{location}</span></>}
+                  {location && <> • <span className="text-accent">{location}</span></>}
                   {" "}• {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
-                  <button onClick={refresh} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
+                  <button onClick={refresh} className="text-primary hover:text-accent transition-colors">
                     Refresh
                   </button>
                 </span>
@@ -205,7 +200,7 @@ const Index = () => {
 
             {/* AI Capabilities Card */}
             <div className="card-glass rounded-lg p-4">
-              <h4 className="text-sm font-semibold mb-3 text-gainn-cyan">AI Capabilities</h4>
+              <h4 className="text-sm font-semibold mb-3 text-accent">AI Capabilities</h4>
               <div className="space-y-2">
                 {[
                   { label: "Fake News Detection", pct: 98 },
@@ -219,7 +214,7 @@ const Index = () => {
                       <span className="text-muted-foreground">{cap.label}</span>
                       <span className="font-mono text-gainn-green">{cap.pct}%</span>
                     </div>
-                    <div className="h-1 rounded-full bg-surface-3 overflow-hidden">
+                    <div className="h-1 rounded-full bg-muted overflow-hidden">
                       <div
                         className="h-full rounded-full bg-gradient-primary"
                         style={{ width: `${cap.pct}%` }}
