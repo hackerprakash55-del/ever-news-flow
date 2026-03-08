@@ -39,9 +39,17 @@ const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string |
 );
 
 const Index = () => {
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const catFromUrl = searchParams.get("cat") ?? "All";
+  const [activeCategory, setActiveCategory] = useState(catFromUrl);
+  const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
+
+  // Sync if URL param changes (e.g. back/forward)
+  useEffect(() => {
+    setActiveCategory(searchParams.get("cat") ?? "All");
+  }, [searchParams]);
 
   const newsCategory = activeCategory === "All" ? "all" : activeCategory;
   const location = geoToQuery(geo);
