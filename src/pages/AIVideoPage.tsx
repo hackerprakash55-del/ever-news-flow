@@ -499,6 +499,10 @@ export default function AIVideoPage() {
       setVideoScript(data);
       if (topicOverride) setTopic(topicOverride);
 
+      // Save to library DB
+      saveVideoToDb(data);
+
+
       generateThumbnail(data.thumbnailPrompt, data.title);
       generateAudio(data.script, data.title);
     } catch (e) {
