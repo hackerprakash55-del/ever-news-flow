@@ -241,7 +241,7 @@ export function TrendingVideosSection() {
 
   return (
     <div>
-      <SectionHeader generating={isAutoGenerating} onRefresh={generateTrendingVideos} />
+      <SectionHeader generating={isAutoGenerating} onRefresh={() => generateTrendingVideos(trendingTopics)} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {videos.map((video) => (
           <VideoCard key={video.id} video={video} onClick={() => handleVideoClick(video)} />
