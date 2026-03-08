@@ -59,6 +59,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 
+const CATEGORY_GRADIENTS: Record<string, string> = {
   "AI": "from-gainn-purple/30 to-gainn-blue/10",
   "Technology": "from-gainn-blue/30 to-gainn-cyan/10",
   "Economy": "from-gainn-green/30 to-gainn-cyan/10",
