@@ -7,10 +7,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
 import { lazy, Suspense } from "react";
 
-// Eagerly load only the auth page and the main index — everything else is lazy
-import Index from "./pages/Index";
+// Eagerly load auth for fastest /auth startup; lazy-load everything else
 import AuthPage from "./pages/AuthPage";
 
+const Index            = lazy(() => import("./pages/Index"));
 const ArticlePage      = lazy(() => import("./pages/ArticlePage"));
 const NewsroomPage     = lazy(() => import("./pages/NewsroomPage"));
 const AIVideoPage      = lazy(() => import("./pages/AIVideoPage"));
