@@ -546,12 +546,14 @@ export default function AIVideoPage() {
       generatedAt: record.generated_at ?? new Date().toISOString(),
     });
     setError(null);
+    setAudioUrl(null);
+    setUseBrowserVoice(true);
     setTopic(record.title);
-    // Use the already-generated thumbnail if available
+    // Always use cached thumbnail_url — never regenerate on open (that was the slow path)
     if (record.thumbnail_url) {
       setThumbnailUrl(record.thumbnail_url);
-    } else if (record.thumbnail_prompt) {
-      generateThumbnail(record.thumbnail_prompt, record.title);
+    } else {
+      setThumbnailUrl(null); // Show placeholder, don't block opening
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
