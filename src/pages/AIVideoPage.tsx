@@ -413,11 +413,16 @@ export default function AIVideoPage() {
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
   const { toast } = useToast();
 
-  // Load video library on mount; if came from nav with a video, generate its assets
+  // Load video library on mount; if came from nav with a video, use cached thumbnail first
   useEffect(() => {
     loadLibrary();
     if (navVideo) {
-      generateThumbnail(navVideo.thumbnail_prompt, navVideo.title);
+      // Use saved thumbnail_url if available — only regenerate if truly missing
+      if (navVideo.thumbnail_url) {
+        setThumbnailUrl(navVideo.thumbnail_url);
+      } else if (navVideo.thumbnail_prompt) {
+        generateThumbnail(navVideo.thumbnail_prompt, navVideo.title);
+      }
     }
   }, []);
 
@@ -430,7 +435,7 @@ export default function AIVideoPage() {
         .order("created_at", { ascending: false });
       if (data) {
         setLibrary(data as VideoRecord[]);
-        // Auto-generate all 8 suggested topics if the library is empty on first load
+        // Auto-generate suggested topics only if library is completely empty
         if (data.length === 0) {
           autoGenerateAllTopics();
         }
@@ -442,60 +447,72 @@ export default function AIVideoPage() {
     }
   };
 
-  // Auto-generate all 8 suggested topics sequentially when library is empty
+  // Helper: generate script + thumbnail for one topic and save to DB
+  const autoGenerateOneTopic = async (t: typeof SUGGESTED_TOPICS[0], supabaseUrl: string, anonKey: string) => {
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: t.label }),
+      });
+      if (!res.ok) return;
+      const data: VideoScript = await res.json();
+      if (!data?.script) return;
+
+      const { data: inserted } = await supabase.from("generated_videos").insert({
+        title: data.title,
+        category: data.category,
+        duration: data.duration,
+        script: data.script,
+        thumbnail_prompt: data.thumbnailPrompt,
+        raw_headlines: data.rawHeadlines,
+        generated_at: data.generatedAt,
+      }).select("id").single();
+
+      // Generate & save thumbnail in background — non-blocking
+      if (inserted?.id && data.thumbnailPrompt) {
+        fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ thumbnailPrompt: data.thumbnailPrompt, title: data.title }),
+        }).then(r => r.ok ? r.json() : null).then(async (thumbData) => {
+          if (thumbData?.imageUrl && inserted?.id) {
+            await supabase.from("generated_videos")
+              .update({ thumbnail_url: thumbData.imageUrl })
+              .eq("id", inserted.id);
+          }
+        }).catch(() => {});
+      }
+
+      // Surface new video in library immediately (without waiting for thumbnail)
+      setLibrary(prev => [{
+        id: inserted?.id ?? crypto.randomUUID(),
+        title: data.title,
+        category: data.category,
+        duration: data.duration,
+        script: data.script,
+        thumbnail_prompt: data.thumbnailPrompt,
+        thumbnail_url: null,
+        raw_headlines: data.rawHeadlines as any,
+        generated_at: data.generatedAt,
+        created_at: new Date().toISOString(),
+      }, ...prev]);
+    } catch (e) {
+      console.error("Auto-generate failed for topic:", t.label, e);
+    }
+  };
+
+  // Auto-generate all 8 topics in parallel batches of 3 (not sequentially)
   const autoGenerateAllTopics = async () => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     if (!supabaseUrl || !anonKey) return;
 
-    for (const t of SUGGESTED_TOPICS) {
-      try {
-        const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ topic: t.label }),
-        });
-        if (!res.ok) continue;
-        const data: VideoScript = await res.json();
-        if (!data?.script) continue;
-
-        // Save to DB
-        const { data: inserted } = await supabase.from("generated_videos").insert({
-          title: data.title,
-          category: data.category,
-          duration: data.duration,
-          script: data.script,
-          thumbnail_prompt: data.thumbnailPrompt,
-          raw_headlines: data.rawHeadlines,
-          generated_at: data.generatedAt,
-        }).select("id").single();
-
-        // Generate & save thumbnail
-        if (inserted?.id && data.thumbnailPrompt) {
-          try {
-            const thumbRes = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
-              method: "POST",
-              headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ thumbnailPrompt: data.thumbnailPrompt, title: data.title }),
-            });
-            if (thumbRes.ok) {
-              const thumbData = await thumbRes.json();
-              if (thumbData.imageUrl) {
-                await supabase.from("generated_videos")
-                  .update({ thumbnail_url: thumbData.imageUrl })
-                  .eq("id", inserted.id);
-              }
-            }
-          } catch (e) {
-            console.error("Auto thumbnail failed:", e);
-          }
-        }
-      } catch (e) {
-        console.error("Auto-generate failed for topic:", t.label, e);
-      }
+    const BATCH_SIZE = 3;
+    for (let i = 0; i < SUGGESTED_TOPICS.length; i += BATCH_SIZE) {
+      const batch = SUGGESTED_TOPICS.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(t => autoGenerateOneTopic(t, supabaseUrl, anonKey)));
     }
-    // Refresh library after all are generated
-    loadLibrary();
   };
 
   const saveVideoToDb = async (video: VideoScript) => {
