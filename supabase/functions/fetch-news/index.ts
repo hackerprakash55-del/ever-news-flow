@@ -287,26 +287,31 @@ serve(async (req) => {
       (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
     );
 
-    // Expand up to 10 article bodies with Gemini
-    const toExpand = rawArticles.slice(0, Math.min(rawArticles.length, 10));
+    // Expand only the first 3 articles with AI — keeps edge fn fast (<3s total)
+    const toExpand = rawArticles.slice(0, Math.min(rawArticles.length, 3));
     const rest = rawArticles.slice(toExpand.length);
     let expandedBodies: string[] = [];
 
     if (LOVABLE_API_KEY) {
       console.log(`Expanding ${toExpand.length} article bodies with Gemini...`);
+      // Race each AI call against a 4-second timeout so one slow model call
+      // never holds up the entire response.
+      const withTimeout = (p: Promise<string>, fallback: string) =>
+        Promise.race([p, new Promise<string>((res) => setTimeout(() => res(fallback), 4000))]);
+
       expandedBodies = await Promise.all(
         toExpand.map((a: any) =>
-          expandArticleBody(
-            a.title || "",
-            a.description || "",
-            a.content ? a.content.replace(/\[\+\d+ chars\]$/, "").trim() : "",
-            a.source?.name || "Unknown Source",
-            a.publishedAt || new Date().toISOString(),
-            LOVABLE_API_KEY
-          ).catch((e) => {
-            console.error("Expand failed:", e);
-            return a.content || a.description || "";
-          })
+          withTimeout(
+            expandArticleBody(
+              a.title || "",
+              a.description || "",
+              a.content ? a.content.replace(/\[\+\d+ chars\]$/, "").trim() : "",
+              a.source?.name || "Unknown Source",
+              a.publishedAt || new Date().toISOString(),
+              LOVABLE_API_KEY
+            ),
+            a.content || a.description || ""
+          ).catch(() => a.content || a.description || "")
         )
       );
     }
