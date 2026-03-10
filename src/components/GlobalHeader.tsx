@@ -2,11 +2,12 @@ import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import gainnLogo from "@/assets/gainn-logo.png";
 import { cn } from "@/lib/utils";
 
-// Lazy-load heavy overlay components — only downloaded when the user opens them
+// Lazy-load heavy overlay components
 const SearchOverlay    = lazy(() => import("@/components/SearchOverlay").then(m => ({ default: m.SearchOverlay })));
 const NotificationBell = lazy(() => import("@/components/NotificationPanel").then(m => ({ default: m.NotificationBell })));
 
@@ -21,8 +22,7 @@ const CATEGORIES = [
   { label: "Global",      cat: "Global Affairs" },
 ];
 
-// ── User Menu Dropdown ─────────────────────────────────────────────────────
-
+// ── User Menu Dropdown ─────────────────────────────────────
 function UserMenu() {
   const { user, profile, signOut } = useAuth();
   const [open, setOpen] = useState(false);
@@ -52,11 +52,7 @@ function UserMenu() {
   }
 
   const initials = (profile?.display_name || user.email || "?")
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+    .split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <div ref={ref} className="relative">
@@ -67,52 +63,35 @@ function UserMenu() {
         <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 overflow-hidden flex items-center justify-center text-xs font-bold text-primary">
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            initials
-          )}
+          ) : initials}
         </div>
         <ChevronDown className={cn("w-3 h-3 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
         <div className="absolute top-full right-0 mt-2 w-56 bg-card rounded-xl shadow-elevated border border-border overflow-hidden z-50">
-          {/* User info */}
           <div className="px-4 py-3 border-b border-border bg-muted/40">
-            <p className="text-sm font-semibold text-card-foreground truncate">
-              {profile?.display_name || "GAINN User"}
-            </p>
+            <p className="text-sm font-semibold text-card-foreground truncate">{profile?.display_name || "GAINN User"}</p>
             <p className="text-xs text-muted-foreground font-mono truncate">{user.email}</p>
           </div>
-
-          {/* Menu items */}
           <div className="py-1">
             {[
               { icon: User,     label: "Profile & Settings", href: "/settings" },
               { icon: Bookmark, label: "Saved Articles",     href: "/settings?tab=saved" },
             ].map(({ icon: Icon, label, href }) => (
-              <Link
-                key={label}
-                to={href}
-                onClick={() => setOpen(false)}
+              <Link key={label} to={href} onClick={() => setOpen(false)}
                 className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
               >
-                <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                {label}
+                <Icon className="w-3.5 h-3.5 text-muted-foreground" />{label}
               </Link>
             ))}
           </div>
-
           <div className="border-t border-border py-1">
             <button
-              onClick={async () => {
-                setOpen(false);
-                await signOut();
-                navigate("/auth");
-              }}
+              onClick={async () => { setOpen(false); await signOut(); navigate("/auth"); }}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign Out
+              <LogOut className="w-3.5 h-3.5" />Sign Out
             </button>
           </div>
         </div>
@@ -121,11 +100,9 @@ function UserMenu() {
   );
 }
 
-// ── Header ─────────────────────────────────────────────────────────────────
-
+// ── Header ──────────────────────────────────────────────────
 interface GlobalHeaderProps {
   onNewsroomClick?: () => void;
-  /** Called when a category pill is clicked (homepage use) */
   onCategoryChange?: (cat: string) => void;
   activeCategory?: string;
 }
@@ -137,6 +114,7 @@ export const GlobalHeader = ({
 }: GlobalHeaderProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [inlineSearch, setInlineSearch] = useState("");
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -149,15 +127,10 @@ export const GlobalHeader = ({
   function handleCatClick(cat: string | null, label: string) {
     setMobileOpen(false);
     if (location.pathname !== "/") {
-      // navigate to home with cat param
       navigate(cat ? `/?cat=${encodeURIComponent(cat)}` : "/");
     } else {
-      // already on home — update param + notify parent
-      if (cat) {
-        setSearchParams({ cat });
-      } else {
-        setSearchParams({});
-      }
+      if (cat) setSearchParams({ cat });
+      else setSearchParams({});
       onCategoryChange?.(label === "Home" ? "All" : label);
     }
   }
@@ -168,9 +141,14 @@ export const GlobalHeader = ({
     return activeCategory === (cat === "Global Affairs" ? "Global" : cat) || activeCategory === cat;
   }
 
+  function handleInlineSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (inlineSearch.trim()) setSearchOpen(true);
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-xl">
-      {/* Top bar */}
+      {/* Top utility bar */}
       <div className="border-b border-border/50 px-4 py-1.5 flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
           <div className="flex items-center gap-1.5">
@@ -195,16 +173,13 @@ export const GlobalHeader = ({
         </div>
       </div>
 
-      {/* Main header */}
+      {/* Main header row */}
       <div className="px-4 md:px-6 py-3 flex items-center gap-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
           <img src={gainnLogo} alt="GAINN Logo" className="w-8 h-8 object-contain" />
           <div>
-            <div
-              className="text-lg font-bold tracking-tight text-gradient-primary"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
+            <div className="text-lg font-bold tracking-tight text-gradient-primary" style={{ fontFamily: "var(--font-display)" }}>
               GAINN
             </div>
             <div className="text-[9px] tracking-[0.2em] text-muted-foreground uppercase font-mono -mt-0.5">
@@ -213,8 +188,23 @@ export const GlobalHeader = ({
           </div>
         </Link>
 
+        {/* Always-visible inline search bar (desktop) */}
+        <form onSubmit={handleInlineSearch} className="hidden md:flex flex-1 max-w-sm ml-2">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              type="search"
+              placeholder="Search stories, topics, regions…"
+              value={inlineSearch}
+              onChange={(e) => setInlineSearch(e.target.value)}
+              onFocus={() => setSearchOpen(true)}
+              className="pl-9 h-8 text-sm bg-surface-2 border-border focus:border-primary/50 placeholder:text-muted-foreground/50"
+            />
+          </div>
+        </form>
+
         {/* Desktop nav */}
-        <nav className="hidden lg:flex items-center gap-0.5 flex-1 ml-4">
+        <nav className="hidden lg:flex items-center gap-0.5 ml-2 flex-shrink-0">
           {CATEGORIES.map((item) => {
             const active = isNavActive(item.cat);
             return (
@@ -232,7 +222,6 @@ export const GlobalHeader = ({
               </button>
             );
           })}
-
           <Link
             to="/video"
             className={cn(
@@ -242,8 +231,7 @@ export const GlobalHeader = ({
                 : "text-gainn-purple hover:bg-gainn-purple/10 border-gainn-purple/25 hover:border-gainn-purple/50"
             )}
           >
-            <Video className="w-3.5 h-3.5" />
-            AI Video
+            <Video className="w-3.5 h-3.5" />AI Video
           </Link>
           <Link
             to="/videos"
@@ -254,17 +242,17 @@ export const GlobalHeader = ({
                 : "text-accent hover:bg-accent/10 border-accent/25 hover:border-accent/50"
             )}
           >
-            <Library className="w-3.5 h-3.5" />
-            Video Library
+            <Library className="w-3.5 h-3.5" />Video Library
           </Link>
         </nav>
 
         {/* Right actions */}
         <div className="flex items-center gap-2 ml-auto">
+          {/* Mobile search icon */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted md:hidden"
             onClick={() => setSearchOpen(true)}
           >
             <Search className="w-4 h-4" />
@@ -285,6 +273,20 @@ export const GlobalHeader = ({
       {/* Mobile nav */}
       {mobileOpen && (
         <div className="lg:hidden border-t border-border bg-card px-4 py-3 flex flex-col gap-1">
+          {/* Mobile search */}
+          <form onSubmit={handleInlineSearch} className="mb-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                type="search"
+                placeholder="Search stories…"
+                value={inlineSearch}
+                onChange={(e) => setInlineSearch(e.target.value)}
+                onFocus={() => { setSearchOpen(true); setMobileOpen(false); }}
+                className="pl-9 h-9 text-sm bg-surface-2 border-border"
+              />
+            </div>
+          </form>
           {CATEGORIES.map((item) => {
             const active = isNavActive(item.cat);
             return (
@@ -293,43 +295,32 @@ export const GlobalHeader = ({
                 onClick={() => handleCatClick(item.cat, item.label)}
                 className={cn(
                   "text-left px-3 py-2 text-sm rounded-md transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  active ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 {item.label}
               </button>
             );
           })}
-          <Link
-            to="/video"
-            onClick={() => setMobileOpen(false)}
+          <Link to="/video" onClick={() => setMobileOpen(false)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md hover:bg-gainn-purple/10"
           >
             <Video className="w-3.5 h-3.5" /> AI Video
           </Link>
-          <Link
-            to="/videos"
-            onClick={() => setMobileOpen(false)}
+          <Link to="/videos" onClick={() => setMobileOpen(false)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-accent rounded-md hover:bg-accent/10"
           >
             <Library className="w-3.5 h-3.5" /> Video Library
           </Link>
-
           <div className="border-t border-border/50 mt-2 pt-2">
             {user ? (
-              <Link
-                to="/settings"
-                className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md"
+              <Link to="/settings" className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md"
                 onClick={() => setMobileOpen(false)}
               >
                 <Settings className="w-3.5 h-3.5" /> Settings
               </Link>
             ) : (
-              <Link
-                to="/auth"
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-primary rounded-md hover:bg-primary/10"
+              <Link to="/auth" className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-primary rounded-md hover:bg-primary/10"
                 onClick={() => setMobileOpen(false)}
               >
                 <LogIn className="w-3.5 h-3.5" /> Sign In
