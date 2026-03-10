@@ -199,6 +199,18 @@ input[type="search"]::-webkit-search-cancel-button { display: none; }
   animation: live-pulse 1.5s ease-in-out infinite;
 }
 
+.animate-live-pulse {
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes fade-in-up-sm {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up-sm 0.35s ease-out forwards;
+}
+
 .agent-active {
   animation: agent-pulse 2s ease-in-out infinite;
 }
