@@ -35,27 +35,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchProfile(userId: string) {
-    const { data } = await supabase
+  // Fire-and-forget: fetch profile in background, never blocks auth gate
+  function fetchProfile(userId: string) {
+    supabase
       .from("profiles")
       .select("*")
       .eq("user_id", userId)
-      .single();
-    setProfile(data as Profile | null);
+      .single()
+      .then(({ data }) => setProfile(data as Profile | null));
   }
 
   async function refreshProfile() {
-    if (user) await fetchProfile(user.id);
+    if (user) fetchProfile(user.id);
   }
 
   useEffect(() => {
-    // Set up listener BEFORE getSession
+    let settled = false;
+
+    // Resolve auth state FAST from getSession (local cache, instant)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!settled) {
+        settled = true;
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) fetchProfile(session.user.id);
+        setIsLoading(false); // ← unblock the UI immediately
+      }
+    });
+
+    // Safety timeout — if getSession somehow stalls, unblock after 3s
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        setIsLoading(false);
+      }
+    }, 3000);
+
+    // Listen for future auth changes (sign-in / sign-out)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
+        settled = true;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          fetchProfile(session.user.id);
         } else {
           setProfile(null);
         }
@@ -63,17 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setIsLoading(false));
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function signOut() {
