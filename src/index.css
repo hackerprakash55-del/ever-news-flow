@@ -123,6 +123,11 @@
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
 
 /* ========================
+   HEADER SEARCH
+   ======================== */
+input[type="search"]::-webkit-search-cancel-button { display: none; }
+
+/* ========================
    TICKER ANIMATION
    ======================== */
 @keyframes ticker {
