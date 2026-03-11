@@ -343,6 +343,7 @@ export default function VideoLibraryPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {watchLiveVideo && <WatchLiveModal video={watchLiveVideo} onClose={() => setWatchLiveVideo(null)} />}
       <GlobalHeader />
       <NewsTickerBar />
 
