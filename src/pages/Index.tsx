@@ -86,6 +86,7 @@ const Index = () => {
         activeCategory={activeCategory}
       />
       <NewsTickerBar />
+      <MarketTicker />
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
 
