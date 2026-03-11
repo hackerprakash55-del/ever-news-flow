@@ -6,9 +6,10 @@ import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import {
   Search, Film, Clock, Tag, ChevronRight, Play,
-  BookOpen, Zap, RefreshCw, Library, Radio,
+  BookOpen, Zap, RefreshCw, Library, Radio, Eye, X, Maximize2, Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
