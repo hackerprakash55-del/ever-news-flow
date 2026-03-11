@@ -250,9 +250,7 @@ const Index = () => {
                 </div>
                 <div className="p-2 space-y-1">
                   {isLoading
-                    ? Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="h-14 rounded shimmer-bg mx-2 mb-1" />
-                      ))
+                    ? Array.from({ length: 5 }).map((_, i) => <ListItemSkeleton key={i} />)
                     : displayArticles.slice(0, 8).map((a, i) => (
                         <ArticleListItem key={a.id} article={a} index={i} />
                       ))
