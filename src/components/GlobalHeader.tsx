@@ -117,6 +117,7 @@ export const GlobalHeader = ({
   const [searchOpen, setSearchOpen] = useState(false);
   const [inlineSearch, setInlineSearch] = useState("");
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
