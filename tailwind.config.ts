@@ -126,6 +126,10 @@ export default {
           "0%": { transform: "scale(1)", opacity: "1" },
           "75%, 100%": { transform: "scale(2.5)", opacity: "0" },
         },
+        "market-scroll": {
+          "0%":   { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
         "count-up": {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },

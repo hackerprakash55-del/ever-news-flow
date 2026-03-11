@@ -350,3 +350,86 @@ input[type="search"]::-webkit-search-cancel-button { display: none; }
 .map-ping {
   animation: map-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* ========================
+   MARKET TICKER SCROLL
+   ======================== */
+@keyframes market-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ========================
+   LIGHT MODE THEME
+   ======================== */
+.light {
+  --background: 210 20% 98%;
+  --foreground: 220 20% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 220 20% 10%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 20% 10%;
+
+  --primary: 210 100% 46%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 210 20% 93%;
+  --secondary-foreground: 220 20% 15%;
+
+  --muted: 210 20% 94%;
+  --muted-foreground: 210 15% 45%;
+
+  --accent: 190 90% 38%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 210 20% 86%;
+  --input: 210 20% 90%;
+  --ring: 210 100% 46%;
+
+  --gainn-blue: 210 100% 46%;
+  --gainn-cyan: 190 90% 38%;
+  --gainn-red: 0 84% 52%;
+  --gainn-amber: 38 92% 48%;
+  --gainn-green: 142 60% 38%;
+  --gainn-purple: 265 75% 54%;
+
+  --surface-0: 210 20% 98%;
+  --surface-1: 210 18% 95%;
+  --surface-2: 210 16% 90%;
+  --surface-3: 210 14% 84%;
+
+  --shadow-card: 0 2px 12px hsl(220 20% 50% / 0.08), 0 1px 3px hsl(220 20% 50% / 0.06);
+  --shadow-elevated: 0 8px 30px hsl(220 20% 40% / 0.12);
+
+  --sidebar-background: 210 20% 96%;
+  --sidebar-foreground: 210 20% 25%;
+  --sidebar-primary: 210 100% 46%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 18% 90%;
+  --sidebar-accent-foreground: 210 20% 15%;
+  --sidebar-border: 210 20% 86%;
+  --sidebar-ring: 210 100% 46%;
+}
+
+/* Light mode overrides for glass cards */
+.light .card-glass {
+  background: hsl(0 0% 100% / 0.9);
+  border-color: hsl(210 20% 86%);
+  box-shadow: var(--shadow-card);
+}
+
+.light .shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    hsl(210 16% 90%) 25%,
+    hsl(210 14% 84%) 50%,
+    hsl(210 16% 90%) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
