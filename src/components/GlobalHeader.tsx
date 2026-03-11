@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown } from "lucide-react";
+import { Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut, Bookmark, User, ChevronDown, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "next-themes";
 import gainnLogo from "@/assets/gainn-logo.png";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +117,7 @@ export const GlobalHeader = ({
   const [searchOpen, setSearchOpen] = useState(false);
   const [inlineSearch, setInlineSearch] = useState("");
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
@@ -256,6 +258,16 @@ export const GlobalHeader = ({
             onClick={() => setSearchOpen(true)}
           >
             <Search className="w-4 h-4" />
+          </Button>
+          {/* Dark / Light toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
           <Suspense fallback={<div className="h-8 w-8" />}><NotificationBell /></Suspense>
           <UserMenu />

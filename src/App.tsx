@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
+import { ThemeProvider } from "next-themes";
 import { lazy, Suspense } from "react";
 
 // Eagerly load auth for fastest /auth startup; lazy-load everything else
@@ -31,33 +32,35 @@ const PageLoader = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public — auth only */}
-              <Route path="/auth" element={<AuthPage />} />
+  <ThemeProvider attribute="class" defaultTheme="dark" storageKey="gainn-theme">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public — auth only */}
+                <Route path="/auth" element={<AuthPage />} />
 
-              {/* Protected — must be signed in */}
-              <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
-              <Route path="/article/:id" element={<AuthGuard><ArticlePage /></AuthGuard>} />
-              <Route path="/newsroom" element={<AuthGuard><NewsroomPage /></AuthGuard>} />
-              <Route path="/video" element={<AuthGuard><AIVideoPage /></AuthGuard>} />
-              <Route path="/videos" element={<AuthGuard><VideoLibraryPage /></AuthGuard>} />
-              <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
+                {/* Protected — must be signed in */}
+                <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+                <Route path="/article/:id" element={<AuthGuard><ArticlePage /></AuthGuard>} />
+                <Route path="/newsroom" element={<AuthGuard><NewsroomPage /></AuthGuard>} />
+                <Route path="/video" element={<AuthGuard><AIVideoPage /></AuthGuard>} />
+                <Route path="/videos" element={<AuthGuard><VideoLibraryPage /></AuthGuard>} />
+                <Route path="/settings" element={<AuthGuard><SettingsPage /></AuthGuard>} />
 
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

@@ -9,6 +9,8 @@ import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { TrendingTopicsSidebar } from "@/components/TrendingTopicsSidebar";
 import { JustInFeed } from "@/components/JustInFeed";
 import { NewsletterBanner } from "@/components/NewsletterBanner";
+import { MarketTicker } from "@/components/MarketTicker";
+import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/components/ArticleSkeletons";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -84,6 +86,7 @@ const Index = () => {
         activeCategory={activeCategory}
       />
       <NewsTickerBar />
+      <MarketTicker />
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
 
@@ -169,13 +172,7 @@ const Index = () => {
 
               {/* Bloomberg-style 3-col hero grid */}
               {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2 rounded-lg shimmer-bg" style={{ minHeight: 480 }} />
-                  <div className="space-y-4">
-                    <div className="rounded-lg shimmer-bg h-56" />
-                    <div className="rounded-lg shimmer-bg h-56" />
-                  </div>
-                </div>
+                <HeroGridSkeleton />
               ) : displayArticles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Large hero — 2 cols */}
@@ -192,7 +189,9 @@ const Index = () => {
               ) : null}
 
               {/* 4-article small grid */}
-              {!isLoading && displayArticles.length >= 4 && (
+              {isLoading ? (
+                <SmallGridSkeleton />
+              ) : displayArticles.length >= 4 && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {displayArticles.slice(3, 7).map((a, i) => (
                     <ArticleCard key={a.id} article={a} isPremium={isPremium(i + 3)} />
@@ -251,9 +250,7 @@ const Index = () => {
                 </div>
                 <div className="p-2 space-y-1">
                   {isLoading
-                    ? Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="h-14 rounded shimmer-bg mx-2 mb-1" />
-                      ))
+                    ? Array.from({ length: 5 }).map((_, i) => <ListItemSkeleton key={i} />)
                     : displayArticles.slice(0, 8).map((a, i) => (
                         <ArticleListItem key={a.id} article={a} index={i} />
                       ))
