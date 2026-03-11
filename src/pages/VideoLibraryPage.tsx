@@ -305,6 +305,7 @@ function SkeletonCard() {
 export default function VideoLibraryPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [watchLiveVideo, setWatchLiveVideo] = useState<VideoRecord | null>(null);
 
   const { data: videos = [], isLoading, isError, refetch, isFetching } = useQuery<VideoRecord[]>({
     queryKey: ["video-library"],
