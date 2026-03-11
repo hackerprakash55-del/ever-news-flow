@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
+import { ThemeProvider } from "next-themes";
 import { lazy, Suspense } from "react";
 
 // Eagerly load auth for fastest /auth startup; lazy-load everything else

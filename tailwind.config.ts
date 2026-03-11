@@ -156,6 +156,7 @@ export default {
         "count-up": "count-up 0.3s ease-out forwards",
         "spin-slow": "spin-slow 8s linear infinite",
         "data-stream": "data-stream 1.5s ease-in-out infinite",
+        "market-scroll": "market-scroll 30s linear infinite",
       },
     },
   },
