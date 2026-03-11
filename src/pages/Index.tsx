@@ -9,6 +9,8 @@ import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { TrendingTopicsSidebar } from "@/components/TrendingTopicsSidebar";
 import { JustInFeed } from "@/components/JustInFeed";
 import { NewsletterBanner } from "@/components/NewsletterBanner";
+import { MarketTicker } from "@/components/MarketTicker";
+import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/components/ArticleSkeletons";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
 import { useNavigate, useSearchParams } from "react-router-dom";
