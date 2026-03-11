@@ -172,13 +172,7 @@ const Index = () => {
 
               {/* Bloomberg-style 3-col hero grid */}
               {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2 rounded-lg shimmer-bg" style={{ minHeight: 480 }} />
-                  <div className="space-y-4">
-                    <div className="rounded-lg shimmer-bg h-56" />
-                    <div className="rounded-lg shimmer-bg h-56" />
-                  </div>
-                </div>
+                <HeroGridSkeleton />
               ) : displayArticles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Large hero — 2 cols */}
@@ -195,7 +189,9 @@ const Index = () => {
               ) : null}
 
               {/* 4-article small grid */}
-              {!isLoading && displayArticles.length >= 4 && (
+              {isLoading ? (
+                <SmallGridSkeleton />
+              ) : displayArticles.length >= 4 && (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {displayArticles.slice(3, 7).map((a, i) => (
                     <ArticleCard key={a.id} article={a} isPremium={isPremium(i + 3)} />
