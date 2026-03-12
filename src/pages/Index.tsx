@@ -97,6 +97,9 @@ const Index = () => {
         {/* Animated Stats Strip */}
         <StatsBar />
 
+        {/* AI Morning Briefing */}
+        <AIMorningBriefing />
+
         {/* Geo Filter + status bar */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
