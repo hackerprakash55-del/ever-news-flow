@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner, StatsBar } from "@/components/BreakingNewsBanner";
+import { AIMorningBriefing } from "@/components/AIMorningBriefing";
 import { HeroArticleCard, ArticleCard, ArticleListItem, SponsoredSlot } from "@/components/ArticleCards";
 import { WorldNewsMap } from "@/components/WorldNewsMap";
 import { AIAnchorPanel } from "@/components/AIAnchorPanel";
