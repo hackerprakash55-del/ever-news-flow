@@ -331,33 +331,4 @@ const Index = () => {
   );
 };
 
-// ── AI Capabilities Card (extracted) ─────────────────────
-const AiCapabilitiesCard = () => (
-  <div className="card-glass rounded-lg p-4">
-    <h4 className="text-sm font-semibold mb-3 text-accent">AI Capabilities</h4>
-    <div className="space-y-2">
-      {[
-        { label: "Fake News Detection", pct: 98 },
-        { label: "Bias Neutralization", pct: 94 },
-        { label: "Source Reliability", pct: 97 },
-        { label: "Multilingual (52 langs)", pct: 99 },
-        { label: "Real-time Processing", pct: 100 },
-      ].map((cap) => (
-        <div key={cap.label}>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-muted-foreground">{cap.label}</span>
-            <span className="font-mono text-gainn-green">{cap.pct}%</span>
-          </div>
-          <div className="h-1 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-primary transition-all duration-1000"
-              style={{ width: `${cap.pct}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
 export default Index;
