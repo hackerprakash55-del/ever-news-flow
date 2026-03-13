@@ -125,6 +125,7 @@ const Index = () => {
         onCategoryChange={setActiveCategory}
         activeCategory={activeCategory}
       />
+      <ValuePropBanner />
       <NewsTickerBar />
       <MarketTicker />
 
