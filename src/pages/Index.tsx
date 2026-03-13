@@ -214,7 +214,7 @@ const Index = () => {
             {/* Left column */}
             <div className="space-y-6">
 
-              {/* Bloomberg-style 3-col hero grid */}
+              {/* Bloomberg-style 3-col hero grid — Row 1 */}
               {isLoading ? (
                 <HeroGridSkeleton />
               ) : displayArticles.length > 0 ? (
@@ -232,7 +232,7 @@ const Index = () => {
                 </div>
               ) : null}
 
-              {/* 4-article small grid */}
+              {/* 4-article small grid — Row 2 */}
               {isLoading ? (
                 <SmallGridSkeleton />
               ) : displayArticles.length >= 4 && (
@@ -243,6 +243,9 @@ const Index = () => {
                 </div>
               )}
 
+              {/* Sponsored slot — between row 2 and row 3 */}
+              {!isLoading && displayArticles.length >= 4 && <SponsoredSlot />}
+
               {/* AI Anchor */}
               <AIAnchorPanel />
 
@@ -252,7 +255,7 @@ const Index = () => {
               {/* World Map */}
               <WorldNewsMap />
 
-              {/* More articles */}
+              {/* More articles — Row 3+ */}
               {!isLoading && displayArticles.length > 7 && (
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono mb-3">
@@ -284,7 +287,7 @@ const Index = () => {
               )}
             </div>
 
-            {/* Right sidebar */}
+            {/* Right sidebar — cleaned up */}
             <div className="space-y-4">
               {/* Trending Now */}
               <div className="card-glass rounded-lg overflow-hidden">
@@ -302,14 +305,8 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Trending Topics pills */}
+              {/* Trending Topics — 5 items max (controlled in component) */}
               <TrendingTopicsSidebar />
-
-              {/* Sponsored slot */}
-              <SponsoredSlot />
-
-              {/* AI Capabilities */}
-              <AiCapabilitiesCard />
             </div>
           </div>
         )}
