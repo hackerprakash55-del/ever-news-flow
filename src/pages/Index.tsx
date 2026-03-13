@@ -15,9 +15,48 @@ import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/compone
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES } from "@/data/mockData";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, Star } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
+
+// ── First-visit value prop banner ─────────────────────────
+const BANNER_KEY = "gainn_banner_dismissed";
+
+function ValuePropBanner() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem(BANNER_KEY)) {
+      setVisible(true);
+    }
+  }, []);
+
+  function dismiss() {
+    localStorage.setItem(BANNER_KEY, "true");
+    setVisible(false);
+  }
+
+  if (!visible) return null;
+
+  return (
+    <div
+      className="w-full flex items-center justify-between gap-3 px-4 py-2 text-xs font-mono"
+      style={{ background: "hsl(222 28% 11%)", borderBottom: "1px solid hsl(var(--border))" }}
+    >
+      <span className="flex-1 text-center" style={{ color: "hsl(var(--accent))" }}>
+        <span className="text-foreground/60 mr-1">✦</span>
+        Real-time AI news from 12,891 verified sources — verified, unbiased, instant.
+      </span>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss banner"
+        className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
 
 const SkeletonCard = () => (
   <div className="card-glass rounded-lg overflow-hidden h-48 shimmer-bg" />
