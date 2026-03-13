@@ -40,6 +40,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <SoftSignInPrompt />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public — no auth required */}
