@@ -1,6 +1,7 @@
 import { Article } from "@/data/mockData";
 import { Shield, Clock, ExternalLink, Zap, Bookmark, BookmarkCheck, Share2, MessageSquare, Crown, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { trackArticleView } from "@/components/SoftSignInPrompt";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 // Store live article in sessionStorage so the article page can retrieve it
 function storeAndNavigate(article: Article, navigate: (path: string) => void) {
   try { sessionStorage.setItem(`article-${article.id}`, JSON.stringify(article)); } catch {}
+  trackArticleView();
   navigate(`/article/${article.id}`);
 }
 
