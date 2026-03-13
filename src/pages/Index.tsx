@@ -205,7 +205,6 @@ const Index = () => {
             <JustInFeed />
             <div className="space-y-4">
               <TrendingTopicsSidebar onTagClick={(tag) => {}} />
-              <AiCapabilitiesCard />
             </div>
           </div>
         ) : (
