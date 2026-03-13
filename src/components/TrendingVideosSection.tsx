@@ -284,9 +284,24 @@ function SectionHeader({ generating, onRefresh }: { generating: boolean; onRefre
   );
 }
 
+// Category-based gradient backgrounds for thumbnails
+const CATEGORY_GRADIENTS: Record<string, string> = {
+  "AI":            "from-violet-900 via-purple-800 to-indigo-900",
+  "Technology":    "from-cyan-900 via-blue-800 to-indigo-900",
+  "Economy":       "from-blue-900 via-teal-800 to-cyan-900",
+  "Politics":      "from-red-900 via-orange-800 to-amber-900",
+  "Geopolitics":   "from-red-900 via-rose-800 to-orange-900",
+  "Environment":   "from-green-900 via-emerald-800 to-teal-900",
+  "Science":       "from-green-900 via-teal-800 to-cyan-900",
+  "Health":        "from-pink-900 via-rose-800 to-red-900",
+  "Global Affairs":"from-blue-900 via-indigo-800 to-violet-900",
+  "General":       "from-slate-800 via-slate-700 to-slate-800",
+};
+
 function VideoCard({ video, onClick }: { video: VideoRecord; onClick: () => void }) {
   const colorClass = CATEGORY_COLORS[video.category] || CATEGORY_COLORS["General"];
   const icon = CATEGORY_ICON[video.category] || "📰";
+  const gradient = CATEGORY_GRADIENTS[video.category] || CATEGORY_GRADIENTS["General"];
   const timeAgo = getTimeAgo(video.created_at);
 
   return (
@@ -295,14 +310,16 @@ function VideoCard({ video, onClick }: { video: VideoRecord; onClick: () => void
       className="card-glass rounded-xl overflow-hidden hover:border-gainn-blue/40 transition-all cursor-pointer group"
     >
       {/* Thumbnail area */}
-      <div className="relative h-36 bg-gradient-to-br from-surface-2 to-surface-0 flex items-center justify-center overflow-hidden">
-        <div className="text-5xl opacity-30 group-hover:opacity-50 transition-opacity">{icon}</div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+      <div className={`relative h-36 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
+        {/* Category icon — decorative background */}
+        <div className="text-6xl opacity-20 select-none group-hover:opacity-30 transition-opacity duration-200">{icon}</div>
+        {/* Subtle dark gradient overlay at bottom */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-        {/* Play overlay */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="w-12 h-12 rounded-full bg-gainn-blue/90 flex items-center justify-center shadow-lg">
-            <Play className="w-5 h-5 text-white ml-0.5" />
+        {/* Always-visible centered Play button; scales up on hover */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center shadow-lg backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
+            <Play className="w-5 h-5 text-white ml-0.5" fill="white" />
           </div>
         </div>
 
@@ -314,7 +331,7 @@ function VideoCard({ video, onClick }: { video: VideoRecord; onClick: () => void
         </div>
 
         {/* Duration */}
-        <div className="absolute bottom-2 right-2 text-[10px] font-mono text-white/80 bg-black/40 px-1.5 py-0.5 rounded">
+        <div className="absolute bottom-2 right-2 text-[10px] font-mono text-white/90 bg-black/50 px-1.5 py-0.5 rounded backdrop-blur-sm">
           {video.duration}
         </div>
       </div>

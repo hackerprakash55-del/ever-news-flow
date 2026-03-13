@@ -229,8 +229,14 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
   const reliability = getSourceReliability(article.credibilityScore);
 
   return (
-    <div className="block group cursor-pointer" onClick={() => storeAndNavigate(article, navigate)}>
-      <div className="card-glass rounded-lg overflow-hidden card-hover h-full flex flex-col relative">
+    <div
+      className="block group cursor-pointer"
+      onClick={() => storeAndNavigate(article, navigate)}
+    >
+      <div
+        className="card-glass rounded-lg overflow-hidden h-full flex flex-col relative transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+        style={{ border: "1px solid hsl(var(--border))" }}
+      >
         {/* Premium overlay */}
         {isPremium && (
           <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-gainn-amber bg-gainn-amber/15 border border-gainn-amber/30">
@@ -256,7 +262,6 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
               <Zap className="w-2.5 h-2.5" />LIVE
             </div>
           )}
-          {/* Premium blur overlay */}
           {isPremium && (
             <div className="absolute inset-0 bg-background/30 backdrop-blur-[1px] flex items-end justify-center pb-3">
               <span className="text-xs text-gainn-amber font-semibold">🔒 Premium Article</span>
@@ -285,6 +290,20 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
             <span className="text-[10px] text-muted-foreground truncate">{author.name}</span>
             <span className="text-[10px] text-muted-foreground/40">·</span>
             <span className={`text-[10px] font-mono ${reliability.color}`}>{article.sources[0]} — {reliability.label}</span>
+          </div>
+
+          {/* Read More link */}
+          <div className="mb-2">
+            <span
+              className="text-xs font-semibold text-accent relative inline-block
+                after:content-[''] after:absolute after:bottom-0 after:left-0
+                after:w-full after:h-px after:bg-accent
+                after:scale-x-0 after:origin-left
+                after:transition-transform after:duration-200
+                group-hover:after:scale-x-100"
+            >
+              Read More →
+            </span>
           </div>
 
           {/* Footer row */}

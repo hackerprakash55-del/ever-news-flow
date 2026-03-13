@@ -16,6 +16,9 @@ const TRENDING_TOPICS = [
   { tag: "Geopolitics", count: 187 },
 ];
 
+// Only the top 5 are shown
+const VISIBLE_COUNT = 5;
+
 export const TrendingTopicsSidebar = ({ onTagClick }: { onTagClick?: (tag: string) => void }) => {
   const navigate = useNavigate();
 
@@ -35,7 +38,7 @@ export const TrendingTopicsSidebar = ({ onTagClick }: { onTagClick?: (tag: strin
         <span className="ml-auto text-[10px] font-mono text-gainn-green animate-live-pulse">● Live</span>
       </div>
       <div className="p-4 flex flex-wrap gap-2">
-        {TRENDING_TOPICS.map((t) => (
+        {TRENDING_TOPICS.slice(0, VISIBLE_COUNT).map((t) => (
           <button
             key={t.tag}
             onClick={() => handleClick(t.tag)}
