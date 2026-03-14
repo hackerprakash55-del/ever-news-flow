@@ -257,6 +257,7 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
   const author = getAuthor(article);
   const comments = getCommentCount(article);
   const reliability = getSourceReliability(article.credibilityScore);
+  const alreadyRead = isArticleRead(article.id);
 
   return (
     <div
@@ -302,12 +303,15 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
         <div className="p-4 flex flex-col flex-1">
           <div className="flex items-center justify-between mb-2">
             <CategoryBadge category={article.category} />
-            {article.isBreaking && (
-              <span className="text-[10px] font-bold text-gainn-red uppercase tracking-wider">Breaking</span>
-            )}
+            <div className="flex items-center gap-1.5">
+              {alreadyRead && <ReadBadge articleId={article.id} />}
+              {article.isBreaking && (
+                <span className="text-[10px] font-bold text-gainn-red uppercase tracking-wider">Breaking</span>
+              )}
+            </div>
           </div>
 
-          <h3 className="text-sm font-display text-foreground mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug flex-1">
+          <h3 className={`text-sm font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug flex-1 ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
             {article.headline}
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
@@ -332,7 +336,7 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
                 after:transition-transform after:duration-200
                 group-hover:after:scale-x-100"
             >
-              Read More →
+              {alreadyRead ? "Read Again →" : "Read More →"}
             </span>
           </div>
 
@@ -360,6 +364,9 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
             </div>
           </div>
         </div>
+
+        {/* Reading progress bar at bottom of card */}
+        <ReadProgressBar articleId={article.id} />
       </div>
     </div>
   );
