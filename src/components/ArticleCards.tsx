@@ -1,5 +1,5 @@
 import { Article } from "@/data/mockData";
-import { Shield, Clock, ExternalLink, Zap, Bookmark, BookmarkCheck, Share2, MessageSquare, Crown, CheckCircle2 } from "lucide-react";
+import { Shield, Clock, ExternalLink, Zap, Bookmark, BookmarkCheck, Share2, MessageSquare, Crown, CheckCircle2, CheckCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
 import { useState } from "react";
@@ -7,12 +7,40 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getProgress, isArticleRead } from "@/hooks/useReadingProgress";
 
 // Store live article in sessionStorage so the article page can retrieve it
 function storeAndNavigate(article: Article, navigate: (path: string) => void) {
   try { sessionStorage.setItem(`article-${article.id}`, JSON.stringify(article)); } catch {}
   trackArticleView();
   navigate(`/article/${article.id}`);
+}
+
+// Read-progress bar shown at bottom of card
+function ReadProgressBar({ articleId }: { articleId: string }) {
+  const pct = getProgress(articleId);
+  if (pct <= 0) return null;
+  const color = pct >= 90
+    ? "hsl(var(--gainn-green, 142 71% 45%))"
+    : "hsl(var(--primary))";
+  return (
+    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-border/50">
+      <div
+        className="h-full transition-all duration-300"
+        style={{ width: `${pct}%`, background: color }}
+      />
+    </div>
+  );
+}
+
+// "Read" checkmark badge
+function ReadBadge({ articleId }: { articleId: string }) {
+  if (!isArticleRead(articleId)) return null;
+  return (
+    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-gainn-green bg-gainn-green/10 border border-gainn-green/25">
+      <CheckCheck className="w-2.5 h-2.5" />Read
+    </div>
+  );
 }
 
 // ── Sub-components ────────────────────────────────────────
@@ -229,6 +257,7 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
   const author = getAuthor(article);
   const comments = getCommentCount(article);
   const reliability = getSourceReliability(article.credibilityScore);
+  const alreadyRead = isArticleRead(article.id);
 
   return (
     <div
@@ -274,12 +303,15 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
         <div className="p-4 flex flex-col flex-1">
           <div className="flex items-center justify-between mb-2">
             <CategoryBadge category={article.category} />
-            {article.isBreaking && (
-              <span className="text-[10px] font-bold text-gainn-red uppercase tracking-wider">Breaking</span>
-            )}
+            <div className="flex items-center gap-1.5">
+              {alreadyRead && <ReadBadge articleId={article.id} />}
+              {article.isBreaking && (
+                <span className="text-[10px] font-bold text-gainn-red uppercase tracking-wider">Breaking</span>
+              )}
+            </div>
           </div>
 
-          <h3 className="text-sm font-display text-foreground mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug flex-1">
+          <h3 className={`text-sm font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug flex-1 ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
             {article.headline}
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
@@ -304,7 +336,7 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
                 after:transition-transform after:duration-200
                 group-hover:after:scale-x-100"
             >
-              Read More →
+              {alreadyRead ? "Read Again →" : "Read More →"}
             </span>
           </div>
 
@@ -332,6 +364,9 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
             </div>
           </div>
         </div>
+
+        {/* Reading progress bar at bottom of card */}
+        <ReadProgressBar articleId={article.id} />
       </div>
     </div>
   );
