@@ -182,6 +182,15 @@ input[type="search"]::-webkit-search-cancel-button { display: none; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes data-flow-vertical {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(400%); }
+}
+
+.animate-data-flow {
+  animation: data-flow-vertical 3s linear infinite;
+}
+
 @keyframes slide-in-right {
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
