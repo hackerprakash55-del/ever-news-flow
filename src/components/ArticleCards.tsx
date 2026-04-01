@@ -326,6 +326,29 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
             <span className={`text-[10px] font-mono ${reliability.color}`}>{article.sources[0]} — {reliability.label}</span>
           </div>
 
+          {/* Trust Score & Sources */}
+          <div className="flex items-center gap-2 mb-2 text-[10px] font-mono">
+            <div className="flex items-center gap-1">
+              <div className="w-16 h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${article.credibilityScore}%`,
+                    background: article.credibilityScore >= 90
+                      ? "hsl(var(--gainn-green))"
+                      : article.credibilityScore >= 70
+                      ? "hsl(var(--gainn-amber))"
+                      : "hsl(var(--gainn-red))",
+                  }}
+                />
+              </div>
+              <span className="text-muted-foreground">Trust: {article.credibilityScore}</span>
+            </div>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="text-muted-foreground">{article.sources.length} sources</span>
+            <span className="text-gainn-green">✓ Verified</span>
+          </div>
+
           {/* Read More link */}
           <div className="mb-2">
             <span
