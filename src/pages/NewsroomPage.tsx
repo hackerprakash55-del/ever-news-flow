@@ -5,6 +5,7 @@ import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { AgentCard, DepartmentOverview } from "@/components/AgentCard";
 import { PipelineLog } from "@/components/PipelineLog";
 import { AGENTS, DEPARTMENT_STATS, MOCK_ARTICLES } from "@/data/mockData";
+import { StatsBar } from "@/components/BreakingNewsBanner";
 import {
   Activity, Cpu, Shield, Eye, Radio, Database, Zap,
   TrendingUp, CheckCircle, AlertTriangle, Clock, Globe
@@ -114,6 +115,11 @@ export default function NewsroomPage() {
               ← Back to GAINN
             </div>
           </Link>
+        </div>
+
+        {/* Stats Bar (moved from homepage) */}
+        <div className="mb-6">
+          <StatsBar />
         </div>
 
         {/* Metrics */}
