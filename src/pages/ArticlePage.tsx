@@ -507,8 +507,8 @@ export default function ArticlePage() {
                 </Link>
               </div>
 
-              {/* ── More Like This ── */}
-              <MoreLikeThis articles={allArticles} current={article} />
+              {/* ── More Stories ── */}
+              <MoreStories articles={allArticles} current={article} />
 
               {/* ── Continue Reading ── */}
               {showNext && <ContinueReading nextArticle={nextArticle} />}
