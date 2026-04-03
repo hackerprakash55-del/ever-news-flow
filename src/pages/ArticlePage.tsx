@@ -93,12 +93,13 @@ function getCategoryGradient(category: string): string {
   return map[category] || "linear-gradient(135deg,#334155,#475569)";
 }
 
-// ── More Like This horizontal strip ───────────────────────
-function MoreLikeThis({ articles, current }: { articles: Article[]; current: Article }) {
+// ── More Stories — 3-card grid ─────────────────────────────
+function MoreStories({ articles, current }: { articles: Article[]; current: Article }) {
   const navigate = useNavigate();
-  const related = articles
-    .filter((a) => a.id !== current.id && a.category === current.category)
-    .slice(0, 5);
+  // Mix same-category + other articles for variety
+  const sameCategory = articles.filter((a) => a.id !== current.id && a.category === current.category);
+  const otherArticles = articles.filter((a) => a.id !== current.id && a.category !== current.category);
+  const related = [...sameCategory, ...otherArticles].slice(0, 3);
 
   if (related.length === 0) return null;
 
@@ -112,34 +113,37 @@ function MoreLikeThis({ articles, current }: { articles: Article[]; current: Art
     <div className="mt-10 pt-8 border-t border-border">
       <div className="flex items-center gap-2 mb-5">
         <Layers className="w-4 h-4 text-accent" />
-        <h2 className="text-base font-semibold">More like this</h2>
-        <span className="ml-auto text-[10px] font-mono text-accent bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-          {current.category}
-        </span>
+        <h2 className="text-base font-semibold">More Stories</h2>
       </div>
 
-      {/* Horizontal scroll */}
-      <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent snap-x snap-mandatory">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {related.map((a) => (
           <div
             key={a.id}
             onClick={() => go(a)}
-            className="flex-shrink-0 w-48 cursor-pointer group snap-start"
+            className="cursor-pointer group rounded-lg overflow-hidden border border-border transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:border-accent/30"
           >
-            <div className="rounded-lg overflow-hidden border border-border transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] h-full">
-              {/* Thumbnail */}
-              <div className="h-28 overflow-hidden relative">
-                {a.imageUrl ? (
-                  <img src={a.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 opacity-80 group-hover:opacity-100" />
-                ) : (
-                  <div className="w-full h-full" style={{ background: getCategoryGradient(a.category) }} />
-                )}
+            <div className="h-36 overflow-hidden relative">
+              {a.imageUrl ? (
+                <img src={a.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 opacity-80 group-hover:opacity-100" />
+              ) : (
+                <div className="w-full h-full" style={{ background: getCategoryGradient(a.category) }} />
+              )}
+              <div className="absolute top-2 left-2">
+                <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded bg-black/50 text-white border border-white/20 backdrop-blur-sm">
+                  {a.category}
+                </span>
               </div>
-              <div className="p-2.5 bg-surface-1">
-                <p className="text-xs font-medium text-foreground group-hover:text-accent transition-colors line-clamp-3 leading-snug mb-1">
-                  {a.headline}
-                </p>
+            </div>
+            <div className="p-3 bg-surface-1">
+              <p className="text-sm font-medium text-foreground group-hover:text-accent transition-colors line-clamp-2 leading-snug mb-2">
+                {a.headline}
+              </p>
+              <div className="flex items-center justify-between">
                 <span className="text-[10px] font-mono text-muted-foreground">{a.readTime}m read</span>
+                <span className="text-[10px] font-mono text-accent opacity-0 group-hover:opacity-100 transition-opacity">
+                  Read More →
+                </span>
               </div>
             </div>
           </div>

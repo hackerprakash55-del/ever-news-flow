@@ -117,6 +117,11 @@ export default function NewsroomPage() {
           </Link>
         </div>
 
+        {/* Stats Bar (moved from homepage) */}
+        <div className="mb-6">
+          <StatsBar />
+        </div>
+
         {/* Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
           <MetricCard label="Active Agents" value={`${runningCount}`} sub={`of 108 total`} icon={Cpu} color="#0ea5e9" trend="↑ 2" />
