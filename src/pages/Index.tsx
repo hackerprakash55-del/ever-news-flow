@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner } from "@/components/BreakingNewsBanner";
@@ -16,9 +16,12 @@ import { MarketTicker } from "@/components/MarketTicker";
 import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/components/ArticleSkeletons";
 import { DepartmentOverview } from "@/components/AgentCard";
 import { useNews } from "@/hooks/useNews";
-import { CATEGORIES } from "@/data/mockData";
+import { CATEGORIES, WORLD_NEWS_PINS } from "@/data/mockData";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, Star, X, Activity, Shield, Globe, Bot } from "lucide-react";
+import {
+  RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, Star, X, Activity,
+  Shield, Globe, Bot, ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
 
@@ -121,6 +124,51 @@ function SystemFooter({ isLive }: { isLive: boolean }) {
   );
 }
 
+// ── Global Radar Pick ─────────────────────────────────────
+function GlobalRadarPick({ articles }: { articles: any[] }) {
+  const navigate = useNavigate();
+  const topPin = WORLD_NEWS_PINS.find(p => p.severity === "breaking") || WORLD_NEWS_PINS[0];
+  // Try to find an article matching a global/breaking pin
+  const radarArticle = articles.find(a => a.isBreaking && a.region !== "Global") || articles.find(a => a.region && a.region !== "Global") || articles[0];
+  if (!radarArticle) return null;
+
+  return (
+    <div className="card-glass rounded-lg overflow-hidden border border-gainn-cyan/20 hover:border-gainn-cyan/40 transition-all cursor-pointer group"
+      onClick={() => {
+        try { sessionStorage.setItem(`article-${radarArticle.id}`, JSON.stringify(radarArticle)); } catch {}
+        navigate(`/article/${radarArticle.id}`);
+      }}
+    >
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-gainn-cyan/5">
+        <span className="text-base">🌍</span>
+        <span className="text-xs font-semibold font-mono text-gainn-cyan uppercase tracking-wider">From the Global Radar</span>
+        <span className="ml-auto text-[10px] font-mono text-gainn-green flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-gainn-green live-dot" /> Live Tracking
+        </span>
+      </div>
+      <div className="flex gap-4 p-4">
+        {/* Mini map thumbnail */}
+        <div className="w-24 h-20 rounded-lg bg-surface-2 border border-border flex-shrink-0 overflow-hidden relative flex items-center justify-center">
+          <Globe className="w-10 h-10 text-gainn-cyan/30" />
+          <div className="absolute w-2 h-2 rounded-full bg-gainn-red live-dot" style={{ top: "40%", left: "55%" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-display text-foreground group-hover:text-gainn-cyan transition-colors line-clamp-2 leading-snug mb-1">
+            {radarArticle.headline}
+          </h3>
+          <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{radarArticle.summary}</p>
+          <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
+            <span className="text-gainn-cyan">{radarArticle.region || topPin?.region}</span>
+            <span>·</span>
+            <span>{radarArticle.readTime}m read</span>
+            <span className="ml-auto text-gainn-cyan font-semibold group-hover:underline">Read Full Story →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const Index = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -132,17 +180,46 @@ const Index = () => {
   const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
   const [feedTab, setFeedTab] = useState("top");
   const [showAgentLog, setShowAgentLog] = useState(false);
+  const [moreCount, setMoreCount] = useState(6); // Load More pagination
 
   useEffect(() => { setActiveCategory(searchParams.get("cat") ?? "All"); }, [searchParams]);
 
   const newsCategory = activeCategory === "All" ? "all" : activeCategory;
   const location = geoToQuery(geo);
-  const { articles, isLive, isLoading, isError, error, fetchedAt, refresh } = useNews({ category: newsCategory, pageSize: 20, location });
+  const { articles, isLive, isLoading, isError, error, fetchedAt, refresh } = useNews({ category: newsCategory, pageSize: 30, location });
 
   const mostRead = [...articles].sort((a, b) => b.credibilityScore - a.credibilityScore);
   const editorsPick = articles.filter((a) => a.isBreaking || a.credibilityScore >= 95).slice(0, 8);
   const displayArticles = feedTab === "most-read" ? mostRead : feedTab === "editors" ? (editorsPick.length > 0 ? editorsPick : articles) : articles;
-  const isPremium = (idx: number) => idx % 7 === 6;
+
+  // Derive trending category from top articles
+  const trendingCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    displayArticles.slice(0, 10).forEach(a => { counts[a.category] = (counts[a.category] || 0) + 1; });
+    let best = "Technology";
+    let max = 0;
+    for (const [cat, count] of Object.entries(counts)) {
+      if (count > max) { max = count; best = cat; }
+    }
+    return best;
+  }, [displayArticles]);
+
+  // Section slicing
+  const heroArticle = displayArticles[0];
+  const heroSide = displayArticles.slice(1, 3);
+  const mustRead = displayArticles.slice(3, 6);
+  const categoryDiveArticles = displayArticles.filter(a => a.category === trendingCategory && !displayArticles.slice(0, 6).includes(a)).slice(0, 4);
+  const usedIds = new Set([
+    ...displayArticles.slice(0, 6).map(a => a.id),
+    ...categoryDiveArticles.map(a => a.id),
+  ]);
+  const remainingArticles = displayArticles.filter(a => !usedIds.has(a.id));
+  // Pick a radar article — first breaking from remaining, or first with a non-Global region
+  const radarArticle = remainingArticles.find(a => a.isBreaking) || remainingArticles.find(a => a.region && a.region !== "Global") || remainingArticles[0];
+  const radarId = radarArticle?.id;
+  const morePool = remainingArticles.filter(a => a.id !== radarId);
+  const moreVisible = morePool.slice(0, moreCount);
+  const hasMoreToLoad = morePool.length > moreCount;
 
   return (
     <div className="min-h-screen bg-background">
@@ -160,27 +237,22 @@ const Index = () => {
 
         {/* Toggle agent log */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAgentLog(!showAgentLog)}
-              className="text-xs font-mono text-muted-foreground hover:text-accent transition-colors flex items-center gap-1.5"
-            >
-              <Activity className="w-3.5 h-3.5" />
-              {showAgentLog ? "Hide" : "Show"} Live Agent Activity
-            </button>
-          </div>
+          <button
+            onClick={() => setShowAgentLog(!showAgentLog)}
+            className="text-xs font-mono text-muted-foreground hover:text-accent transition-colors flex items-center gap-1.5"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            {showAgentLog ? "Hide" : "Show"} Live Agent Activity
+          </button>
           <div className="flex items-center gap-1.5 text-[10px] font-mono text-gainn-green">
             <span className="w-1.5 h-1.5 rounded-full bg-gainn-green live-dot" />
             System Live
           </div>
         </div>
 
-        {/* Agent Activity Log Panel */}
         {showAgentLog && (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
-            <div className="max-h-[360px]">
-              <PipelineLog />
-            </div>
+            <div className="max-h-[360px]"><PipelineLog /></div>
             <DepartmentOverview />
           </div>
         )}
@@ -197,7 +269,6 @@ const Index = () => {
             </div>
           )}
 
-          {/* Single row: GeoFilter + LiveBadge + Refresh | Feed Tabs */}
           <div className="flex items-center gap-2 border-b border-border pb-0 -mb-3 flex-wrap">
             <GeoFilter value={geo} onChange={setGeo} />
             <LiveBadge isLive={isLive} fetchedAt={fetchedAt} />
@@ -206,13 +277,11 @@ const Index = () => {
               onClick={refresh} disabled={isLoading}>
               <RefreshCw className="w-3.5 h-3.5" />
             </Button>
-
             <div className="h-5 w-px bg-border mx-1 hidden sm:block" />
-
             {FEED_TABS.map((tab) => {
               const Icon = tab.icon;
               return (
-                <button key={tab.id} onClick={() => setFeedTab(tab.id)}
+                <button key={tab.id} onClick={() => { setFeedTab(tab.id); setMoreCount(6); }}
                   className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap -mb-px ${
                     feedTab === tab.id ? "border-accent text-accent" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                   }`}>
@@ -224,7 +293,6 @@ const Index = () => {
             })}
           </div>
 
-          {/* Geo breadcrumb */}
           {(geo.country || geo.state || geo.city) && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-mono w-fit mt-4">
               <MapPin className="w-3 h-3 text-primary" />
@@ -236,6 +304,10 @@ const Index = () => {
           )}
         </div>
 
+        {/* ════════════════════════════════════════════════════
+            EDITORIAL FEED SECTIONS
+            ════════════════════════════════════════════════════ */}
+
         {feedTab === "just-in" ? (
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
             <JustInFeed />
@@ -243,42 +315,91 @@ const Index = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
-            <div className="space-y-6">
-              {isLoading ? <HeroGridSkeleton /> : displayArticles.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2"><HeroArticleCard article={displayArticles[0]} /></div>
-                  <div className="space-y-4">
-                    {displayArticles.slice(1, 3).map((a) => <ArticleCard key={a.id} article={a} isPremium={false} />)}
-                  </div>
-                </div>
-              ) : null}
+            <div className="space-y-8">
 
-              {isLoading ? <SmallGridSkeleton /> : displayArticles.length >= 4 && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {displayArticles.slice(3, 7).map((a, i) => <ArticleCard key={a.id} article={a} isPremium={isPremium(i + 3)} />)}
+              {/* ── SECTION 1: HERO ── */}
+              {isLoading ? <HeroGridSkeleton /> : heroArticle && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2"><HeroArticleCard article={heroArticle} /></div>
+                  <div className="space-y-4">
+                    {heroSide.map((a) => <ArticleCard key={a.id} article={a} isPremium={false} />)}
+                  </div>
                 </div>
               )}
 
-              {!isLoading && displayArticles.length >= 4 && <SponsoredSlot />}
-              <AIAnchorPanel />
-              <TrendingVideosSection />
-              <WorldNewsMap />
-
-              {!isLoading && displayArticles.length > 7 && (
+              {/* ── SECTION 2: MUST READ (3 articles) ── */}
+              {!isLoading && mustRead.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider font-mono mb-3">
-                    More Stories — {geo.city ?? geo.state ?? geo.country
-                      ? `${geo.city ?? geo.state ?? geo.country} · ${activeCategory === "All" ? "All Topics" : activeCategory}`
-                      : activeCategory === "All" ? "Top Headlines" : activeCategory}
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {displayArticles.slice(7).map((a, i) => <ArticleCard key={a.id} article={a} isPremium={isPremium(i + 7)} />)}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-2 h-2 rounded-full bg-gainn-cyan" />
+                    <h2 className="text-sm font-semibold font-mono uppercase tracking-wider text-gainn-cyan">Must Read Right Now</h2>
                   </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {mustRead.map((a) => <ArticleCard key={a.id} article={a} isPremium={false} />)}
+                  </div>
+                </div>
+              )}
+
+              {/* ── SECTION 3: VIDEO BREAK ── */}
+              <TrendingVideosSection />
+
+              {/* ── SECTION 4: CATEGORY DEEP DIVE ── */}
+              {!isLoading && categoryDiveArticles.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Zap className="w-4 h-4 text-gainn-amber" />
+                    <h2 className="text-sm font-semibold font-mono uppercase tracking-wider">
+                      Top in {trendingCategory} Today
+                    </h2>
+                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">{categoryDiveArticles.length} stories</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {categoryDiveArticles.map((a) => <ArticleCard key={a.id} article={a} isPremium={false} />)}
+                  </div>
+                </div>
+              )}
+
+              {/* ── SECTION 5: GLOBAL RADAR PICK ── */}
+              {!isLoading && radarArticle && (
+                <GlobalRadarPick articles={[radarArticle]} />
+              )}
+
+              {/* ── SECTION 6: NEWSLETTER CTA ── */}
+              <NewsletterBanner />
+
+              {/* ── SECTION 7: MORE HEADLINES (paginated 6) ── */}
+              {!isLoading && moreVisible.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                    <h2 className="text-sm font-semibold font-mono uppercase tracking-wider text-muted-foreground">More Headlines</h2>
+                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+                      {Math.min(moreCount, morePool.length)} of {morePool.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {moreVisible.map((a) => (
+                      <div key={a.id} className="animate-fade-in">
+                        <ArticleCard article={a} isPremium={false} />
+                      </div>
+                    ))}
+                  </div>
+                  {hasMoreToLoad && (
+                    <div className="text-center mt-6">
+                      <Button
+                        variant="outline"
+                        onClick={() => setMoreCount(c => c + 6)}
+                        className="px-8 text-sm font-mono gap-2"
+                      >
+                        Load More Stories <ChevronRight className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
               {!isLoading && displayArticles.length > 0 && (
-                <div className="text-center py-4">
+                <div className="text-center py-2">
                   <span className="text-xs font-mono text-muted-foreground">
                     {displayArticles.length} articles
                     {location && <> • <span className="text-accent">{location}</span></>}
@@ -289,6 +410,7 @@ const Index = () => {
               )}
             </div>
 
+            {/* ── SIDEBAR ── */}
             <div className="space-y-4">
               <div className="card-glass rounded-lg overflow-hidden">
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
@@ -305,8 +427,6 @@ const Index = () => {
             </div>
           </div>
         )}
-
-        <NewsletterBanner />
       </main>
 
       <SystemFooter isLive={isLive} />
