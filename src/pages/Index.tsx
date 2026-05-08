@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner } from "@/components/BreakingNewsBanner";
-import { AgentPipeline } from "@/components/AgentPipeline";
 import { PipelineLog } from "@/components/PipelineLog";
+import { TrendingClipsReel } from "@/components/TrendingClipsReel";
 import { AIMorningBriefing } from "@/components/AIMorningBriefing";
 import { HeroArticleCard, ArticleCard, ArticleListItem, SponsoredSlot } from "@/components/ArticleCards";
 import { WorldNewsMap } from "@/components/WorldNewsMap";
@@ -230,31 +230,9 @@ const Index = () => {
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
 
-        {/* ── AI AGENT PIPELINE ── */}
-        <div ref={pipelineRef}>
-          <AgentPipeline />
-        </div>
-
-        {/* Toggle agent log */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setShowAgentLog(!showAgentLog)}
-            className="text-xs font-mono text-muted-foreground hover:text-accent transition-colors flex items-center gap-1.5"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            {showAgentLog ? "Hide" : "Show"} Live Agent Activity
-          </button>
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-gainn-green">
-            <span className="w-1.5 h-1.5 rounded-full bg-gainn-green live-dot" />
-            System Live
-          </div>
-        </div>
-
-        {showAgentLog && (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4">
-            <div className="max-h-[360px]"><PipelineLog /></div>
-            <DepartmentOverview />
-          </div>
+        {/* ── TRENDING CLIPS REEL (auto-cycling 2s) ── */}
+        {!isLoading && articles.length > 0 && (
+          <TrendingClipsReel articles={articles} />
         )}
 
         <BreakingNewsBanner />
