@@ -18,6 +18,7 @@ const NewsroomPage     = lazy(() => import("./pages/NewsroomPage"));
 const AIVideoPage      = lazy(() => import("./pages/AIVideoPage"));
 const VideoLibraryPage = lazy(() => import("./pages/VideoLibraryPage"));
 const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
+const TrendingPage     = lazy(() => import("./pages/TrendingPage"));
 const NotFound         = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
                 <Route path="/article/:id" element={<ArticlePage />} />
                 <Route path="/video"      element={<AIVideoPage />} />
                 <Route path="/videos"     element={<VideoLibraryPage />} />
+                <Route path="/trending"   element={<TrendingPage />} />
 
                 {/* Protected — must be signed in */}
                 <Route path="/newsroom"   element={<AuthGuard><NewsroomPage /></AuthGuard>} />

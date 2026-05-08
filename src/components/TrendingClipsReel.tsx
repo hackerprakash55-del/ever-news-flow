@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Article } from "@/data/mockData";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
+import { supabase } from "@/integrations/supabase/client";
 import { Play, Pause, ArrowRight, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 
 const CATEGORY_GRADIENT: Record<string, string> = {
@@ -24,14 +25,57 @@ const CATEGORY_ICON: Record<string, string> = {
 };
 
 const CLIP_MS = 2000;
+const PULSE_MS = 1500; // realtime tick interval
+
+// Pick N pseudo-random items from a pool, biased toward freshness
+function pickClips(pool: Article[], count: number, seed: number): Article[] {
+  if (pool.length <= count) return pool.slice(0, count);
+  const head = pool.slice(0, Math.min(pool.length, count * 3));
+  const out: Article[] = [];
+  const used = new Set<number>();
+  let s = seed;
+  while (out.length < count && used.size < head.length) {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    const idx = s % head.length;
+    if (!used.has(idx)) { used.add(idx); out.push(head[idx]); }
+  }
+  return out;
+}
 
 export function TrendingClipsReel({ articles }: { articles: Article[] }) {
   const navigate = useNavigate();
-  const clips = articles.slice(0, 8);
+  const [pulse, setPulse] = useState(0);
+  const [isLiveSocket, setIsLiveSocket] = useState(false);
+  const clips = pickClips(articles, 8, pulse + 1);
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const tickRef = useRef<number | null>(null);
+
+  // ── Realtime WebSocket pulse: refresh clips every 1.5s across all clients ──
+  useEffect(() => {
+    const channel = supabase
+      .channel("trending-clips-pulse", { config: { broadcast: { self: true } } })
+      .on("broadcast", { event: "tick" }, (payload) => {
+        setPulse((p) => p + 1);
+        const seed = (payload?.payload as any)?.seed;
+        if (typeof seed === "number") setActive(seed % 8);
+      })
+      .subscribe((status) => {
+        setIsLiveSocket(status === "SUBSCRIBED");
+      });
+
+    // Self-broadcast tick to keep the reel "live"
+    const iv = window.setInterval(() => {
+      const seed = Math.floor(Math.random() * 1000);
+      channel.send({ type: "broadcast", event: "tick", payload: { seed, ts: Date.now() } });
+    }, PULSE_MS);
+
+    return () => {
+      window.clearInterval(iv);
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     if (!playing || clips.length === 0) return;
@@ -58,6 +102,10 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
     navigate(`/article/${article.id}`);
   }
 
+  function openCategory(category: string) {
+    navigate(`/trending?category=${encodeURIComponent(category)}`);
+  }
+
   return (
     <div className="card-glass rounded-xl overflow-hidden">
       {/* Header */}
@@ -65,8 +113,13 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
         <div className="flex items-center gap-2">
           <Flame className="w-4 h-4 text-gainn-red" />
           <span className="text-sm font-semibold">Trending Now</span>
-          <span className="flex items-center gap-1 text-[10px] font-mono text-gainn-red px-2 py-0.5 rounded-full border border-gainn-red/30 bg-gainn-red/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-gainn-red live-dot" /> LIVE REEL
+          <span className={`flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+            isLiveSocket
+              ? "text-gainn-green border-gainn-green/30 bg-gainn-green/10"
+              : "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10"
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full live-dot ${isLiveSocket ? "bg-gainn-green" : "bg-gainn-amber"}`} />
+            {isLiveSocket ? "LIVE · WS" : "CONNECTING…"}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -135,10 +188,10 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
               {clip.sources?.[0] ?? "GAINN"} · {clip.readTime}m read
             </span>
             <button
-              onClick={(e) => { e.stopPropagation(); open(clip); }}
+              onClick={(e) => { e.stopPropagation(); openCategory(clip.category); }}
               className="flex items-center gap-1 text-xs font-semibold text-white bg-white/15 hover:bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-md border border-white/20 transition-colors"
             >
-              See more <ArrowRight className="w-3 h-3" />
+              See more in {clip.category} <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
