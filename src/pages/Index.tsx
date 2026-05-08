@@ -14,13 +14,12 @@ import { JustInFeed } from "@/components/JustInFeed";
 import { NewsletterBanner } from "@/components/NewsletterBanner";
 import { MarketTicker } from "@/components/MarketTicker";
 import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/components/ArticleSkeletons";
-import { DepartmentOverview } from "@/components/AgentCard";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES, WORLD_NEWS_PINS } from "@/data/mockData";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, Star, X, Activity,
-  Shield, Globe, Bot, ChevronRight,
+  RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, Star, X,
+  Globe, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
@@ -173,13 +172,11 @@ const Index = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const feedRef = useRef<HTMLDivElement>(null);
-  const pipelineRef = useRef<HTMLDivElement>(null);
 
   const catFromUrl = searchParams.get("cat") ?? "All";
   const [activeCategory, setActiveCategory] = useState(catFromUrl);
   const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
   const [feedTab, setFeedTab] = useState("top");
-  const [showAgentLog, setShowAgentLog] = useState(false);
   const [moreCount, setMoreCount] = useState(6); // Load More pagination
 
   useEffect(() => { setActiveCategory(searchParams.get("cat") ?? "All"); }, [searchParams]);
