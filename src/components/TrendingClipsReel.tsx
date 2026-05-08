@@ -132,7 +132,7 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
           </h3>
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-mono text-white/70">
-              {clip.source} · {clip.readTime}m read
+              {clip.sources?.[0]?.name ?? "GAINN"} · {clip.readTime}m read
             </span>
             <button
               onClick={(e) => { e.stopPropagation(); open(clip); }}
