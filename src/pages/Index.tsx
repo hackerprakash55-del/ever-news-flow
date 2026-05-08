@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner } from "@/components/BreakingNewsBanner";
-import { PipelineLog } from "@/components/PipelineLog";
 import { TrendingClipsReel } from "@/components/TrendingClipsReel";
 import { AIMorningBriefing } from "@/components/AIMorningBriefing";
 import { HeroArticleCard, ArticleCard, ArticleListItem, SponsoredSlot } from "@/components/ArticleCards";
