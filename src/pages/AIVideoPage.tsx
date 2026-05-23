@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { tuneUtterance, waitForVoices } from "@/lib/voice";
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
@@ -293,17 +294,12 @@ function BrowserVoicePlayer({ script, title }: { script: string; title: string }
     .trim()
     .slice(0, 5000);
 
-  const play = useCallback(() => {
+  const play = useCallback(async () => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
+    await waitForVoices();
     const utter = new SpeechSynthesisUtterance(cleanText);
-    utter.rate = 0.9;
-    utter.pitch = 0.85;
-    utter.volume = 1;
-    // Pick a deep male voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => /male|daniel|google uk|en-gb/i.test(v.name));
-    if (preferred) utter.voice = preferred;
+    tuneUtterance(utter);
     utter.onend = () => { setIsPlaying(false); setIsPaused(false); };
     utter.onerror = () => { setIsPlaying(false); setIsPaused(false); };
     uttRef.current = utter;
