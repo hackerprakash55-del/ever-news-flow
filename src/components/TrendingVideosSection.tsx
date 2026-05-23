@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNews } from "@/hooks/useNews";
 import { Play, Pause, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { tuneUtterance, waitForVoices } from "@/lib/voice";
 
 interface VideoRecord {
   id: string;
@@ -45,19 +46,15 @@ function MiniVoicePlayer({ script }: { script: string }) {
     .trim()
     .slice(0, 5000);
 
-  const toggle = useCallback(() => {
+  const toggle = useCallback(async () => {
     if (isPlaying) {
       window.speechSynthesis.cancel();
       setIsPlaying(false);
     } else {
       window.speechSynthesis.cancel();
+      await waitForVoices();
       const utter = new SpeechSynthesisUtterance(cleanText);
-      utter.rate = 0.9;
-      utter.pitch = 0.85;
-      utter.volume = 1;
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => /male|daniel|google uk|en-gb/i.test(v.name));
-      if (preferred) utter.voice = preferred;
+      tuneUtterance(utter);
       utter.onend = () => setIsPlaying(false);
       utter.onerror = () => setIsPlaying(false);
       uttRef.current = utter;
