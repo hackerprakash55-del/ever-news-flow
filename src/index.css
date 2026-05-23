@@ -201,6 +201,41 @@ input[type="search"]::-webkit-search-cancel-button { display: none; }
   100% { background-position: 200% 0; }
 }
 
+/* Cinematic Ken Burns slow zoom — used on premium video thumbnails */
+@keyframes ken-burns {
+  0%   { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.12) translate(-2%, -2%); }
+}
+.animate-ken-burns {
+  animation: ken-burns 12s ease-in-out infinite alternate;
+}
+
+/* Soft pulsing ring used behind play buttons */
+@keyframes ring-pulse {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(1.6); opacity: 0;    }
+}
+.animate-ring-pulse {
+  animation: ring-pulse 2s ease-out infinite;
+}
+
+/* Subtle film grain overlay for premium video feel */
+.film-grain {
+  background-image:
+    radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 3px 3px, 5px 5px;
+  background-position: 0 0, 1px 1px;
+  mix-blend-mode: overlay;
+}
+
+/* Lenis smooth-scroll base styles */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
+
 /* ========================
    UTILITY CLASSES
    ======================== */

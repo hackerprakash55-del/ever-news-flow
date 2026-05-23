@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNews } from "@/hooks/useNews";
 import { Play, Pause, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { tuneUtterance, waitForVoices } from "@/lib/voice";
 
 interface VideoRecord {
   id: string;
@@ -45,19 +46,15 @@ function MiniVoicePlayer({ script }: { script: string }) {
     .trim()
     .slice(0, 5000);
 
-  const toggle = useCallback(() => {
+  const toggle = useCallback(async () => {
     if (isPlaying) {
       window.speechSynthesis.cancel();
       setIsPlaying(false);
     } else {
       window.speechSynthesis.cancel();
+      await waitForVoices();
       const utter = new SpeechSynthesisUtterance(cleanText);
-      utter.rate = 0.9;
-      utter.pitch = 0.85;
-      utter.volume = 1;
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v => /male|daniel|google uk|en-gb/i.test(v.name));
-      if (preferred) utter.voice = preferred;
+      tuneUtterance(utter);
       utter.onend = () => setIsPlaying(false);
       utter.onerror = () => setIsPlaying(false);
       uttRef.current = utter;
@@ -309,22 +306,38 @@ function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest:
       onClick={onClick}
       className="card-glass rounded-xl overflow-hidden hover:border-gainn-blue/40 transition-all cursor-pointer group"
     >
-      {/* Thumbnail with hover shimmer */}
-      <div className={`relative h-40 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
-        {/* Decorative icon */}
-        <div className="text-6xl opacity-20 select-none group-hover:opacity-30 transition-opacity duration-200">{icon}</div>
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+      {/* Cinematic thumbnail */}
+      <div className="relative h-44 overflow-hidden">
+        {/* Ken Burns animated gradient layer */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} animate-ken-burns will-change-transform`} />
 
-        {/* Hover shimmer effect */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[2000ms]" />
+        {/* Soft radial highlight */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_55%)]" />
+
+        {/* Decorative icon */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-7xl opacity-15 select-none group-hover:opacity-25 transition-opacity duration-500">{icon}</div>
         </div>
 
-        {/* Centered Play button */}
+        {/* Film grain */}
+        <div className="absolute inset-0 film-grain opacity-40 pointer-events-none" />
+
+        {/* Bottom vignette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+
+        {/* Hover shimmer */}
+        <div className="absolute inset-0 overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1600ms] ease-out" />
+        </div>
+
+        {/* Premium play button with pulsing ring */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center shadow-lg backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-            <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
+          <div className="relative">
+            <span className="absolute inset-0 rounded-full bg-white/40 animate-ring-pulse" />
+            <span className="absolute inset-0 rounded-full bg-white/30 animate-ring-pulse" style={{ animationDelay: "0.8s" }} />
+            <div className="relative w-16 h-16 rounded-full bg-white/95 flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
+              <Play className="w-6 h-6 text-black ml-1" fill="black" />
+            </div>
           </div>
         </div>
 
