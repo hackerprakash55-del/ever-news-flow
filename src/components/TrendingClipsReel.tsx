@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Article } from "@/data/mockData";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
@@ -49,8 +49,6 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
   const clips = useMemo(() => pickClips(articles, 8, pulse + 1), [articles, pulse]);
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const rafRef = useRef<number | null>(null);
 
   // ── Realtime WebSocket pulse: refresh clips every 1.5s across all clients ──
   useEffect(() => {
@@ -65,11 +63,11 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
         setIsLiveSocket(status === "SUBSCRIBED");
       });
 
-    // Self-broadcast tick to keep the reel "live"
+    // Self-broadcast tick to keep the reel live without forcing constant React work.
     const iv = window.setInterval(() => {
       const seed = Math.floor(Math.random() * 1000);
       channel.send({ type: "broadcast", event: "tick", payload: { seed, ts: Date.now() } });
-    }, PULSE_MS);
+    }, PULSE_MS * 2);
 
     return () => {
       window.clearInterval(iv);
@@ -79,23 +77,10 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
 
   useEffect(() => {
     if (!playing || clips.length === 0) return;
-    const start = Date.now();
-    let advanced = false;
-    const loop = () => {
-      const elapsed = Date.now() - start;
-      const pct = Math.min(100, (elapsed / CLIP_MS) * 100);
-      setProgress(pct);
-      if (elapsed >= CLIP_MS) {
-        if (!advanced) {
-          advanced = true;
-          setActive((a) => (a + 1) % clips.length);
-        }
-        return;
-      }
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    const timer = window.setTimeout(() => {
+      setActive((a) => (a + 1) % clips.length);
+    }, CLIP_MS);
+    return () => window.clearTimeout(timer);
   }, [active, playing, clips.length]);
 
   if (clips.length === 0) return null;
