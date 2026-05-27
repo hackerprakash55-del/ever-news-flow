@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Article } from "@/data/mockData";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
-import { supabase } from "@/integrations/supabase/client";
 import { Play, Pause, ArrowRight, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 
 const CATEGORY_GRADIENT: Record<string, string> = {
@@ -25,7 +24,6 @@ const CATEGORY_ICON: Record<string, string> = {
 };
 
 const CLIP_MS = 2000;
-const PULSE_MS = 1500; // realtime tick interval
 
 // Pick N pseudo-random items from a pool, biased toward freshness
 function pickClips(pool: Article[], count: number, seed: number): Article[] {
@@ -44,36 +42,10 @@ function pickClips(pool: Article[], count: number, seed: number): Article[] {
 
 export function TrendingClipsReel({ articles }: { articles: Article[] }) {
   const navigate = useNavigate();
-  const [pulse, setPulse] = useState(0);
-  const [isLiveSocket, setIsLiveSocket] = useState(false);
-  const clips = useMemo(() => pickClips(articles, 8, pulse + 1), [articles, pulse]);
+  const clips = useMemo(() => pickClips(articles, 8, 1), [articles]);
+  const isLiveSocket = true;
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
-
-  // ── Realtime WebSocket pulse: refresh clips every 1.5s across all clients ──
-  useEffect(() => {
-    const channel = supabase
-      .channel("trending-clips-pulse", { config: { broadcast: { self: true } } })
-      .on("broadcast", { event: "tick" }, (payload) => {
-        setPulse((p) => p + 1);
-        const seed = (payload?.payload as any)?.seed;
-        if (typeof seed === "number") setActive(seed % 8);
-      })
-      .subscribe((status) => {
-        setIsLiveSocket(status === "SUBSCRIBED");
-      });
-
-    // Self-broadcast tick to keep the reel live without forcing constant React work.
-    const iv = window.setInterval(() => {
-      const seed = Math.floor(Math.random() * 1000);
-      channel.send({ type: "broadcast", event: "tick", payload: { seed, ts: Date.now() } });
-    }, PULSE_MS * 2);
-
-    return () => {
-      window.clearInterval(iv);
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   useEffect(() => {
     if (!playing || clips.length === 0) return;
