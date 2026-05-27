@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import Lenis from "lenis";
 
 /**
  * Premium buttery-smooth scrolling (Awwwards / Studio Freight style).
@@ -9,8 +8,12 @@ import Lenis from "lenis";
  */
 export function SmoothScroll() {
   useEffect(() => {
-    // Smooth-scroll disabled — it was intercepting input and causing the page
-    // to feel frozen/unclickable on some browsers. Fall back to native scroll.
+    // Smooth-scroll is disabled. Also clean up any Lenis classes/styles left by
+    // hot reload so they cannot keep the page locked or intercepting input.
+    document.documentElement.classList.remove("lenis", "lenis-smooth", "lenis-stopped", "lenis-scrolling");
+    document.body.classList.remove("lenis", "lenis-smooth", "lenis-stopped", "lenis-scrolling");
+    document.documentElement.style.removeProperty("overflow");
+    document.body.style.removeProperty("overflow");
     return;
   }, []);
 

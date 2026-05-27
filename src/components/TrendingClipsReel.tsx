@@ -1,8 +1,7 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Article } from "@/data/mockData";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
-import { supabase } from "@/integrations/supabase/client";
 import { Play, Pause, ArrowRight, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 
 const CATEGORY_GRADIENT: Record<string, string> = {
@@ -25,7 +24,6 @@ const CATEGORY_ICON: Record<string, string> = {
 };
 
 const CLIP_MS = 2000;
-const PULSE_MS = 1500; // realtime tick interval
 
 // Pick N pseudo-random items from a pool, biased toward freshness
 function pickClips(pool: Article[], count: number, seed: number): Article[] {
@@ -44,58 +42,17 @@ function pickClips(pool: Article[], count: number, seed: number): Article[] {
 
 export function TrendingClipsReel({ articles }: { articles: Article[] }) {
   const navigate = useNavigate();
-  const [pulse, setPulse] = useState(0);
-  const [isLiveSocket, setIsLiveSocket] = useState(false);
-  const clips = useMemo(() => pickClips(articles, 8, pulse + 1), [articles, pulse]);
+  const clips = useMemo(() => pickClips(articles, 8, 1), [articles]);
+  const isLiveSocket = true;
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const rafRef = useRef<number | null>(null);
-
-  // ── Realtime WebSocket pulse: refresh clips every 1.5s across all clients ──
-  useEffect(() => {
-    const channel = supabase
-      .channel("trending-clips-pulse", { config: { broadcast: { self: true } } })
-      .on("broadcast", { event: "tick" }, (payload) => {
-        setPulse((p) => p + 1);
-        const seed = (payload?.payload as any)?.seed;
-        if (typeof seed === "number") setActive(seed % 8);
-      })
-      .subscribe((status) => {
-        setIsLiveSocket(status === "SUBSCRIBED");
-      });
-
-    // Self-broadcast tick to keep the reel "live"
-    const iv = window.setInterval(() => {
-      const seed = Math.floor(Math.random() * 1000);
-      channel.send({ type: "broadcast", event: "tick", payload: { seed, ts: Date.now() } });
-    }, PULSE_MS);
-
-    return () => {
-      window.clearInterval(iv);
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   useEffect(() => {
     if (!playing || clips.length === 0) return;
-    const start = Date.now();
-    let advanced = false;
-    const loop = () => {
-      const elapsed = Date.now() - start;
-      const pct = Math.min(100, (elapsed / CLIP_MS) * 100);
-      setProgress(pct);
-      if (elapsed >= CLIP_MS) {
-        if (!advanced) {
-          advanced = true;
-          setActive((a) => (a + 1) % clips.length);
-        }
-        return;
-      }
-      rafRef.current = requestAnimationFrame(loop);
-    };
-    rafRef.current = requestAnimationFrame(loop);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    const timer = window.setTimeout(() => {
+      setActive((a) => (a + 1) % clips.length);
+    }, CLIP_MS);
+    return () => window.clearTimeout(timer);
   }, [active, playing, clips.length]);
 
   if (clips.length === 0) return null;
@@ -206,8 +163,8 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
         {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 z-20">
           <div
-            className="h-full bg-white transition-[width] duration-75"
-            style={{ width: `${progress}%` }}
+            key={`${clip.id}-${active}-${playing ? "playing" : "paused"}`}
+            className={`h-full bg-white ${playing ? "clip-progress" : "w-0"}`}
           />
         </div>
       </div>
@@ -217,7 +174,7 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
         {clips.map((c, i) => (
           <button
             key={c.id}
-            onClick={() => { setActive(i); setProgress(0); }}
+            onClick={() => setActive(i)}
             className={`flex-shrink-0 h-1.5 rounded-full transition-all ${
               i === active ? "w-10 bg-gainn-red" : "w-5 bg-border hover:bg-muted-foreground/40"
             }`}
