@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Article } from "@/data/mockData";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
@@ -46,11 +46,11 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
   const navigate = useNavigate();
   const [pulse, setPulse] = useState(0);
   const [isLiveSocket, setIsLiveSocket] = useState(false);
-  const clips = pickClips(articles, 8, pulse + 1);
+  const clips = useMemo(() => pickClips(articles, 8, pulse + 1), [articles, pulse]);
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
-  const tickRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   // ── Realtime WebSocket pulse: refresh clips every 1.5s across all clients ──
   useEffect(() => {
@@ -80,15 +80,22 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
   useEffect(() => {
     if (!playing || clips.length === 0) return;
     const start = Date.now();
-    tickRef.current = window.setInterval(() => {
+    let advanced = false;
+    const loop = () => {
       const elapsed = Date.now() - start;
       const pct = Math.min(100, (elapsed / CLIP_MS) * 100);
       setProgress(pct);
       if (elapsed >= CLIP_MS) {
-        setActive((a) => (a + 1) % clips.length);
+        if (!advanced) {
+          advanced = true;
+          setActive((a) => (a + 1) % clips.length);
+        }
+        return;
       }
-    }, 50);
-    return () => { if (tickRef.current) window.clearInterval(tickRef.current); };
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [active, playing, clips.length]);
 
   if (clips.length === 0) return null;
