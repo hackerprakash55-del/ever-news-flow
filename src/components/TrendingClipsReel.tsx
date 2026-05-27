@@ -191,8 +191,8 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
         {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10 z-20">
           <div
-            className="h-full bg-white transition-[width] duration-75"
-            style={{ width: `${progress}%` }}
+            key={`${clip.id}-${active}-${playing ? "playing" : "paused"}`}
+            className={`h-full bg-white ${playing ? "clip-progress" : "w-0"}`}
           />
         </div>
       </div>
@@ -202,7 +202,7 @@ export function TrendingClipsReel({ articles }: { articles: Article[] }) {
         {clips.map((c, i) => (
           <button
             key={c.id}
-            onClick={() => { setActive(i); setProgress(0); }}
+            onClick={() => setActive(i)}
             className={`flex-shrink-0 h-1.5 rounded-full transition-all ${
               i === active ? "w-10 bg-gainn-red" : "w-5 bg-border hover:bg-muted-foreground/40"
             }`}
