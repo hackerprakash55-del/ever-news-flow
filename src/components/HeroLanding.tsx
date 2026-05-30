@@ -105,44 +105,40 @@ export const HeroLanding = ({ onViewFeed, onHowItWorks }: { onViewFeed: () => vo
 
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-16 md:py-24 relative" style={{ zIndex: 3 }}>
         {/* System status badge */}
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-gainn-green/30 bg-gainn-green/5 text-xs font-mono backdrop-blur-sm">
-            <span className="w-2 h-2 rounded-full bg-gainn-green live-dot" />
-            <span className="text-gainn-green font-bold tracking-wide">SYSTEM ONLINE</span>
-            <span className="text-muted-foreground hidden sm:inline">— 108 agents active across 34 countries</span>
+        <div className="flex justify-center mb-10">
+          <div className="chip-soft flex items-center gap-2 px-4 py-1.5 text-xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-gainn-green live-dot" />
+            <span className="text-foreground/90 font-semibold tracking-wide">SYSTEM ONLINE</span>
+            <span className="text-muted-foreground hidden sm:inline">· 108 agents · 34 countries</span>
           </div>
         </div>
 
         {/* Main headline */}
-        <div className="text-center max-w-4xl mx-auto mb-8">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-display text-foreground mb-6 leading-[1.05]">
-            Autonomous{" "}
+        <div className="text-center max-w-5xl mx-auto mb-10">
+          <h1 className="display-mega text-5xl md:text-7xl lg:text-[5.5rem] text-foreground mb-6">
+            The Autonomous<br />
             <span className="text-gradient-primary">AI News Agency</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-6">
-            AI agents ingest, verify, and generate real-time news —{" "}
-            <span className="text-accent font-semibold">without human intervention.</span>
-          </p>
-          <p className="text-xs font-mono text-muted-foreground/60 max-w-lg mx-auto">
-            Multi-agent architecture • Real-time verification • Zero editorial bias • 24/7 autonomous operation
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            AI agents ingest, verify, and publish real-time global news —
+            <span className="text-foreground/90 font-medium"> without human intervention.</span>
           </p>
         </div>
 
         {/* CTAs */}
-        <div className="flex items-center justify-center gap-4 mb-12">
-          <Button
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-14">
+          <button
             onClick={onViewFeed}
-            className="h-12 px-8 text-sm font-semibold gap-2 bg-gradient-to-r from-primary to-accent text-white hover:opacity-90 transition-opacity shadow-glow-blue"
+            className="btn-pill-primary h-12 px-7 text-sm font-semibold inline-flex items-center gap-2"
           >
             <Zap className="w-4 h-4" /> View Live Feed
-          </Button>
-          <Button
-            variant="outline"
+          </button>
+          <button
             onClick={onHowItWorks}
-            className="h-12 px-8 text-sm font-semibold gap-2 border-border hover:border-primary/40 hover:bg-primary/5"
+            className="btn-pill-ghost h-12 px-7 text-sm font-semibold inline-flex items-center gap-2"
           >
             <Play className="w-4 h-4" /> Watch System in Action
-          </Button>
+          </button>
         </div>
 
         {/* Live activity ticker */}
