@@ -192,7 +192,7 @@ export const GlobalHeader = ({
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl animate-slide-down">
       {/* Top utility bar */}
       <div className="border-b border-border/50 px-4 py-1.5 flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
@@ -221,7 +221,7 @@ export const GlobalHeader = ({
       {/* Main header row */}
       <div className="px-4 md:px-6 py-3 flex items-center gap-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
+        <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 animate-logo-pop">
           <img src={gainnLogo} alt="GAINN Logo" className="w-8 h-8 object-contain" />
           <div>
             <div className="text-lg font-bold tracking-tight text-gradient-primary" style={{ fontFamily: "var(--font-display)" }}>
@@ -257,7 +257,7 @@ export const GlobalHeader = ({
                 key={item.label}
                 onClick={() => handleCatClick(item.cat, item.label)}
                 className={cn(
-                  "px-3 py-1.5 text-sm rounded-md transition-all font-medium whitespace-nowrap",
+                  "stagger-item nav-underline px-3 py-1.5 text-sm rounded-md transition-all font-medium whitespace-nowrap",
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
