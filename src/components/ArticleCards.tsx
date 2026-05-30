@@ -259,15 +259,16 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
   const comments = getCommentCount(article);
   const reliability = getSourceReliability(article.credibilityScore);
   const alreadyRead = isArticleRead(article.id);
+  const revealRef = useReveal<HTMLDivElement>();
 
   return (
     <div
-      className="block group cursor-pointer"
+      ref={revealRef}
+      className="block group cursor-pointer reveal"
       onClick={() => storeAndNavigate(article, navigate)}
     >
       <div
-        className="card-glass rounded-lg overflow-hidden h-full flex flex-col relative transition-shadow duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-        style={{ border: "1px solid hsl(var(--border))" }}
+        className="card-glass overflow-hidden h-full flex flex-col relative"
       >
         {/* Premium overlay */}
         {isPremium && (
