@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getProgress, isArticleRead } from "@/hooks/useReadingProgress";
+import { useReveal } from "@/hooks/useReveal";
 
 // Store live article in sessionStorage so the article page can retrieve it
 function storeAndNavigate(article: Article, navigate: (path: string) => void) {
@@ -165,8 +166,8 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
   const comments = getCommentCount(article);
 
   return (
-    <div className="block group cursor-pointer" onClick={() => storeAndNavigate(article, navigate)}>
-      <div className="relative overflow-hidden rounded-lg bg-surface-1 border border-border card-hover" style={{ minHeight: 480 }}>
+    <div className="block group cursor-pointer animate-hero-rise" onClick={() => storeAndNavigate(article, navigate)}>
+      <div className="card-glass relative overflow-hidden" style={{ minHeight: 480 }}>
         {article.imageUrl ? (
           <img
             src={article.imageUrl}
@@ -181,7 +182,7 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
         <div className="relative h-full flex flex-col justify-end p-6 min-h-[480px]">
           <div className="flex items-center gap-2 mb-3">
             {article.isBreaking && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold text-white bg-gainn-red animate-pulse">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-white bg-destructive breaking-pulse">
                 <Zap className="w-3 h-3" />BREAKING
               </span>
             )}
@@ -193,7 +194,7 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
             <CategoryBadge category={article.category} />
           </div>
 
-          <h2 className="text-2xl md:text-3xl font-display text-foreground mb-3 group-hover:text-accent transition-colors leading-tight">
+          <h2 className="hero-headline text-foreground mb-3 group-hover:text-primary transition-colors">
             {article.headline}
           </h2>
           <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{article.summary}</p>
