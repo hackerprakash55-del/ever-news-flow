@@ -65,15 +65,18 @@ export function AIMorningBriefing() {
 
   function handleListen() {
     if (!window.speechSynthesis) return;
+    // Always cancel any previous utterance first
+    window.speechSynthesis.cancel();
     if (speaking) {
-      window.speechSynthesis.cancel();
       setSpeaking(false);
       return;
     }
     const text = bullets.map((b, i) => `Point ${i + 1}. ${b}`).join(" ... ");
     const utt = new SpeechSynthesisUtterance(text);
-    utt.rate = 0.95;
+    utt.rate = 0.9;
     utt.pitch = 1;
+    utt.volume = 1;
+    utt.lang = "en-US";
     utt.onend = () => setSpeaking(false);
     utt.onerror = () => setSpeaking(false);
     synthRef.current = utt;
@@ -118,6 +121,20 @@ export function AIMorningBriefing() {
           >
             {speaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
             {speaking ? "Stop" : "Listen"}
+            {speaking && (
+              <span className="flex items-end gap-0.5 ml-0.5">
+                {[3, 6, 4, 7, 3].map((h, i) => (
+                  <span
+                    key={i}
+                    className="w-0.5 bg-destructive rounded-full"
+                    style={{
+                      height: `${h}px`,
+                      animation: `data-stream 0.${5 + i}s ease-in-out infinite alternate`,
+                    }}
+                  />
+                ))}
+              </span>
+            )}
           </button>
 
           {/* Expand/collapse chevron */}

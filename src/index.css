@@ -291,6 +291,11 @@ html.lenis, html.lenis body { height: auto; }
   animation: live-pulse 1.5s ease-in-out infinite;
 }
 
+@keyframes data-stream {
+  0%   { transform: scaleY(0.4); }
+  100% { transform: scaleY(1.2); }
+}
+
 .animate-live-pulse {
   animation: live-pulse 1.5s ease-in-out infinite;
 }
