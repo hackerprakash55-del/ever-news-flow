@@ -4,6 +4,7 @@ import { useNews } from "@/hooks/useNews";
 import { Play, Pause, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
+import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 
 interface VideoRecord {
   id: string;
@@ -156,6 +157,7 @@ export function TrendingVideosSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const autoGenStarted = useRef(false);
+  const [activeVideo, setActiveVideo] = useState<VideoModalSource | null>(null);
 
   const trendingTopics = articles
     .slice(0, 4)
@@ -198,7 +200,14 @@ export function TrendingVideosSection() {
   }, [isLoading, newsLoading, videos.length, trendingTopics.length]);
 
   const handleVideoClick = (video: VideoRecord) => {
-    navigate("/video", { state: { video } });
+    setActiveVideo({
+      title: video.title,
+      category: video.category,
+      // No hosted mp4 yet — modal will show styled "Video unavailable" card with the
+      // article thumbnail prompt context. Replace with real `video.url` when available.
+      src: (video as any).video_url ?? null,
+      poster: null,
+    });
   };
 
   if (isLoading) {
@@ -263,6 +272,7 @@ export function TrendingVideosSection() {
           View All Videos → <ArrowUpRight className="w-3 h-3" />
         </button>
       </div>
+      <VideoModal open={!!activeVideo} video={activeVideo} onClose={() => setActiveVideo(null)} />
     </div>
   );
 }
