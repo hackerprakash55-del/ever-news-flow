@@ -12,6 +12,10 @@ import { TrendingTopicsSidebar } from "@/components/TrendingTopicsSidebar";
 import { JustInFeed } from "@/components/JustInFeed";
 import { NewsletterBanner } from "@/components/NewsletterBanner";
 import { MarketTicker } from "@/components/MarketTicker";
+import { HeroAnnouncementBar } from "@/components/HeroAnnouncementBar";
+import { PremiumUpgradeModal } from "@/components/PremiumUpgradeModal";
+import { StickyUpgradeBar } from "@/components/StickyUpgradeBar";
+import { SocialProofStrip } from "@/components/SocialProofStrip";
 import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/components/ArticleSkeletons";
 import { useNews } from "@/hooks/useNews";
 import { CATEGORIES, WORLD_NEWS_PINS } from "@/data/mockData";
@@ -171,6 +175,7 @@ const Index = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const feedRef = useRef<HTMLDivElement>(null);
+  const [premiumOpen, setPremiumOpen] = useState(false);
 
   const catFromUrl = searchParams.get("cat") ?? "All";
   const [activeCategory, setActiveCategory] = useState(catFromUrl);
@@ -220,6 +225,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <GlobalHeader onNewsroomClick={() => navigate("/newsroom")} onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
+      <HeroAnnouncementBar onUpgradeClick={() => setPremiumOpen(true)} />
       <ValuePropBanner />
       <NewsTickerBar />
       <MarketTicker />
@@ -339,6 +345,7 @@ const Index = () => {
               )}
 
               {/* ── SECTION 6: NEWSLETTER CTA ── */}
+              <SocialProofStrip />
               <NewsletterBanner />
 
               {/* ── SECTION 7: MORE HEADLINES (paginated 6) ── */}
@@ -404,6 +411,8 @@ const Index = () => {
       </main>
 
       <SystemFooter isLive={isLive} />
+      <StickyUpgradeBar onUpgradeClick={() => setPremiumOpen(true)} />
+      <PremiumUpgradeModal open={premiumOpen} onClose={() => setPremiumOpen(false)} />
     </div>
   );
 };
