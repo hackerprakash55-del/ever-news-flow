@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { getVideoGradient } from "@/lib/videoVisuals";
+import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
@@ -394,6 +395,7 @@ export default function AIVideoPage() {
   const [useBrowserVoice, setUseBrowserVoice] = useState(!!navVideo);
   const [library, setLibrary] = useState<VideoRecord[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
+  const [activeVideo, setActiveVideo] = useState<VideoModalSource | null>(null);
   const { toast } = useToast();
 
   // Load video library on mount; video visuals are now pure CSS gradients so playback never depends on image/video URLs.
@@ -512,6 +514,13 @@ export default function AIVideoPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const playReport = (record: VideoRecord) => setActiveVideo({
+    title: record.title,
+    category: record.category ?? "Global Affairs",
+    script: record.script,
+    poster: null,
+  });
+
 
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -582,6 +591,7 @@ export default function AIVideoPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <VideoModal open={!!activeVideo} video={activeVideo} onClose={() => setActiveVideo(null)} />
       <GlobalHeader />
       <NewsTickerBar />
 
