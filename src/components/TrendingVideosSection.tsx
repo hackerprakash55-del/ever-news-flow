@@ -372,7 +372,13 @@ function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest:
         </h3>
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono text-muted-foreground">{timeAgo}</span>
-          <MiniVoicePlayer script={video.script} />
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-gainn-blue/15 text-gainn-blue border border-gainn-blue/30 hover:bg-gainn-blue/25"
+          >
+            <Play className="w-3 h-3" />
+            <span>Play</span>
+          </button>
         </div>
       </div>
     </div>
