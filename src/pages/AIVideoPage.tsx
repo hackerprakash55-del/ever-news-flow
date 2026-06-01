@@ -5,7 +5,7 @@ import { NewsTickerBar } from "@/components/NewsTickerBar";
 import {
   Video, Sparkles, Play, Pause, Clock, Globe, ChevronRight,
   Loader2, RefreshCw, Download, AlertCircle,
-  Mic, Film, BookOpen, Zap, TrendingUp, Image as ImageIcon,
+  Mic, Film, BookOpen, Zap, TrendingUp,
   PlayCircle, Volume2, VolumeX, Headphones, Square, Radio,
   Library, CalendarDays, ArrowUpRight
 } from "lucide-react";
@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
+import { getVideoGradient } from "@/lib/videoVisuals";
+import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
@@ -57,18 +59,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Science":        "bg-gainn-cyan/20 text-gainn-cyan border-gainn-cyan/30",
   "Health":         "bg-gainn-amber/20 text-gainn-amber border-gainn-amber/30",
   "Global Affairs": "bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
-};
-
-
-const CATEGORY_GRADIENTS: Record<string, string> = {
-  "AI": "from-gainn-purple/30 to-gainn-blue/10",
-  "Technology": "from-gainn-blue/30 to-gainn-cyan/10",
-  "Economy": "from-gainn-green/30 to-gainn-cyan/10",
-  "Politics": "from-gainn-red/30 to-gainn-amber/10",
-  "Environment": "from-gainn-green/30 to-gainn-blue/10",
-  "Science": "from-gainn-cyan/30 to-gainn-blue/10",
-  "Health": "from-gainn-amber/30 to-gainn-green/10",
-  "Global Affairs": "from-gainn-blue/30 to-gainn-purple/10",
 };
 
 
@@ -400,26 +390,17 @@ export default function AIVideoPage() {
     } : null
   );
   const [error, setError] = useState<string | null>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [useBrowserVoice, setUseBrowserVoice] = useState(!!navVideo);
   const [library, setLibrary] = useState<VideoRecord[]>([]);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(true);
+  const [activeVideo, setActiveVideo] = useState<VideoModalSource | null>(null);
   const { toast } = useToast();
 
-  // Load video library on mount; if came from nav with a video, use cached thumbnail first
+  // Load video library on mount; video visuals are now pure CSS gradients so playback never depends on image/video URLs.
   useEffect(() => {
     loadLibrary();
-    if (navVideo) {
-      // Use saved thumbnail_url if available — only regenerate if truly missing
-      if (navVideo.thumbnail_url) {
-        setThumbnailUrl(navVideo.thumbnail_url);
-      } else if (navVideo.thumbnail_prompt) {
-        generateThumbnail(navVideo.thumbnail_prompt, navVideo.title);
-      }
-    }
   }, []);
 
   const loadLibrary = async () => {
@@ -464,21 +445,6 @@ export default function AIVideoPage() {
         raw_headlines: data.rawHeadlines,
         generated_at: data.generatedAt,
       }).select("id").single();
-
-      // Generate & save thumbnail in background — non-blocking
-      if (inserted?.id && data.thumbnailPrompt) {
-        fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ thumbnailPrompt: data.thumbnailPrompt, title: data.title }),
-        }).then(r => r.ok ? r.json() : null).then(async (thumbData) => {
-          if (thumbData?.imageUrl && inserted?.id) {
-            await supabase.from("generated_videos")
-              .update({ thumbnail_url: thumbData.imageUrl })
-              .eq("id", inserted.id);
-          }
-        }).catch(() => {});
-      }
 
       // Surface new video in library immediately (without waiting for thumbnail)
       setLibrary(prev => [{
@@ -545,14 +511,15 @@ export default function AIVideoPage() {
     setAudioUrl(null);
     setUseBrowserVoice(true);
     setTopic(record.title);
-    // Always use cached thumbnail_url — never regenerate on open (that was the slow path)
-    if (record.thumbnail_url) {
-      setThumbnailUrl(record.thumbnail_url);
-    } else {
-      setThumbnailUrl(null); // Show placeholder, don't block opening
-    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const playReport = (record: VideoRecord) => setActiveVideo({
+    title: record.title,
+    category: record.category ?? "Global Affairs",
+    script: record.script,
+    poster: null,
+  });
 
 
 
@@ -566,7 +533,6 @@ export default function AIVideoPage() {
     setIsGenerating(true);
     setError(null);
     setVideoScript(null);
-    setThumbnailUrl(null);
     setAudioUrl(null);
     setUseBrowserVoice(false);
 
@@ -600,34 +566,11 @@ export default function AIVideoPage() {
       // Save to library DB
       saveVideoToDb(data);
 
-
-      generateThumbnail(data.thumbnailPrompt, data.title);
       generateAudio(data.script, data.title);
     } catch (e) {
       setError("Network error — please try again.");
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-  const generateThumbnail = async (prompt: string, title: string) => {
-    setIsGeneratingThumbnail(true);
-    try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${anonKey}`,
-          apikey: anonKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ thumbnailPrompt: prompt, title }),
-      });
-      const data = await res.json();
-      if (res.ok && data.imageUrl) setThumbnailUrl(data.imageUrl);
-    } catch (e) {
-      console.error("Thumbnail generation failed:", e);
-    } finally {
-      setIsGeneratingThumbnail(false);
     }
   };
 
@@ -648,6 +591,7 @@ export default function AIVideoPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <VideoModal open={!!activeVideo} video={activeVideo} onClose={() => setActiveVideo(null)} />
       <GlobalHeader />
       <NewsTickerBar />
 
@@ -757,17 +701,10 @@ export default function AIVideoPage() {
             {/* Main Panel */}
             <div className="card-glass rounded-xl overflow-hidden border border-border">
 
-              {/* VIDEO PLAYER */}
-              <div className="relative w-full bg-black" style={{ aspectRatio: "16/9" }}>
-                {isGeneratingThumbnail ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-1">
-                    <Loader2 className="w-8 h-8 text-gainn-blue animate-spin" />
-                    <span className="text-xs font-mono text-muted-foreground">Generating cinematic thumbnail...</span>
-                  </div>
-                ) : thumbnailUrl ? (
-                  <>
-                    <img src={thumbnailUrl} alt={videoScript.title} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 flex flex-col justify-between p-4 md:p-6">
+              {/* AI SCRIPT READER STAGE */}
+              <div className="relative w-full overflow-hidden" style={{ aspectRatio: "16/9", background: getVideoGradient(videoScript.category) }}>
+                <div className="absolute inset-0 film-grain opacity-35 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/20 flex flex-col justify-between p-4 md:p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gainn-red text-white uppercase tracking-wider">
@@ -783,9 +720,13 @@ export default function AIVideoPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+                        <button
+                          onClick={() => setActiveVideo({ title: videoScript.title, category: videoScript.category, script: videoScript.script, poster: null })}
+                          className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center transition-transform hover:scale-[1.03]"
+                          aria-label="Play AI video report"
+                        >
                           <PlayCircle className="w-10 h-10 text-white" />
-                        </div>
+                        </button>
                       </div>
                       <div>
                         <h2 className="text-white font-display text-lg md:text-xl leading-tight drop-shadow-lg">
@@ -799,19 +740,7 @@ export default function AIVideoPage() {
                           </span>
                         </div>
                       </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-1">
-                    <div className="w-14 h-14 rounded-full bg-surface-2 border border-border flex items-center justify-center">
-                      <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                    <span className="text-xs font-mono text-muted-foreground">Thumbnail unavailable</span>
-                    <button onClick={() => generateThumbnail(videoScript.thumbnailPrompt, videoScript.title)} className="text-xs text-gainn-blue underline">
-                      Retry generation
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
 
               {/* AUDIO PLAYER */}
@@ -886,16 +815,6 @@ export default function AIVideoPage() {
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => generate()} className="border-border text-muted-foreground hover:text-foreground">
                   <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Regenerate
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateThumbnail(videoScript.thumbnailPrompt, videoScript.title)}
-                  disabled={isGeneratingThumbnail}
-                  className="border-gainn-purple/30 text-gainn-purple hover:bg-gainn-purple/10"
-                >
-                  {isGeneratingThumbnail ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5 mr-1.5" />}
-                  New Thumbnail
                 </Button>
                 <Button
                   variant="outline"
@@ -1028,16 +947,16 @@ export default function AIVideoPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {library.map((record) => {
-              const gradient = CATEGORY_GRADIENTS[record.category] || "from-gainn-blue/20 to-gainn-purple/10";
+              const gradient = getVideoGradient(record.category);
               const badge = CATEGORY_COLORS[record.category] || "bg-surface-2 text-muted-foreground border-border";
               return (
                 <button
                   key={record.id}
-                  onClick={() => loadVideoFromLibrary(record)}
+                  onClick={() => playReport(record)}
                   className="card-glass rounded-xl overflow-hidden border border-border hover:border-gainn-blue/40 hover:shadow-lg transition-all text-left group"
                 >
                   {/* Thumbnail placeholder */}
-                  <div className={`relative h-32 bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                  <div className="relative h-32 flex items-center justify-center" style={{ background: gradient }}>
                     <PlayCircle className="w-10 h-10 text-white/30 group-hover:text-white/60 transition-colors" />
                     <div className="absolute top-2 left-2">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge} uppercase tracking-wider`}>
@@ -1047,6 +966,9 @@ export default function AIVideoPage() {
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ArrowUpRight className="w-4 h-4 text-white/70" />
                     </div>
+                    <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-gainn-cyan px-2.5 py-1 text-[10px] font-bold text-background opacity-0 transition-opacity group-hover:opacity-100">
+                      <Play className="w-3 h-3" /> Play
+                    </span>
                   </div>
                   {/* Meta */}
                   <div className="p-3">

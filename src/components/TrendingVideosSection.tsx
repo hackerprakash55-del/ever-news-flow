@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNews } from "@/hooks/useNews";
-import { Play, Pause, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
+import { Play, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
+import { getVideoGradient } from "@/lib/videoVisuals";
 
 interface VideoRecord {
   id: string;
@@ -34,67 +34,6 @@ const CATEGORY_ICON: Record<string, string> = {
   "AI": "🤖", "Technology": "💻", "Economy": "📈", "Politics": "🏛️",
   "Environment": "🌿", "Science": "🔬", "Health": "🏥", "Global Affairs": "🌍", "General": "📰",
 };
-
-function MiniVoicePlayer({ script }: { script: string }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  const cleanText = script
-    .replace(/\*\*[A-Z\s]+\*\*/g, "")
-    .replace(/#{1,3}\s+\w+/g, "")
-    .replace(/\*\*/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, 5000);
-
-  const toggle = useCallback(async () => {
-    if (isPlaying) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-    } else {
-      window.speechSynthesis.cancel();
-      await waitForVoices();
-      const utter = new SpeechSynthesisUtterance(cleanText);
-      tuneUtterance(utter);
-      utter.onend = () => setIsPlaying(false);
-      utter.onerror = () => setIsPlaying(false);
-      uttRef.current = utter;
-      window.speechSynthesis.speak(utter);
-      setIsPlaying(true);
-    }
-  }, [isPlaying, cleanText]);
-
-  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
-
-  return (
-    <button
-      onClick={e => { e.stopPropagation(); toggle(); }}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-        isPlaying
-          ? "bg-gainn-green/20 text-gainn-green border border-gainn-green/40"
-          : "bg-gainn-blue/15 text-gainn-blue border border-gainn-blue/30 hover:bg-gainn-blue/25"
-      }`}
-    >
-      {isPlaying ? (
-        <>
-          <Pause className="w-3 h-3" />
-          <span>Pause</span>
-          <div className="flex items-end gap-0.5 ml-1">
-            {[3,5,4,6,3].map((h,i) => (
-              <div key={i} className="w-0.5 rounded-full bg-gainn-green animate-pulse"
-                style={{ height: `${h}px`, animationDelay: `${i*0.08}s` }} />
-            ))}
-          </div>
-        </>
-      ) : (
-        <>
-          <Play className="w-3 h-3" />
-          <span>Play</span>
-        </>
-      )}
-    </button>
-  );
-}
 
 async function autoGenerateScript(topic: string): Promise<VideoRecord | null> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -136,19 +75,6 @@ function getViewCount(id: string): string {
   const views = (n % 90 + 10) * 100 + (n % 47) * 10;
   return views >= 1000 ? `${(views / 1000).toFixed(1)}K` : String(views);
 }
-
-const CATEGORY_GRADIENTS: Record<string, string> = {
-  "AI":            "from-violet-900 via-purple-800 to-indigo-900",
-  "Technology":    "from-cyan-900 via-blue-800 to-indigo-900",
-  "Economy":       "from-blue-900 via-teal-800 to-cyan-900",
-  "Politics":      "from-red-900 via-rose-800 to-amber-900",
-  "Geopolitics":   "from-red-900 via-rose-800 to-orange-900",
-  "Environment":   "from-green-900 via-emerald-800 to-teal-900",
-  "Science":       "from-green-900 via-teal-800 to-cyan-900",
-  "Health":        "from-pink-900 via-rose-800 to-red-900",
-  "Global Affairs":"from-blue-900 via-indigo-800 to-violet-900",
-  "General":       "from-slate-800 via-slate-700 to-slate-800",
-};
 
 export function TrendingVideosSection() {
   const navigate = useNavigate();
@@ -203,9 +129,7 @@ export function TrendingVideosSection() {
     setActiveVideo({
       title: video.title,
       category: video.category,
-      // No hosted mp4 yet — modal will show styled "Video unavailable" card with the
-      // article thumbnail prompt context. Replace with real `video.url` when available.
-      src: (video as any).video_url ?? null,
+      script: video.script,
       poster: null,
     });
   };
@@ -262,12 +186,12 @@ export function TrendingVideosSection() {
       </div>
       <div className="mt-4 flex items-center justify-between">
         <button
-          onClick={() => navigate("/ai-video")}
+          onClick={() => navigate("/video")}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors bg-gainn-red/15 text-gainn-red border border-gainn-red/30 hover:bg-gainn-red/25"
         >
           <Radio className="w-3.5 h-3.5" /> Watch Live Broadcast →
         </button>
-        <button onClick={() => navigate("/video-library")}
+        <button onClick={() => navigate("/videos")}
           className="inline-flex items-center gap-1.5 text-xs font-mono text-gainn-blue hover:text-gainn-cyan transition-colors">
           View All Videos → <ArrowUpRight className="w-3 h-3" />
         </button>
@@ -307,7 +231,7 @@ function VideoSectionHeader({ generating, onRefresh }: { generating: boolean; on
 function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest: boolean; onClick: () => void }) {
   const colorClass = CATEGORY_COLORS[video.category] || CATEGORY_COLORS["General"];
   const icon = CATEGORY_ICON[video.category] || "📰";
-  const gradient = CATEGORY_GRADIENTS[video.category] || CATEGORY_GRADIENTS["General"];
+  const gradient = getVideoGradient(video.category);
   const timeAgo = getTimeAgo(video.created_at);
   const views = getViewCount(video.id);
 
@@ -319,7 +243,7 @@ function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest:
       {/* Cinematic thumbnail */}
       <div className="relative h-44 overflow-hidden">
         {/* Ken Burns animated gradient layer */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} animate-ken-burns will-change-transform`} />
+        <div className="absolute inset-0 animate-ken-burns will-change-transform" style={{ background: gradient }} />
 
         {/* Soft radial highlight */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_55%)]" />
@@ -386,7 +310,13 @@ function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest:
         </h3>
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono text-muted-foreground">{timeAgo}</span>
-          <MiniVoicePlayer script={video.script} />
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all bg-gainn-blue/15 text-gainn-blue border border-gainn-blue/30 hover:bg-gainn-blue/25"
+          >
+            <Play className="w-3 h-3" />
+            <span>Play</span>
+          </button>
         </div>
       </div>
     </div>

@@ -296,6 +296,16 @@ html.lenis, html.lenis body { height: auto; }
   100% { transform: scaleY(1.2); }
 }
 
+@keyframes ai-wave {
+  0%, 100% { transform: scaleY(0.38); opacity: 0.55; }
+  50% { transform: scaleY(1.15); opacity: 1; }
+}
+
+.animate-ai-wave {
+  transform-origin: center bottom;
+  animation: ai-wave 0.78s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 .animate-live-pulse {
   animation: live-pulse 1.5s ease-in-out infinite;
 }
