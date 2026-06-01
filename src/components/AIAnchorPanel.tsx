@@ -1,12 +1,11 @@
-import aiAnchorImg from "@/assets/ai-anchor.jpg";
-import { Play, Radio, Volume2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, Radio } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNews } from "@/hooks/useNews";
 
 export const AIAnchorPanel = () => {
-  const [playing, setPlaying] = useState(false);
   const [selected, setSelected] = useState(0);
+  const [typedWords, setTypedWords] = useState(1);
   const { articles, isLoading } = useNews({ pageSize: 6 });
   const navigate = useNavigate();
 
@@ -20,6 +19,21 @@ export const AIAnchorPanel = () => {
   }));
 
   const current = segments[selected];
+  const headlineWords = (current?.title ?? "Loading live feed").split(/\s+/).filter(Boolean);
+
+  useEffect(() => {
+    setTypedWords(1);
+    if (!headlineWords.length) return;
+    const timer = window.setInterval(() => {
+      setTypedWords((count) => (count >= headlineWords.length ? 1 : count + 1));
+    }, 260);
+    return () => window.clearInterval(timer);
+  }, [current?.id, headlineWords.length]);
+
+  const openCurrent = () => {
+    if (!current) return;
+    navigate(`/article/${current.id}`, { state: { article: articles[selected] } });
+  };
 
   return (
     <div className="card-glass rounded-lg overflow-hidden">
@@ -35,30 +49,23 @@ export const AIAnchorPanel = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-        {/* Video panel */}
-        <div className="relative bg-surface-0 overflow-hidden" style={{ minHeight: 220 }}>
-          {current?.imageUrl ? (
-            <img
-              src={current.imageUrl}
-              alt={current?.title}
-              className="w-full h-full object-cover"
-              style={{ minHeight: 220 }}
-              onError={(e) => { (e.target as HTMLImageElement).src = ""; (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-          ) : (
-            <img
-              src={aiAnchorImg}
-              alt="GAINN AI Anchor"
-              className="w-full h-full object-cover"
-              style={{ minHeight: 220 }}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        {/* Live broadcast panel */}
+        <div
+          className="relative bg-surface-0 overflow-hidden"
+          style={{
+            minHeight: 220,
+            backgroundImage: `${current?.imageUrl ? `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.78)), url(${current.imageUrl})` : "linear-gradient(135deg, #0a0818 0%, #2d1b69 100%)"}`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/20" />
+          <div className="absolute inset-0 film-grain opacity-30 pointer-events-none" />
 
           {/* Bottom overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-3">
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-1.5 py-0.5 bg-gainn-red text-white text-[9px] font-bold tracking-widest rounded">
+              <span className="px-1.5 py-0.5 bg-gainn-red text-white text-[9px] font-bold tracking-widest rounded live-dot">
                 LIVE
               </span>
               <span className="text-white text-[10px] font-mono">GAINN • AI ANCHOR</span>
@@ -69,37 +76,31 @@ export const AIAnchorPanel = () => {
               )}
             </div>
             <div className="text-white text-xs font-medium line-clamp-2">
-              {current?.title ?? "Loading live feed…"}
+              {headlineWords.slice(0, typedWords).join(" ")}
+              <span className="inline-block w-1.5 h-3 ml-1 bg-gainn-cyan align-[-2px] animate-pulse" />
             </div>
           </div>
 
-          {/* Center play button */}
-          <button
-            onClick={() => setPlaying(!playing)}
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gainn-blue/80 hover:bg-gainn-blue flex items-center justify-center transition-all hover:scale-110 backdrop-blur-sm"
-          >
-            {playing ? (
-              <Volume2 className="w-5 h-5 text-white" />
-            ) : (
-              <Play className="w-5 h-5 text-white ml-0.5" />
-            )}
-          </button>
-
-          {/* Voice indicator */}
-          {playing && (
-            <div className="absolute top-3 right-3 flex items-end gap-0.5">
-              {[3, 5, 4, 7, 3, 6, 4].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-1 rounded-full bg-gainn-cyan"
-                  style={{
-                    height: `${h * 2}px`,
-                    animation: `data-stream ${0.3 + i * 0.1}s ease-in-out infinite`,
-                  }}
-                />
-              ))}
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <div className="rounded-2xl border border-white/15 bg-black/35 backdrop-blur-md px-5 py-4 text-center shadow-[0_18px_60px_rgba(0,0,0,0.45)]">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-gainn-red/40 bg-gainn-red/15 px-3 py-1 text-[10px] font-bold font-mono text-gainn-red tracking-widest">
+                <span className="h-1.5 w-1.5 rounded-full bg-gainn-red live-dot" /> LIVE BROADCAST
+              </div>
+              <p className="max-w-sm text-sm font-display text-white line-clamp-2">{current?.title ?? "Loading live feed…"}</p>
+              <button
+                onClick={openCurrent}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gainn-cyan px-4 py-2 text-xs font-bold text-background transition-transform hover:scale-[1.03]"
+              >
+                Read Full Story <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-          )}
+          </div>
+
+          <div className="absolute top-3 right-3 flex items-end gap-0.5">
+            {[3, 5, 4, 7, 3].map((h, i) => (
+              <div key={i} className="w-1 rounded-full bg-gainn-cyan animate-ai-wave" style={{ height: `${h * 2}px`, animationDelay: `${i * 0.1}s` }} />
+            ))}
+          </div>
         </div>
 
         {/* Playlist */}
@@ -131,11 +132,11 @@ export const AIAnchorPanel = () => {
                       selected === i ? "ring-2 ring-gainn-blue" : "bg-surface-2"
                     }`}>
                       {seg.imageUrl ? (
-                        <img src={seg.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        <span className="w-full h-full" style={{ background: "linear-gradient(135deg, #0a0818 0%, #2d1b69 100%)" }} />
                       ) : seg.live ? (
                         <span className="w-2 h-2 rounded-full bg-gainn-red live-dot" />
                       ) : (
-                        <Play className="w-3 h-3 text-muted-foreground" />
+                        <Radio className="w-3 h-3 text-muted-foreground" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

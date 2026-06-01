@@ -5,6 +5,7 @@ import { Play, Pause, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "
 import { useNavigate } from "react-router-dom";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
+import { getVideoGradient } from "@/lib/videoVisuals";
 
 interface VideoRecord {
   id: string;
@@ -137,19 +138,6 @@ function getViewCount(id: string): string {
   return views >= 1000 ? `${(views / 1000).toFixed(1)}K` : String(views);
 }
 
-const CATEGORY_GRADIENTS: Record<string, string> = {
-  "AI":            "from-violet-900 via-purple-800 to-indigo-900",
-  "Technology":    "from-cyan-900 via-blue-800 to-indigo-900",
-  "Economy":       "from-blue-900 via-teal-800 to-cyan-900",
-  "Politics":      "from-red-900 via-rose-800 to-amber-900",
-  "Geopolitics":   "from-red-900 via-rose-800 to-orange-900",
-  "Environment":   "from-green-900 via-emerald-800 to-teal-900",
-  "Science":       "from-green-900 via-teal-800 to-cyan-900",
-  "Health":        "from-pink-900 via-rose-800 to-red-900",
-  "Global Affairs":"from-blue-900 via-indigo-800 to-violet-900",
-  "General":       "from-slate-800 via-slate-700 to-slate-800",
-};
-
 export function TrendingVideosSection() {
   const navigate = useNavigate();
   const { articles, isLoading: newsLoading } = useNews({ pageSize: 10 });
@@ -203,9 +191,7 @@ export function TrendingVideosSection() {
     setActiveVideo({
       title: video.title,
       category: video.category,
-      // No hosted mp4 yet — modal will show styled "Video unavailable" card with the
-      // article thumbnail prompt context. Replace with real `video.url` when available.
-      src: (video as any).video_url ?? null,
+      script: video.script,
       poster: null,
     });
   };
@@ -262,12 +248,12 @@ export function TrendingVideosSection() {
       </div>
       <div className="mt-4 flex items-center justify-between">
         <button
-          onClick={() => navigate("/ai-video")}
+          onClick={() => navigate("/video")}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors bg-gainn-red/15 text-gainn-red border border-gainn-red/30 hover:bg-gainn-red/25"
         >
           <Radio className="w-3.5 h-3.5" /> Watch Live Broadcast →
         </button>
-        <button onClick={() => navigate("/video-library")}
+        <button onClick={() => navigate("/videos")}
           className="inline-flex items-center gap-1.5 text-xs font-mono text-gainn-blue hover:text-gainn-cyan transition-colors">
           View All Videos → <ArrowUpRight className="w-3 h-3" />
         </button>
@@ -307,7 +293,7 @@ function VideoSectionHeader({ generating, onRefresh }: { generating: boolean; on
 function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest: boolean; onClick: () => void }) {
   const colorClass = CATEGORY_COLORS[video.category] || CATEGORY_COLORS["General"];
   const icon = CATEGORY_ICON[video.category] || "📰";
-  const gradient = CATEGORY_GRADIENTS[video.category] || CATEGORY_GRADIENTS["General"];
+  const gradient = getVideoGradient(video.category);
   const timeAgo = getTimeAgo(video.created_at);
   const views = getViewCount(video.id);
 
@@ -319,7 +305,7 @@ function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest:
       {/* Cinematic thumbnail */}
       <div className="relative h-44 overflow-hidden">
         {/* Ken Burns animated gradient layer */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} animate-ken-burns will-change-transform`} />
+        <div className="absolute inset-0 animate-ken-burns will-change-transform" style={{ background: gradient }} />
 
         {/* Soft radial highlight */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_55%)]" />

@@ -6,10 +6,12 @@ import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import {
   Search, Film, Clock, Tag, ChevronRight, Play,
-  BookOpen, Zap, RefreshCw, Library, Radio, Eye, X, Maximize2, Volume2,
+  BookOpen, Zap, RefreshCw, Library, Radio, Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
+import { getVideoGradient } from "@/lib/videoVisuals";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -51,17 +53,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Global Affairs":"bg-gainn-blue/20 text-gainn-blue border-gainn-blue/30",
 };
 
-const CATEGORY_GRADIENTS: Record<string, string> = {
-  AI:             "from-gainn-purple/25 to-gainn-blue/5",
-  Technology:     "from-gainn-blue/25 to-gainn-cyan/5",
-  Economy:        "from-gainn-green/25 to-gainn-cyan/5",
-  Politics:       "from-gainn-red/25 to-gainn-amber/5",
-  Environment:    "from-gainn-green/25 to-gainn-blue/5",
-  Science:        "from-gainn-cyan/25 to-gainn-blue/5",
-  Health:         "from-gainn-amber/25 to-gainn-green/5",
-  "Global Affairs":"from-gainn-blue/25 to-gainn-purple/5",
-};
-
 const CATEGORY_ICONS: Record<string, string> = {
   AI: "🤖", Technology: "💻", Economy: "📈", Politics: "🏛️",
   Environment: "🌿", Science: "🚀", Health: "🏥", "Global Affairs": "🌍",
@@ -87,66 +78,11 @@ function fakeViews(id: string) {
   return base.toLocaleString();
 }
 
-// ── Watch Live Modal ────────────────────────────────────────────────────────
-function WatchLiveModal({ video, onClose }: { video: VideoRecord; onClose: () => void }) {
-  const cat = video.category ?? "Global Affairs";
-  const icon = CATEGORY_ICONS[cat] ?? "📰";
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-2xl bg-card rounded-2xl border border-border overflow-hidden shadow-elevated"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Player area */}
-        <div className="relative bg-surface-0 aspect-video flex items-center justify-center overflow-hidden">
-          {video.thumbnail_url ? (
-            <img src={video.thumbnail_url} alt={video.title} className="absolute inset-0 w-full h-full object-cover opacity-30" />
-          ) : null}
-          <div className="relative flex flex-col items-center gap-4 text-center px-6">
-            <span className="text-6xl">{icon}</span>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gainn-blue/20 border border-gainn-blue/30">
-              <div className="w-2 h-2 rounded-full bg-gainn-red animate-pulse" />
-              <span className="text-sm font-mono font-bold text-gainn-cyan">LIVE AI BROADCAST</span>
-            </div>
-            <p className="text-muted-foreground text-xs max-w-xs">
-              AI-generated live reading of this report is playing now.
-            </p>
-          </div>
-          {/* Fake controls overlay */}
-          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-3 flex items-center gap-3">
-            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-              <Play className="w-3 h-3 text-white ml-0.5" />
-            </div>
-            <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
-              <div className="h-full bg-gainn-cyan rounded-full animate-[grow_8s_linear_infinite]" style={{ width: "38%" }} />
-            </div>
-            <Volume2 className="w-3.5 h-3.5 text-white/60" />
-            <Maximize2 className="w-3.5 h-3.5 text-white/60" />
-          </div>
-        </div>
-        {/* Info */}
-        <div className="p-4 flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold text-sm text-foreground leading-snug">{video.title}</h3>
-            <p className="text-xs text-muted-foreground mt-1 font-mono">{cat} · AI Video Report</p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── VideoCard ────────────────────────────────────────────────────────────────
-function VideoCard({ video, onWatchLive }: { video: VideoRecord; onWatchLive: (v: VideoRecord) => void }) {
+function VideoCard({ video, onPlayReport }: { video: VideoRecord; onPlayReport: (v: VideoRecord) => void }) {
   const [hovered, setHovered] = useState(false);
   const cat = video.category ?? "Global Affairs";
-  const gradient = CATEGORY_GRADIENTS[cat] ?? "from-gainn-blue/20 to-gainn-purple/5";
+  const gradient = getVideoGradient(cat);
   const badge = CATEGORY_COLORS[cat] ?? "bg-surface-2 text-muted-foreground border-border";
   const icon = CATEGORY_ICONS[cat] ?? "📰";
   const headlines: string[] = Array.isArray(video.raw_headlines)
@@ -168,55 +104,30 @@ function VideoCard({ video, onWatchLive }: { video: VideoRecord; onWatchLive: (v
       onMouseLeave={() => setHovered(false)}
     >
       {/* Thumbnail area */}
-      <div className={cn(
-        "relative h-44 bg-gradient-to-br flex items-center justify-center overflow-hidden",
-        gradient
-      )}>
-        {video.thumbnail_url ? (
-          <img
-            src={video.thumbnail_url}
-            alt={video.title}
-            className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-transform duration-500",
-              hovered && "scale-105"
-            )}
-          />
-        ) : (
-          <>
-            <div className="absolute inset-0 opacity-10"
-              style={{ backgroundImage: "radial-gradient(hsl(var(--gainn-blue)) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
-            />
-            <div className="relative flex flex-col items-center gap-3 text-center px-4">
-              <span className="text-4xl">{icon}</span>
-              <div className={cn(
-                "w-10 h-10 rounded-full bg-foreground/10 backdrop-blur-sm flex items-center justify-center transition-colors",
-                hovered ? "bg-gainn-blue/30" : ""
-              )}>
-                <Play className={cn("w-5 h-5 ml-0.5 transition-colors", hovered ? "text-gainn-cyan" : "text-foreground/80")} />
-              </div>
-            </div>
-          </>
-        )}
+      <div className="relative h-44 flex items-center justify-center overflow-hidden" style={{ background: gradient }}>
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: "radial-gradient(hsl(var(--gainn-blue)) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
+        />
+        <div className="relative flex flex-col items-center gap-3 text-center px-4">
+          <span className="text-4xl">{icon}</span>
+          <div className={cn(
+            "w-10 h-10 rounded-full bg-foreground/10 backdrop-blur-sm flex items-center justify-center transition-colors",
+            hovered ? "bg-gainn-blue/30" : ""
+          )}>
+            <Play className={cn("w-5 h-5 ml-0.5 transition-colors", hovered ? "text-gainn-cyan" : "text-foreground/80")} />
+          </div>
+        </div>
 
-        {/* Hover overlay with Watch Live */}
+        {/* Hover overlay with script reader */}
         <div className={cn(
           "absolute inset-0 bg-black/50 flex items-center justify-center gap-2 transition-opacity duration-200",
           hovered ? "opacity-100" : "opacity-0"
         )}>
-          <Link
-            to="/video"
-            state={{ videoId: video.id }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-blue text-white text-xs font-semibold hover:bg-gainn-blue/90 transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Play className="w-3.5 h-3.5 ml-0.5" /> Watch
-          </Link>
           <button
-            onClick={(e) => { e.preventDefault(); onWatchLive(video); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-red text-white text-xs font-semibold hover:bg-gainn-red/90 transition-colors"
+            onClick={(e) => { e.preventDefault(); onPlayReport(video); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gainn-blue text-background text-xs font-semibold hover:bg-gainn-blue/90 transition-colors"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            Live
+            <Play className="w-3.5 h-3.5 ml-0.5" /> Play Report
           </button>
         </div>
 
@@ -268,17 +179,16 @@ function VideoCard({ video, onWatchLive }: { video: VideoRecord; onWatchLive: (v
 
       {/* Footer CTA */}
       <div className="px-4 pb-4">
-        <Link
-          to="/video"
-          state={{ videoId: video.id }}
+        <button
+          onClick={() => onPlayReport(video)}
           className={cn(
-            "flex items-center gap-1.5 text-xs font-semibold transition-colors",
+            "flex w-full items-center gap-1.5 text-xs font-semibold transition-colors",
             hovered ? "text-gainn-cyan" : "text-gainn-blue"
           )}
         >
-          <Play className="w-3 h-3" /> Watch Report
+          <Play className="w-3 h-3" /> Play Script Reader
           <ChevronRight className="w-3 h-3 ml-auto" />
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -305,7 +215,14 @@ function SkeletonCard() {
 export default function VideoLibraryPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [watchLiveVideo, setWatchLiveVideo] = useState<VideoRecord | null>(null);
+  const [activeVideo, setActiveVideo] = useState<VideoModalSource | null>(null);
+
+  const playReport = (video: VideoRecord) => setActiveVideo({
+    title: video.title,
+    category: video.category ?? "Global Affairs",
+    script: video.script,
+    poster: null,
+  });
 
   const { data: videos = [], isLoading, isError, refetch, isFetching } = useQuery<VideoRecord[]>({
     queryKey: ["video-library"],
@@ -343,7 +260,7 @@ export default function VideoLibraryPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {watchLiveVideo && <WatchLiveModal video={watchLiveVideo} onClose={() => setWatchLiveVideo(null)} />}
+      <VideoModal open={!!activeVideo} video={activeVideo} onClose={() => setActiveVideo(null)} />
       <GlobalHeader />
       <NewsTickerBar />
 
@@ -495,7 +412,7 @@ export default function VideoLibraryPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {filtered.map((video) => (
-                <VideoCard key={video.id} video={video} onWatchLive={setWatchLiveVideo} />
+                <VideoCard key={video.id} video={video} onPlayReport={playReport} />
               ))}
             </div>
           </>

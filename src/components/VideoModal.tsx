@@ -1,12 +1,12 @@
-import { useEffect, useRef } from "react";
-import { X, Play } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { X, Play, Pause, Radio } from "lucide-react";
+import { tuneUtterance, waitForVoices } from "@/lib/voice";
+import { cleanNarrationText, estimateNarrationSeconds, getVideoGradient } from "@/lib/videoVisuals";
 
 export interface VideoModalSource {
   title: string;
   category?: string;
-  /** Direct .mp4 / hosted url. When missing, fallback card is shown. */
-  src?: string | null;
-  /** Optional poster / thumbnail image. */
+  script?: string | null;
   poster?: string | null;
 }
 
@@ -16,9 +16,68 @@ interface Props {
   video: VideoModalSource | null;
 }
 
-/** Full-screen cinematic video modal — HTML5 controls, ESC to close, fade-in. */
+/** Full-screen AI video script reader — no brittle video URLs, only Web Speech narration. */
 export function VideoModal({ open, onClose, video }: Props) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+  const elapsedBeforePauseRef = useRef(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  const narration = useMemo(() => cleanNarrationText(video?.script || video?.title), [video?.script, video?.title]);
+  const duration = useMemo(() => estimateNarrationSeconds(narration), [narration]);
+  const progress = Math.min(100, (elapsed / duration) * 100);
+
+  const stopNarration = useCallback(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    utteranceRef.current = null;
+    startedAtRef.current = null;
+    elapsedBeforePauseRef.current = 0;
+    setElapsed(0);
+    setIsPlaying(false);
+    setIsPaused(false);
+  }, []);
+
+  const startNarration = useCallback(async () => {
+    if (!narration || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    await waitForVoices();
+    const utterance = new SpeechSynthesisUtterance(narration);
+    tuneUtterance(utterance);
+    utterance.onend = () => {
+      startedAtRef.current = null;
+      elapsedBeforePauseRef.current = 0;
+      setElapsed(duration);
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+    utteranceRef.current = utterance;
+    elapsedBeforePauseRef.current = 0;
+    startedAtRef.current = Date.now();
+    setElapsed(0);
+    setIsPlaying(true);
+    setIsPaused(false);
+    window.speechSynthesis.speak(utterance);
+  }, [duration, narration]);
+
+  const togglePause = useCallback(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window) || !isPlaying) return;
+    if (isPaused) {
+      window.speechSynthesis.resume();
+      startedAtRef.current = Date.now();
+      setIsPaused(false);
+    } else {
+      window.speechSynthesis.pause();
+      if (startedAtRef.current) elapsedBeforePauseRef.current += (Date.now() - startedAtRef.current) / 1000;
+      startedAtRef.current = null;
+      setIsPaused(true);
+    }
+  }, [isPaused, isPlaying]);
 
   useEffect(() => {
     if (!open) return;
@@ -26,24 +85,26 @@ export function VideoModal({ open, onClose, video }: Props) {
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    // Try to autoplay-with-sound (user clicked, so allowed)
-    const t = setTimeout(() => {
-      const v = videoRef.current;
-      if (v && video?.src) {
-        v.muted = false;
-        v.play().catch(() => { /* will rely on controls */ });
-      }
-    }, 50);
+    const t = window.setTimeout(() => { startNarration(); }, 80);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
-      clearTimeout(t);
-      const v = videoRef.current;
-      if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
+      window.clearTimeout(t);
+      stopNarration();
     };
-  }, [open, onClose, video?.src]);
+  }, [open, onClose, startNarration, stopNarration]);
+
+  useEffect(() => {
+    if (!open || !isPlaying || isPaused) return;
+    const timer = window.setInterval(() => {
+      const running = startedAtRef.current ? (Date.now() - startedAtRef.current) / 1000 : 0;
+      setElapsed(Math.min(duration, elapsedBeforePauseRef.current + running));
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [duration, isPaused, isPlaying, open]);
 
   if (!open || !video) return null;
+  const gradient = getVideoGradient(video.category);
 
   return (
     <div
@@ -61,58 +122,54 @@ export function VideoModal({ open, onClose, video }: Props) {
         <X className="w-5 h-5" />
       </button>
 
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-5xl"
-      >
-        <div className="text-white/90 text-sm font-mono mb-3 flex items-center gap-2">
-          {video.category && (
-            <span className="px-2 py-0.5 rounded border border-white/15 text-[10px] tracking-wider">
-              {video.category.toUpperCase()}
-            </span>
-          )}
-          <span className="truncate">{video.title}</span>
-        </div>
-        <div className="relative w-full overflow-hidden rounded-xl bg-black border border-white/10" style={{ aspectRatio: "16 / 9" }}>
-          {video.src ? (
-            <video
-              ref={videoRef}
-              src={video.src}
-              poster={video.poster || undefined}
-              controls
-              playsInline
-              preload="metadata"
-              autoPlay
-              className="w-full h-full"
-              onError={(e) => {
-                // Force the fallback card by clearing src on error
-                (e.currentTarget as HTMLVideoElement).style.display = "none";
-                const fallback = (e.currentTarget.parentElement?.querySelector("[data-fallback]") as HTMLElement);
-                if (fallback) fallback.style.display = "flex";
-              }}
-            />
-          ) : null}
+      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_30px_120px_rgba(0,0,0,0.75)]">
+        <div className="absolute inset-0 scale-110 opacity-55 blur-2xl" style={{ background: gradient }} />
+        {video.poster && <div className="absolute inset-0 bg-cover bg-center opacity-20 blur-xl scale-110" style={{ backgroundImage: `url(${video.poster})` }} />}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
 
-          {/* Fallback card (shown if no src or video fails) */}
-          <div
-            data-fallback
-            style={{ display: video.src ? "none" : "flex" }}
-            className="absolute inset-0 flex-col items-center justify-center gap-3 text-center p-8"
-          >
-            {video.poster && (
-              <img src={video.poster} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-            )}
-            <div className="relative w-16 h-16 rounded-full bg-white/10 border border-white/15 flex items-center justify-center">
-              <Play className="w-6 h-6 text-white/70 ml-0.5" />
+        <div className="relative min-h-[520px] flex items-center justify-center p-6 md:p-10">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/12 bg-black/45 backdrop-blur-xl p-6 md:p-8 text-center">
+            <div className="mx-auto mb-5 flex w-fit items-center gap-2 rounded-full border border-gainn-red/40 bg-gainn-red/15 px-3 py-1 text-[10px] font-bold font-mono text-gainn-red tracking-widest">
+              <span className="h-1.5 w-1.5 rounded-full bg-gainn-red live-dot" /> AI VIDEO REPORT
             </div>
-            <p className="relative text-white font-semibold">Video unavailable</p>
-            <p className="relative text-white/60 text-sm max-w-md">
-              This report's video stream couldn't be loaded. The article and AI-generated transcript are still available.
-            </p>
+
+            <h2 className="font-display text-3xl md:text-5xl font-bold leading-tight text-white drop-shadow-[0_0_35px_rgba(0,212,255,0.18)]">
+              {video.title}
+            </h2>
+            {video.category && <p className="mt-3 text-xs font-mono uppercase tracking-[0.25em] text-gainn-cyan">{video.category}</p>}
+
+            <div className="mt-8 flex items-end justify-center gap-1.5 h-14" aria-hidden="true">
+              {[18, 34, 50, 30, 42].map((height, i) => (
+                <span
+                  key={i}
+                  className={`w-2 rounded-full bg-gainn-cyan ${isPlaying && !isPaused ? "animate-ai-wave" : "opacity-35"}`}
+                  style={{ height, animationDelay: `${i * 0.12}s` }}
+                />
+              ))}
+            </div>
+
+            <div className="mt-7 flex items-center justify-center gap-3">
+              {!isPlaying ? (
+                <button onClick={startNarration} className="inline-flex items-center gap-2 rounded-full bg-gainn-cyan px-5 py-2.5 text-sm font-bold text-background transition-transform hover:scale-[1.03]">
+                  <Play className="h-4 w-4" /> Play narration
+                </button>
+              ) : (
+                <button onClick={togglePause} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold text-white border border-white/15 transition-transform hover:scale-[1.03]">
+                  {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                  {isPaused ? "Resume" : "Pause"}
+                </button>
+              )}
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-mono text-white/60">
+                <Radio className="h-3 w-3 text-gainn-red" /> Web Speech API
+              </span>
+            </div>
+
+            <p className="mt-5 line-clamp-3 text-sm leading-relaxed text-white/58">{narration}</p>
           </div>
-        </div>
-        <div className="mt-3 text-[11px] font-mono text-white/50 text-center">
-          Press <kbd className="px-1.5 py-0.5 rounded border border-white/15">Esc</kbd> to close
+
+          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10">
+            <div className="h-full bg-gainn-cyan transition-[width] duration-300" style={{ width: `${progress}%` }} />
+          </div>
         </div>
       </div>
     </div>
