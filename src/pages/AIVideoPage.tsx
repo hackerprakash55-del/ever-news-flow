@@ -720,9 +720,13 @@ export default function AIVideoPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
+                        <button
+                          onClick={() => setActiveVideo({ title: videoScript.title, category: videoScript.category, script: videoScript.script, poster: null })}
+                          className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center transition-transform hover:scale-[1.03]"
+                          aria-label="Play AI video report"
+                        >
                           <PlayCircle className="w-10 h-10 text-white" />
-                        </div>
+                        </button>
                       </div>
                       <div>
                         <h2 className="text-white font-display text-lg md:text-xl leading-tight drop-shadow-lg">
