@@ -948,7 +948,7 @@ export default function AIVideoPage() {
               return (
                 <button
                   key={record.id}
-                  onClick={() => loadVideoFromLibrary(record)}
+                  onClick={() => playReport(record)}
                   className="card-glass rounded-xl overflow-hidden border border-border hover:border-gainn-blue/40 hover:shadow-lg transition-all text-left group"
                 >
                   {/* Thumbnail placeholder */}
@@ -962,13 +962,9 @@ export default function AIVideoPage() {
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ArrowUpRight className="w-4 h-4 text-white/70" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); playReport(record); }}
-                      className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-gainn-cyan px-2.5 py-1 text-[10px] font-bold text-background opacity-0 transition-opacity group-hover:opacity-100"
-                    >
+                    <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-gainn-cyan px-2.5 py-1 text-[10px] font-bold text-background opacity-0 transition-opacity group-hover:opacity-100">
                       <Play className="w-3 h-3" /> Play
-                    </button>
+                    </span>
                   </div>
                   {/* Meta */}
                   <div className="p-3">
