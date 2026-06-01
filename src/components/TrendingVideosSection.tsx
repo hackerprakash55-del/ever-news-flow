@@ -1,9 +1,8 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNews } from "@/hooks/useNews";
-import { Play, Pause, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
+import { Play, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 import { getVideoGradient } from "@/lib/videoVisuals";
 
@@ -35,67 +34,6 @@ const CATEGORY_ICON: Record<string, string> = {
   "AI": "🤖", "Technology": "💻", "Economy": "📈", "Politics": "🏛️",
   "Environment": "🌿", "Science": "🔬", "Health": "🏥", "Global Affairs": "🌍", "General": "📰",
 };
-
-function MiniVoicePlayer({ script }: { script: string }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  const cleanText = script
-    .replace(/\*\*[A-Z\s]+\*\*/g, "")
-    .replace(/#{1,3}\s+\w+/g, "")
-    .replace(/\*\*/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, 5000);
-
-  const toggle = useCallback(async () => {
-    if (isPlaying) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-    } else {
-      window.speechSynthesis.cancel();
-      await waitForVoices();
-      const utter = new SpeechSynthesisUtterance(cleanText);
-      tuneUtterance(utter);
-      utter.onend = () => setIsPlaying(false);
-      utter.onerror = () => setIsPlaying(false);
-      uttRef.current = utter;
-      window.speechSynthesis.speak(utter);
-      setIsPlaying(true);
-    }
-  }, [isPlaying, cleanText]);
-
-  useEffect(() => () => { window.speechSynthesis.cancel(); }, []);
-
-  return (
-    <button
-      onClick={e => { e.stopPropagation(); toggle(); }}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-        isPlaying
-          ? "bg-gainn-green/20 text-gainn-green border border-gainn-green/40"
-          : "bg-gainn-blue/15 text-gainn-blue border border-gainn-blue/30 hover:bg-gainn-blue/25"
-      }`}
-    >
-      {isPlaying ? (
-        <>
-          <Pause className="w-3 h-3" />
-          <span>Pause</span>
-          <div className="flex items-end gap-0.5 ml-1">
-            {[3,5,4,6,3].map((h,i) => (
-              <div key={i} className="w-0.5 rounded-full bg-gainn-green animate-pulse"
-                style={{ height: `${h}px`, animationDelay: `${i*0.08}s` }} />
-            ))}
-          </div>
-        </>
-      ) : (
-        <>
-          <Play className="w-3 h-3" />
-          <span>Play</span>
-        </>
-      )}
-    </button>
-  );
-}
 
 async function autoGenerateScript(topic: string): Promise<VideoRecord | null> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
