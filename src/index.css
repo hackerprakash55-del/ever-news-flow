@@ -755,3 +755,114 @@ html.lenis, html.lenis body { height: auto; }
   50%      { box-shadow: 0 0 0 8px rgba(255, 45, 45, 0); }
 }
 .breaking-pulse { animation: breaking-pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+
+/* ============================================================
+   Premium card glass (global)
+   ============================================================ */
+.card-glass {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-glass:hover {
+  border-color: rgba(0, 212, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Bolt swing inside breaking badge */
+@keyframes bolt-swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50%      { transform: rotate(5deg); }
+}
+.bolt-swing { animation: bolt-swing 3s ease-in-out infinite; transform-origin: center; }
+
+/* Market ticker price flash */
+@keyframes price-pop-up {
+  0%   { transform: scale(1); color: inherit; background: transparent; }
+  35%  { transform: scale(1.15); color: hsl(142 71% 55%); background: rgba(0,255,100,0.10); }
+  100% { transform: scale(1); background: transparent; }
+}
+@keyframes price-pop-down {
+  0%   { transform: scale(1); color: inherit; background: transparent; }
+  35%  { transform: scale(1.15); color: hsl(0 90% 62%); background: rgba(255,45,45,0.10); }
+  100% { transform: scale(1); background: transparent; }
+}
+.price-flash-up   { animation: price-pop-up 300ms cubic-bezier(0.4,0,0.2,1); display: inline-block; border-radius: 4px; padding: 0 2px; }
+.price-flash-down { animation: price-pop-down 300ms cubic-bezier(0.4,0,0.2,1); display: inline-block; border-radius: 4px; padding: 0 2px; }
+
+/* ============================================================
+   Cinematic page-load sequence (spring easing)
+   ============================================================ */
+@keyframes nav-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes banner-down {
+  from { opacity: 0; transform: translateY(-100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ticker-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes hero-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes side-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes col-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+:root {
+  --spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.load-nav        { animation: nav-down    500ms var(--spring) 100ms both; will-change: transform, opacity; }
+.load-announce   { animation: banner-down 500ms var(--spring) 200ms both; will-change: transform, opacity; }
+.load-ticker     { animation: ticker-fade 500ms var(--spring) 300ms both; will-change: opacity; }
+.load-hero       { animation: hero-up     700ms var(--spring) 400ms both; will-change: transform, opacity; }
+.load-side       { animation: side-right  700ms var(--spring) 600ms both; will-change: transform, opacity; }
+.load-col > *    { animation: col-up      600ms var(--spring) both; will-change: transform, opacity; }
+.load-col > *:nth-child(1) { animation-delay: 500ms; }
+.load-col > *:nth-child(2) { animation-delay: 600ms; }
+.load-col > *:nth-child(3) { animation-delay: 700ms; }
+.load-col > *:nth-child(4) { animation-delay: 800ms; }
+
+/* Section heading slides in from left when entering viewport */
+.reveal-left { will-change: transform, opacity; }
+.reveal-left.is-visible { transition-timing-function: var(--spring); }
+
+/* Staggered card reveal (delays applied via inline style or nth-child below) */
+.reveal-stagger > * { transition-delay: 0ms; }
+.reveal-stagger.is-visible > *:nth-child(1) { transition-delay: 0ms; }
+.reveal-stagger.is-visible > *:nth-child(2) { transition-delay: 80ms; }
+.reveal-stagger.is-visible > *:nth-child(3) { transition-delay: 160ms; }
+.reveal-stagger.is-visible > *:nth-child(4) { transition-delay: 240ms; }
+
+/* Newsletter scale-in */
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 500ms var(--spring), transform 500ms var(--spring);
+  will-change: opacity, transform;
+}
+.reveal-scale.is-visible { opacity: 1; transform: scale(1); }
+
+/* Nav glass strip */
+.nav-glass {
+  background: rgba(5, 8, 16, 0.85);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
