@@ -27,30 +27,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
 
-// ── First-visit value prop banner ─────────────────────────
-const BANNER_KEY = "gainn_banner_dismissed";
-
-function ValuePropBanner() {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem(BANNER_KEY)) setVisible(true);
-  }, []);
-  function dismiss() { localStorage.setItem(BANNER_KEY, "true"); setVisible(false); }
-  if (!visible) return null;
-  return (
-    <div className="w-full flex items-center justify-between gap-3 px-4 py-2 text-xs font-mono bg-surface-1 border-b border-border">
-      <span className="flex-1 text-center text-accent">
-        <span className="text-foreground/60 mr-1">✦</span>
-        Real-time AI news from 12,891 verified sources — verified, unbiased, instant.
-      </span>
-      <button onClick={dismiss} aria-label="Dismiss banner"
-        className="flex-shrink-0 p-1 rounded hover:bg-surface-2 transition-colors text-muted-foreground hover:text-foreground">
-        <X className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
-}
-
 const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string | null }) => (
   <div className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border ${
     isLive ? "text-gainn-green border-gainn-green/30 bg-gainn-green/10" : "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10"
@@ -224,11 +200,17 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <GlobalHeader onNewsroomClick={() => navigate("/newsroom")} onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
-      <HeroAnnouncementBar onUpgradeClick={() => setPremiumOpen(true)} />
-      <ValuePropBanner />
-      <NewsTickerBar />
-      <MarketTicker />
+      <div className="ambient-orbs" aria-hidden="true"><span /></div>
+      <div className="load-nav">
+        <GlobalHeader onNewsroomClick={() => navigate("/newsroom")} onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
+      </div>
+      <div className="load-announce">
+        <HeroAnnouncementBar onUpgradeClick={() => setPremiumOpen(true)} />
+      </div>
+      <div className="load-ticker">
+        <NewsTickerBar />
+        <MarketTicker />
+      </div>
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
 

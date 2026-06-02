@@ -56,7 +56,7 @@ export const BreakingNewsBanner = () => {
         {/* Severity label block */}
         <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3 bg-gainn-red text-white h-full">
           <span className="w-2 h-2 rounded-full bg-white live-dot" />
-          <Zap className="w-3.5 h-3.5" />
+          <Zap className="w-3.5 h-3.5 bolt-swing" />
           <span className="text-xs font-black uppercase tracking-widest whitespace-nowrap">
             {alert.severity}
           </span>

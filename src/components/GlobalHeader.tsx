@@ -192,7 +192,7 @@ export const GlobalHeader = ({
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl animate-slide-down">
+    <header className="sticky top-0 z-50 nav-glass animate-slide-down">
       {/* Top utility bar */}
       <div className="border-b border-border/50 px-4 py-1.5 flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">

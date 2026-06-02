@@ -35,14 +35,15 @@ function nudge(base: Ticker): Ticker {
   return { ...base, price: newPrice, change: totalChange, changePct: totalChangePct };
 }
 
-function TickerItem({ t }: { t: Ticker }) {
+function TickerItem({ t, flashing }: { t: Ticker; flashing?: boolean }) {
   const up = t.changePct > 0;
   const flat = Math.abs(t.changePct) < 0.01;
+  const flashClass = flashing ? (up ? "price-flash-up" : "price-flash-down") : "";
 
   return (
     <div className="flex items-center gap-2 px-4 py-1.5 border-r border-border/40 flex-shrink-0">
       <span className="text-[11px] font-mono font-bold text-muted-foreground">{t.symbol}</span>
-      <span className="text-[11px] font-mono font-semibold text-foreground">
+      <span className={cn("text-[11px] font-mono font-semibold text-foreground", flashClass)}>
         {fmtPrice(t.price, t.prefix ?? (["BTC","ETH"].includes(t.symbol) ? "$" : ""))}
       </span>
       <span className={cn(
@@ -95,11 +96,8 @@ export function MarketTicker() {
         <div className="overflow-hidden flex-1">
           <div className="flex animate-[market-scroll_30s_linear_infinite] hover:[animation-play-state:paused]">
             {doubled.map((t, i) => (
-              <div key={`${t.symbol}-${i}`} className={cn(
-                "transition-colors duration-500",
-                flash.has(t.symbol) ? "bg-primary/5" : ""
-              )}>
-                <TickerItem t={t} />
+              <div key={`${t.symbol}-${i}`}>
+                <TickerItem t={t} flashing={flash.has(t.symbol)} />
               </div>
             ))}
           </div>

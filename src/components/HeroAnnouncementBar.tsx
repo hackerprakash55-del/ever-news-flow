@@ -25,9 +25,9 @@ export function HeroAnnouncementBar({ onUpgradeClick }: Props) {
       <div className="max-w-screen-2xl mx-auto flex items-center gap-3 px-4 py-2">
         <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
         <p className="flex-1 truncate text-foreground/90">
-          <span className="font-semibold">🚀 GAINN Pro is live</span>
-          <span className="text-foreground/70"> — Unlimited articles, no ads, AI analysis. </span>
-          <span className="text-primary font-semibold">Get 30% off this week</span>
+          <span className="font-semibold">✦ 12,891 verified sources</span>
+          <span className="text-foreground/70"> · 108 AI agents · Real-time · </span>
+          <span className="text-primary font-semibold">Upgrade to Pro — 30% off this week →</span>
         </p>
         <button
           onClick={onUpgradeClick}
