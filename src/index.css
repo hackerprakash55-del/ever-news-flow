@@ -12,7 +12,7 @@
 @layer base {
   :root {
     /* Core — #060910 canvas, cyan signal, red alert */
-    --background: 218 45% 4%;
+    --background: 218 50% 4%;
     --foreground: 0 0% 96%;
 
     --card: 218 30% 7%;
@@ -106,40 +106,75 @@
     -webkit-font-smoothing: antialiased;
     position: relative;
     min-height: 100vh;
+    background-color: #050810;
   }
 
-  /* Ambient drifting orbs — two-color depth layer */
-  body::before,
+  /* Ambient drifting orbs — three-color depth layer (cyan / red / indigo) */
+  .ambient-orbs {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+    opacity: 0;
+    animation: orbs-fade-in 600ms ease-out 0ms forwards;
+  }
+  .ambient-orbs::before,
+  .ambient-orbs::after,
+  .ambient-orbs > span {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(20px);
+    will-change: transform;
+  }
+  .ambient-orbs::before {
+    width: 600px; height: 600px;
+    top: -150px; left: -120px;
+    background: radial-gradient(closest-side, rgba(0, 212, 255, 0.07), transparent 70%);
+    animation: orb-float-a 25s ease-in-out infinite alternate;
+  }
+  .ambient-orbs::after {
+    width: 400px; height: 400px;
+    top: 30%; right: -100px;
+    background: radial-gradient(closest-side, rgba(255, 45, 45, 0.05), transparent 70%);
+    animation: orb-float-b 25s ease-in-out infinite alternate;
+  }
+  .ambient-orbs > span {
+    width: 500px; height: 500px;
+    bottom: -150px; left: 20%;
+    background: radial-gradient(closest-side, rgba(99, 102, 241, 0.04), transparent 70%);
+    animation: orb-float-c 25s ease-in-out infinite alternate;
+    display: block;
+  }
+  #root { position: relative; z-index: 1; }
+
+  /* Subtle grain overlay using SVG fractal noise */
   body::after {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
-    z-index: 0;
-    background-repeat: no-repeat;
-    will-change: transform;
+    z-index: 1;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   }
-  body::before {
-    background-image: radial-gradient(closest-side, rgba(0, 212, 255, 0.10), transparent 70%);
-    background-size: 60vw 60vw;
-    background-position: 15% 20%;
-    animation: orb-drift-a 22s ease-in-out infinite alternate;
-  }
-  body::after {
-    background-image: radial-gradient(closest-side, rgba(255, 45, 45, 0.07), transparent 70%);
-    background-size: 55vw 55vw;
-    background-position: 85% 80%;
-    animation: orb-drift-b 26s ease-in-out infinite alternate;
-  }
-  #root { position: relative; z-index: 1; }
 
-  @keyframes orb-drift-a {
-    0%   { transform: translate3d(-4%, -2%, 0) scale(1); }
-    100% { transform: translate3d(8%, 6%, 0) scale(1.15); }
+  @keyframes orbs-fade-in {
+    to { opacity: 1; }
   }
-  @keyframes orb-drift-b {
-    0%   { transform: translate3d(4%, 2%, 0) scale(1.05); }
-    100% { transform: translate3d(-6%, -4%, 0) scale(0.95); }
+  @keyframes orb-float-a {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(80px, 60px, 0) scale(1.15); }
+  }
+  @keyframes orb-float-b {
+    0%   { transform: translate3d(0, 0, 0) scale(1.05); }
+    100% { transform: translate3d(-60px, -40px, 0) scale(0.95); }
+  }
+  @keyframes orb-float-c {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(50px, -50px, 0) scale(1.1); }
   }
 
   h1, h2, h3 {
