@@ -353,15 +353,9 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
 
           {/* Read More link */}
           <div className="mb-2">
-            <span
-              className="text-xs font-semibold text-accent relative inline-block
-                after:content-[''] after:absolute after:bottom-0 after:left-0
-                after:w-full after:h-px after:bg-accent
-                after:scale-x-0 after:origin-left
-                after:transition-transform after:duration-200
-                group-hover:after:scale-x-100"
-            >
-              {alreadyRead ? "Read Again →" : "Read More →"}
+            <span className="text-xs font-semibold text-accent relative inline-flex items-center gap-1 transition-colors duration-200 group-hover:text-primary">
+              {alreadyRead ? "Read Again" : "Read More"}
+              <span className="inline-block transition-transform duration-200 group-hover:translate-x-1">→</span>
             </span>
           </div>
 
