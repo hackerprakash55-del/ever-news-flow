@@ -14,6 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_traces: {
+        Row: {
+          agent_name: string
+          created_at: string
+          error: string | null
+          id: string
+          input: Json | null
+          latency_ms: number | null
+          model: string | null
+          output: Json | null
+          reasoning: string | null
+          run_id: string
+          status: string
+          step_order: number
+          tokens_in: number | null
+          tokens_out: number | null
+        }
+        Insert: {
+          agent_name: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: Json | null
+          latency_ms?: number | null
+          model?: string | null
+          output?: Json | null
+          reasoning?: string | null
+          run_id: string
+          status?: string
+          step_order?: number
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: Json | null
+          latency_ms?: number | null
+          model?: string | null
+          output?: Json | null
+          reasoning?: string | null
+          run_id?: string
+          status?: string
+          step_order?: number
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Relationships: []
+      }
+      claim_evidence: {
+        Row: {
+          claim_id: string
+          created_at: string
+          excerpt: string | null
+          id: string
+          retrieved_at: string
+          source_id: string | null
+          stance: string
+          url: string | null
+          weight: number
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          retrieved_at?: string
+          source_id?: string | null
+          stance: string
+          url?: string | null
+          weight?: number
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          retrieved_at?: string
+          source_id?: string | null
+          stance?: string
+          url?: string | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_evidence_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_evidence_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      claims: {
+        Row: {
+          claim_text: string
+          confidence: number
+          created_at: string
+          embedding: string | null
+          entities: Json
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          metadata: Json
+          normalized_text: string
+          status: string
+          topic: string | null
+          updated_at: string
+          verification_count: number
+        }
+        Insert: {
+          claim_text: string
+          confidence?: number
+          created_at?: string
+          embedding?: string | null
+          entities?: Json
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          metadata?: Json
+          normalized_text: string
+          status?: string
+          topic?: string | null
+          updated_at?: string
+          verification_count?: number
+        }
+        Update: {
+          claim_text?: string
+          confidence?: number
+          created_at?: string
+          embedding?: string | null
+          entities?: Json
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          metadata?: Json
+          normalized_text?: string
+          status?: string
+          topic?: string | null
+          updated_at?: string
+          verification_count?: number
+        }
+        Relationships: []
+      }
       generated_videos: {
         Row: {
           category: string | null
@@ -158,15 +311,209 @@ export type Database = {
         }
         Relationships: []
       }
+      sources: {
+        Row: {
+          citation_quality: number
+          consistency_score: number
+          created_at: string
+          display_name: string | null
+          domain: string
+          historical_accuracy: number
+          id: string
+          last_seen_at: string | null
+          metadata: Json
+          refuted_claims: number
+          reliability_score: number
+          total_claims: number
+          updated_at: string
+          verified_claims: number
+        }
+        Insert: {
+          citation_quality?: number
+          consistency_score?: number
+          created_at?: string
+          display_name?: string | null
+          domain: string
+          historical_accuracy?: number
+          id?: string
+          last_seen_at?: string | null
+          metadata?: Json
+          refuted_claims?: number
+          reliability_score?: number
+          total_claims?: number
+          updated_at?: string
+          verified_claims?: number
+        }
+        Update: {
+          citation_quality?: number
+          consistency_score?: number
+          created_at?: string
+          display_name?: string | null
+          domain?: string
+          historical_accuracy?: number
+          id?: string
+          last_seen_at?: string | null
+          metadata?: Json
+          refuted_claims?: number
+          reliability_score?: number
+          total_claims?: number
+          updated_at?: string
+          verified_claims?: number
+        }
+        Relationships: []
+      }
+      topic_memory: {
+        Row: {
+          created_at: string
+          embedding: string | null
+          entities: Json
+          id: string
+          last_updated: string
+          story_count: number
+          summary: string | null
+          topic: string
+        }
+        Insert: {
+          created_at?: string
+          embedding?: string | null
+          entities?: Json
+          id?: string
+          last_updated?: string
+          story_count?: number
+          summary?: string | null
+          topic: string
+        }
+        Update: {
+          created_at?: string
+          embedding?: string | null
+          entities?: Json
+          id?: string
+          last_updated?: string
+          story_count?: number
+          summary?: string | null
+          topic?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      verification_runs: {
+        Row: {
+          agent_votes: Json
+          claim_ids: string[]
+          consensus_score: number
+          created_at: string
+          id: string
+          metadata: Json
+          published: boolean
+          published_at: string | null
+          run_id: string
+          story_headline: string | null
+          threshold: number
+          threshold_met: boolean
+          topic: string | null
+          total_latency_ms: number | null
+          total_tokens: number | null
+        }
+        Insert: {
+          agent_votes?: Json
+          claim_ids?: string[]
+          consensus_score?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          published?: boolean
+          published_at?: string | null
+          run_id: string
+          story_headline?: string | null
+          threshold?: number
+          threshold_met?: boolean
+          topic?: string | null
+          total_latency_ms?: number | null
+          total_tokens?: number | null
+        }
+        Update: {
+          agent_votes?: Json
+          claim_ids?: string[]
+          consensus_score?: number
+          created_at?: string
+          id?: string
+          metadata?: Json
+          published?: boolean
+          published_at?: string | null
+          run_id?: string
+          story_headline?: string | null
+          threshold?: number
+          threshold_met?: boolean
+          topic?: string | null
+          total_latency_ms?: number | null
+          total_tokens?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      match_claims: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          claim_text: string
+          confidence: number
+          id: string
+          similarity: number
+          status: string
+          topic: string
+        }[]
+      }
+      match_topics: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          entities: Json
+          id: string
+          similarity: number
+          summary: string
+          topic: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "editor" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -293,6 +640,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "editor", "user"],
+    },
   },
 } as const
