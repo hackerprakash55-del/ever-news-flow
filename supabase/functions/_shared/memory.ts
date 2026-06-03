@@ -41,13 +41,8 @@ export async function upsertClaim(input: {
   if (existing) {
     await supa
       .from("claims")
-      .update({
-        last_seen_at: new Date().toISOString(),
-        verification_count: undefined,
-      })
+      .update({ last_seen_at: new Date().toISOString() })
       .eq("id", existing.id);
-    // increment verification_count via RPC-style raw update
-    await supa.rpc as unknown;
     return { id: existing.id, reused: true };
   }
   const emb = await embed(input.claimText);
