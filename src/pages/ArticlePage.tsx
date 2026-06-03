@@ -353,7 +353,7 @@ function MoreStories({ articles, current }: { articles: Article[]; current: Arti
     <div className="mt-10 pt-8 border-t border-border">
       <div className="flex items-center gap-2 mb-5">
         <Layers className="w-4 h-4 text-accent" />
-        <h2 className="text-base font-semibold">More Stories</h2>
+        <h2 className="text-base font-display font-semibold">Continue Reading</h2>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -639,6 +639,7 @@ export default function ArticlePage() {
         <ScrollProgressBar articleId={article.id} />
         <GlobalHeader />
         <NewsTickerBar />
+        <ShareRail article={article} />
 
         <div className="max-w-screen-xl mx-auto px-4 md:px-6 py-8 pb-24 md:pb-8">
           {/* Breadcrumb */}
@@ -685,6 +686,8 @@ export default function ArticlePage() {
               <h1 className="text-3xl md:text-4xl font-display text-foreground leading-tight mb-4">
                 {article.headline}
               </h1>
+
+              <AuthorCard article={article} />
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
                 <span className={`flex items-center gap-1.5 font-mono text-xs ${isLiveArticle ? "text-gainn-green" : "text-accent"}`}>
@@ -748,10 +751,12 @@ export default function ArticlePage() {
               </div>
 
               {/* ── More Stories ── */}
+              <AIAnalysis article={article} />
               <MoreStories articles={allArticles} current={article} />
 
               {/* ── Continue Reading ── */}
               {showNext && <ContinueReading nextArticle={nextArticle} />}
+              {showNext && <InfiniteAutoLoad nextArticle={nextArticle} />}
             </div>
 
             {/* ── Sidebar ── */}
