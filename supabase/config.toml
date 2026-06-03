@@ -11,3 +11,15 @@ verify_jwt = false
 
 [functions.elevenlabs-tts]
 verify_jwt = false
+
+[functions.memory-service]
+verify_jwt = false
+
+[functions.newsroom-orchestrate]
+verify_jwt = false
+
+[functions.intel-search]
+verify_jwt = false
+
+[functions.admin-metrics]
+verify_jwt = true
