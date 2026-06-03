@@ -9,6 +9,7 @@ import {
   Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark,
   BookmarkCheck, ChevronRight, ExternalLink, MapPin, Layers, TrendingUp, ChevronRight as Next,
 } from "lucide-react";
+import { Twitter, Linkedin, Link2, Sparkles, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNews } from "@/hooks/useNews";
 import { useAuth } from "@/contexts/AuthContext";
@@ -64,16 +65,255 @@ function ScrollProgressBar({ articleId }: { articleId: string }) {
   }, [articleId]);
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] h-0.5 bg-transparent pointer-events-none">
-      <div
-        className="h-full transition-all duration-100"
-        style={{
-          width: `${pct}%`,
-          background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))",
+    <>
+      <div className="fixed top-0 left-0 right-0 z-[100] h-[3px] bg-white/[0.04] pointer-events-none">
+        <div
+          className="h-full transition-[width] duration-100 ease-out"
+          style={{
+            width: `${pct}%`,
+            background: "#00D4FF",
+            boxShadow: "0 0 12px rgba(0,212,255,0.6)",
+          }}
+        />
+      </div>
+      {pct > 2 && (
+        <div
+          className="fixed z-[101] pointer-events-none top-[8px] transition-all duration-100"
+          style={{ left: `calc(${pct}% - 36px)`, maxLeft: "calc(100% - 56px)" as any }}
+        >
+          <span
+            className="inline-flex items-center justify-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-full"
+            style={{
+              background: "rgba(0,212,255,0.15)",
+              color: "#00D4FF",
+              border: "1px solid rgba(0,212,255,0.4)",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            {Math.round(pct)}%
+          </span>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Sticky share rail (desktop) ────────────────────────────
+function ShareRail({ article }: { article: Article }) {
+  const [visible, setVisible] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    function onScroll() { setVisible(window.scrollY > 300); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const url = typeof window !== "undefined" ? window.location.href : "";
+  const text = encodeURIComponent(article.headline);
+  const enc = encodeURIComponent(url);
+
+  const links = [
+    { Icon: Twitter, label: "X", href: `https://twitter.com/intent/tweet?text=${text}&url=${enc}` },
+    { Icon: Linkedin, label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc}` },
+  ];
+
+  return (
+    <div
+      className={`hidden lg:flex fixed left-4 xl:left-8 top-1/2 -translate-y-1/2 z-40 flex-col gap-2 p-2 rounded-full transition-all duration-300 ${
+        visible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3 pointer-events-none"
+      }`}
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        backdropFilter: "blur(12px)",
+      }}
+    >
+      {links.map(({ Icon, label, href }) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Share on ${label}`}
+          className="w-9 h-9 grid place-items-center rounded-full text-muted-foreground hover:text-[#00D4FF] hover:bg-[#00D4FF]/10 transition-all hover:scale-110"
+        >
+          <Icon className="w-4 h-4" />
+        </a>
+      ))}
+      <button
+        onClick={() => {
+          navigator.clipboard?.writeText(url);
+          toast({ title: "Link copied", description: "Article URL copied to clipboard" });
         }}
-      />
+        aria-label="Copy link"
+        className="w-9 h-9 grid place-items-center rounded-full text-muted-foreground hover:text-[#00D4FF] hover:bg-[#00D4FF]/10 transition-all hover:scale-110"
+      >
+        <Link2 className="w-4 h-4" />
+      </button>
     </div>
   );
+}
+
+// ── Author card ────────────────────────────────────────────
+function AuthorCard({ article }: { article: Article }) {
+  const { toast } = useToast();
+  const [following, setFollowing] = useState(false);
+  const name = (article as any).author || "GAINN Editorial AI";
+  const title = `${article.category} Desk · AI Correspondent`;
+  const initials = name.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
+  const articleCount = 120 + (article.id.charCodeAt(0) % 80);
+
+  return (
+    <div
+      className="mt-6 rounded-xl p-4 flex items-center gap-4"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        backdropFilter: "blur(12px)",
+      }}
+    >
+      <div
+        className="w-12 h-12 rounded-full grid place-items-center text-sm font-bold font-mono flex-shrink-0"
+        style={{ background: "linear-gradient(135deg,#00D4FF,#0066ff)", color: "#001018" }}
+      >
+        {initials}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-foreground truncate">{name}</div>
+        <div className="text-[11px] text-muted-foreground font-mono truncate">
+          {title} · {articleCount} articles
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          setFollowing((f) => !f);
+          toast({ title: following ? "Unfollowed" : `Following ${name}` });
+        }}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+          following
+            ? "bg-transparent border border-[#00D4FF]/40 text-[#00D4FF]"
+            : "bg-[#00D4FF] text-[#001018] hover:scale-[1.03]"
+        }`}
+      >
+        <UserPlus className="w-3.5 h-3.5" />
+        {following ? "Following" : "Follow"}
+      </button>
+    </div>
+  );
+}
+
+// ── AI Analysis section ────────────────────────────────────
+function AIAnalysis({ article }: { article: Article }) {
+  const cat = article.category;
+  const why = [
+    `${article.summary} The story directly shapes how ${cat.toLowerCase()} stakeholders allocate attention and capital this week.`,
+    `Beyond the headline, this signals a structural shift that ripples across adjacent markets, policy debates, and public sentiment.`,
+  ].join(" ");
+  const left = `Progressive analysts frame this as evidence that stronger oversight and equity-focused policy in ${cat.toLowerCase()} are overdue.`;
+  const right = `Conservative commentators argue the development validates market-led approaches and warns against premature regulatory response.`;
+  const intl = `International observers see ${article.region || "global"} dynamics at play, with implications for cross-border coordination and trade.`;
+  const next1 = `Expect follow-on coverage within 48 hours as institutional actors respond and additional verified sources weigh in.`;
+  const next2 = `Watch for a measurable shift in related indicators — sentiment, pricing, or policy proposals — over the next 1–2 weeks.`;
+
+  return (
+    <div
+      className="mt-10 rounded-xl p-6"
+      style={{
+        background: "rgba(0,212,255,0.04)",
+        borderLeft: "4px solid #00D4FF",
+        border: "1px solid rgba(0,212,255,0.15)",
+        borderLeftWidth: 4,
+        backdropFilter: "blur(14px)",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles className="w-4 h-4 text-[#00D4FF]" />
+        <h2 className="text-base font-display font-bold text-foreground">
+          <span className="mr-1">🤖</span> GAINN AI Analysis
+        </h2>
+        <span className="ml-auto text-[10px] font-mono px-2 py-0.5 rounded bg-[#00D4FF]/10 text-[#00D4FF] border border-[#00D4FF]/30">
+          BETA
+        </span>
+      </div>
+
+      <div className="space-y-5 text-sm">
+        <section>
+          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[#00D4FF] mb-1.5">
+            Why This Matters
+          </h3>
+          <p className="text-foreground/90 leading-relaxed">{why}</p>
+        </section>
+
+        <section>
+          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[#00D4FF] mb-2">
+            Perspectives
+          </h3>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {[
+              { label: "Left view", color: "#5b8def", text: left },
+              { label: "Right view", color: "#ff7a59", text: right },
+              { label: "International", color: "#10b981", text: intl },
+            ].map((p) => (
+              <div key={p.label} className="rounded-lg p-3 bg-white/[0.03] border border-white/[0.06]">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1" style={{ color: p.color }}>
+                  {p.label}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{p.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[#00D4FF] mb-2">
+            What Happens Next
+          </h3>
+          <ul className="space-y-2">
+            {[next1, next2].map((t, i) => (
+              <li key={i} className="flex gap-2.5 text-sm text-foreground/90">
+                <span
+                  className="flex-shrink-0 w-5 h-5 rounded-full grid place-items-center text-[10px] font-mono font-bold mt-0.5"
+                  style={{ background: "rgba(0,212,255,0.15)", color: "#00D4FF" }}
+                >
+                  {i + 1}
+                </span>
+                <span className="leading-relaxed">{t}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// ── Auto-load infinite scroll ─────────────────────────────
+function InfiniteAutoLoad({ nextArticle }: { nextArticle: Article }) {
+  const navigate = useNavigate();
+  const ref = useRef<HTMLDivElement>(null);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    function onScroll() {
+      if (fired.current) return;
+      const el = document.documentElement;
+      const pct = (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100;
+      if (pct >= 90) {
+        fired.current = true;
+        try { sessionStorage.setItem(`article-${nextArticle.id}`, JSON.stringify(nextArticle)); } catch {}
+        setTimeout(() => {
+          navigate(`/article/${nextArticle.id}`, { state: { article: nextArticle } });
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }, 350);
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [nextArticle, navigate]);
+
+  return <div ref={ref} className="h-1" />;
 }
 
 // ── Category gradient for thumbnail ───────────────────────
