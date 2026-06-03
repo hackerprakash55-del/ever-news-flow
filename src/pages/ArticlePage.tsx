@@ -79,7 +79,7 @@ function ScrollProgressBar({ articleId }: { articleId: string }) {
       {pct > 2 && (
         <div
           className="fixed z-[101] pointer-events-none top-[8px] transition-all duration-100"
-          style={{ left: `calc(${pct}% - 36px)`, maxLeft: "calc(100% - 56px)" as any }}
+          style={{ left: `calc(min(${pct}%, 100% - 56px) - 0px)` }}
         >
           <span
             className="inline-flex items-center justify-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-full"
