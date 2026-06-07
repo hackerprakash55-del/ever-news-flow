@@ -185,6 +185,174 @@ export type Database = {
         }
         Relationships: []
       }
+      entities: {
+        Row: {
+          aliases: string[]
+          created_at: string
+          embedding: string | null
+          id: string
+          last_seen_at: string
+          mention_count: number
+          metadata: Json
+          name: string
+          salience: number
+          type: string
+        }
+        Insert: {
+          aliases?: string[]
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          last_seen_at?: string
+          mention_count?: number
+          metadata?: Json
+          name: string
+          salience?: number
+          type: string
+        }
+        Update: {
+          aliases?: string[]
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          last_seen_at?: string
+          mention_count?: number
+          metadata?: Json
+          name?: string
+          salience?: number
+          type?: string
+        }
+        Relationships: []
+      }
+      entity_edges: {
+        Row: {
+          created_at: string
+          dst_entity: string
+          evidence_claim_ids: string[]
+          id: string
+          last_seen: string
+          relation: string
+          src_entity: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          dst_entity: string
+          evidence_claim_ids?: string[]
+          id?: string
+          last_seen?: string
+          relation: string
+          src_entity: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          dst_entity?: string
+          evidence_claim_ids?: string[]
+          id?: string
+          last_seen?: string
+          relation?: string
+          src_entity?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_edges_dst_entity_fkey"
+            columns: ["dst_entity"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_edges_src_entity_fkey"
+            columns: ["src_entity"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_mentions: {
+        Row: {
+          claim_id: string
+          confidence: number
+          created_at: string
+          entity_id: string
+          id: string
+          span: string | null
+        }
+        Insert: {
+          claim_id: string
+          confidence?: number
+          created_at?: string
+          entity_id: string
+          id?: string
+          span?: string | null
+        }
+        Update: {
+          claim_id?: string
+          confidence?: number
+          created_at?: string
+          entity_id?: string
+          id?: string
+          span?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_mentions_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_mentions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_clusters: {
+        Row: {
+          broadcasted_at: string | null
+          claim_ids: string[]
+          embedding: string | null
+          entity_ids: string[]
+          hotness: number
+          id: string
+          label: string
+          last_updated: string
+          started_at: string
+          summary: string | null
+        }
+        Insert: {
+          broadcasted_at?: string | null
+          claim_ids?: string[]
+          embedding?: string | null
+          entity_ids?: string[]
+          hotness?: number
+          id?: string
+          label: string
+          last_updated?: string
+          started_at?: string
+          summary?: string | null
+        }
+        Update: {
+          broadcasted_at?: string | null
+          claim_ids?: string[]
+          embedding?: string | null
+          entity_ids?: string[]
+          hotness?: number
+          id?: string
+          label?: string
+          last_updated?: string
+          started_at?: string
+          summary?: string | null
+        }
+        Relationships: []
+      }
       generated_videos: {
         Row: {
           category: string | null
@@ -558,6 +726,33 @@ export type Database = {
           similarity: number
           status: string
           topic: string
+        }[]
+      }
+      match_entities: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          id: string
+          name: string
+          similarity: number
+          type: string
+        }[]
+      }
+      match_events: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          hotness: number
+          id: string
+          label: string
+          similarity: number
+          summary: string
         }[]
       }
       match_topics: {
