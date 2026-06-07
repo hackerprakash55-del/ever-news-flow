@@ -83,6 +83,60 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcast_segments: {
+        Row: {
+          broadcast_id: string
+          created_at: string
+          duration_s: number
+          event_cluster_id: string | null
+          id: string
+          kind: string
+          played_at: string | null
+          script: string
+          segment_order: number
+          voice: string
+        }
+        Insert: {
+          broadcast_id: string
+          created_at?: string
+          duration_s?: number
+          event_cluster_id?: string | null
+          id?: string
+          kind: string
+          played_at?: string | null
+          script: string
+          segment_order: number
+          voice?: string
+        }
+        Update: {
+          broadcast_id?: string
+          created_at?: string
+          duration_s?: number
+          event_cluster_id?: string | null
+          id?: string
+          kind?: string
+          played_at?: string | null
+          script?: string
+          segment_order?: number
+          voice?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_segments_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "live_broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_segments_event_cluster_id_fkey"
+            columns: ["event_cluster_id"]
+            isOneToOne: false
+            referencedRelation: "event_clusters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_evidence: {
         Row: {
           claim_id: string
@@ -356,39 +410,92 @@ export type Database = {
       generated_videos: {
         Row: {
           category: string | null
+          claim_ids: string[]
           created_at: string | null
           duration: string | null
+          event_cluster_id: string | null
           generated_at: string | null
           id: string
+          newsletter_md: string | null
           raw_headlines: Json | null
           script: string
+          short_script: string | null
+          social_caption: string | null
           thumbnail_prompt: string | null
           thumbnail_url: string | null
           title: string
         }
         Insert: {
           category?: string | null
+          claim_ids?: string[]
           created_at?: string | null
           duration?: string | null
+          event_cluster_id?: string | null
           generated_at?: string | null
           id?: string
+          newsletter_md?: string | null
           raw_headlines?: Json | null
           script: string
+          short_script?: string | null
+          social_caption?: string | null
           thumbnail_prompt?: string | null
           thumbnail_url?: string | null
           title: string
         }
         Update: {
           category?: string | null
+          claim_ids?: string[]
           created_at?: string | null
           duration?: string | null
+          event_cluster_id?: string | null
           generated_at?: string | null
           id?: string
+          newsletter_md?: string | null
           raw_headlines?: Json | null
           script?: string
+          short_script?: string | null
+          social_caption?: string | null
           thumbnail_prompt?: string | null
           thumbnail_url?: string | null
           title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_videos_event_cluster_id_fkey"
+            columns: ["event_cluster_id"]
+            isOneToOne: false
+            referencedRelation: "event_clusters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_broadcasts: {
+        Row: {
+          current_segment_id: string | null
+          ended_at: string | null
+          headline: string | null
+          id: string
+          metadata: Json
+          started_at: string
+          status: string
+        }
+        Insert: {
+          current_segment_id?: string | null
+          ended_at?: string | null
+          headline?: string | null
+          id?: string
+          metadata?: Json
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          current_segment_id?: string | null
+          ended_at?: string | null
+          headline?: string | null
+          id?: string
+          metadata?: Json
+          started_at?: string
+          status?: string
         }
         Relationships: []
       }
