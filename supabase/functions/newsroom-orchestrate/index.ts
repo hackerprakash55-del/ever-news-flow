@@ -16,6 +16,7 @@ import {
 } from "../_shared/memory.ts";
 import { aggregateConsensus } from "../_shared/trust.ts";
 import { serviceClient } from "../_shared/supa.ts";
+import { graphAgent } from "../_shared/graph.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -103,6 +104,15 @@ serve(async (req) => {
       distribution = await distributionAgent({ runId, step: step++ }, article);
 
       await upsertTopicMemory(topic, best.summary, claimDrafts.flatMap((c) => c.entities ?? []));
+
+      // 8. Knowledge graph + event clustering for every persisted claim.
+      //    Run sequentially to avoid hammering the embedding endpoint.
+      for (let i = 0; i < claimIds.length; i++) {
+        const id = claimIds[i];
+        const text = claimDrafts[i]?.text ?? "";
+        if (!id || !text) continue;
+        await graphAgent({ runId, step: step++ }, id, text, topic);
+      }
     }
 
     // 8. Record verification run
