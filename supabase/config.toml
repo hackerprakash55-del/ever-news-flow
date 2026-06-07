@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.admin-metrics]
 verify_jwt = true
+
+[functions.broadcast-orchestrate]
+verify_jwt = false
+
+[functions.personalize-feed]
+verify_jwt = true
+
+[functions.label-claim]
+verify_jwt = true

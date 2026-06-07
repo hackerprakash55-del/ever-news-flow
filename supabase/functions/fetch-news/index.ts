@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -254,6 +255,56 @@ serve(async (req) => {
     const pageSize = Math.min(Number(url.searchParams.get("pageSize") || "20"), 30);
     const searchQuery = url.searchParams.get("q") || ""; // free-text keyword search
 
+    const t0 = Date.now();
+
+    // ── Phase 2: feature-flagged routing through the multi-agent newsroom ──
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    let flagEnabled = false;
+    let rolloutPct = 0;
+    let route: "orchestrator" | "fallback" = "fallback";
+    let fallbackReason: string | null = null;
+    let orchestratorVerification: {
+      runId?: string;
+      consensusScore?: number;
+      claimIds?: string[];
+      topic?: string;
+    } | null = null;
+    const svc = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+      ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+      : null;
+    if (svc) {
+      try {
+        const { data: flag } = await svc
+          .from("app_settings")
+          .select("value")
+          .eq("key", "newsroom_pipeline")
+          .maybeSingle();
+        const v = (flag?.value ?? {}) as { enabled?: boolean; rollout_pct?: number };
+        flagEnabled = !!v.enabled;
+        rolloutPct = Number(v.rollout_pct ?? 0);
+      } catch (_) { /* ignore */ }
+    }
+    const rollDice = flagEnabled && Math.random() * 100 < rolloutPct;
+
+    // If the flag rolled, fire the orchestrator in parallel with NewsAPI on
+    // the dominant topic (search query or category). We never block longer
+    // than 12s on it — NewsAPI results are returned either way.
+    const orchestratorTopic = (searchQuery || (category !== "all" ? category : "")).trim();
+    let orchestratorPromise: Promise<Response> | null = null;
+    if (rollDice && orchestratorTopic && SUPABASE_URL && SUPABASE_ANON_KEY) {
+      orchestratorPromise = fetch(`${SUPABASE_URL}/functions/v1/newsroom-orchestrate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          apikey: SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ topic: orchestratorTopic, threshold: 0.7 }),
+      });
+    }
+
     // If a free-text search query is provided, override category routing
     // and use NewsAPI /everything with the keyword
     let newsApiUrl: string;
@@ -324,6 +375,62 @@ serve(async (req) => {
 
     console.log(`Returning ${articles.length} articles (${expandedBodies.length} AI-expanded, location="${location}")`);
 
+    // ── Await orchestrator (bounded) and attach verification metadata ──
+    if (orchestratorPromise) {
+      try {
+        const orchRes = await Promise.race([
+          orchestratorPromise,
+          new Promise<null>((res) => setTimeout(() => res(null), 12000)),
+        ]);
+        if (orchRes && orchRes.ok) {
+          const orchJson = await orchRes.json();
+          route = "orchestrator";
+          orchestratorVerification = {
+            runId: orchJson.runId,
+            consensusScore: orchJson.consensusScore,
+            claimIds: orchJson.claimIds ?? [],
+            topic: orchJson.topic,
+          };
+          // Tag the first article with verification metadata for the UI.
+          if (articles[0] && typeof orchJson.consensusScore === "number") {
+            (articles[0] as any).verification = {
+              consensus: orchJson.consensusScore,
+              thresholdMet: !!orchJson.thresholdMet,
+              runId: orchJson.runId,
+              claimCount: orchJson.claimCount ?? 0,
+              source: "newsroom-orchestrator",
+            };
+          }
+        } else {
+          fallbackReason = orchRes ? `orchestrator http ${orchRes.status}` : "orchestrator timeout";
+        }
+      } catch (e) {
+        fallbackReason = `orchestrator error: ${e instanceof Error ? e.message : "unknown"}`;
+      }
+    } else if (rollDice) {
+      fallbackReason = "missing topic or service env";
+    } else if (flagEnabled) {
+      fallbackReason = "rollout dice miss";
+    } else {
+      fallbackReason = "flag disabled";
+    }
+
+    // Log routing decision (best-effort, never throws to caller).
+    if (svc) {
+      svc.from("pipeline_decisions").insert({
+        endpoint: "fetch-news",
+        route,
+        category,
+        region: location || null,
+        topic: orchestratorTopic || null,
+        rollout_pct: rolloutPct,
+        flag_enabled: flagEnabled,
+        latency_ms: Date.now() - t0,
+        fallback_reason: fallbackReason,
+        run_id: orchestratorVerification?.runId ?? null,
+      }).then(() => {}, (err) => console.warn("pipeline_decisions insert:", err?.message));
+    }
+
     return new Response(
       JSON.stringify({
         articles,
@@ -331,6 +438,8 @@ serve(async (req) => {
         source: "NewsAPI + Gemini",
         fetchedAt: new Date().toISOString(),
         location: location || null,
+        verification: orchestratorVerification,
+        route,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

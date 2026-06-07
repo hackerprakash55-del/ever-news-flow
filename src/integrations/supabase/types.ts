@@ -65,6 +65,78 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      broadcast_segments: {
+        Row: {
+          broadcast_id: string
+          created_at: string
+          duration_s: number
+          event_cluster_id: string | null
+          id: string
+          kind: string
+          played_at: string | null
+          script: string
+          segment_order: number
+          voice: string
+        }
+        Insert: {
+          broadcast_id: string
+          created_at?: string
+          duration_s?: number
+          event_cluster_id?: string | null
+          id?: string
+          kind: string
+          played_at?: string | null
+          script: string
+          segment_order: number
+          voice?: string
+        }
+        Update: {
+          broadcast_id?: string
+          created_at?: string
+          duration_s?: number
+          event_cluster_id?: string | null
+          id?: string
+          kind?: string
+          played_at?: string | null
+          script?: string
+          segment_order?: number
+          voice?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_segments_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "live_broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_segments_event_cluster_id_fkey"
+            columns: ["event_cluster_id"]
+            isOneToOne: false
+            referencedRelation: "event_clusters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claim_evidence: {
         Row: {
           claim_id: string
@@ -167,42 +239,298 @@ export type Database = {
         }
         Relationships: []
       }
+      entities: {
+        Row: {
+          aliases: string[]
+          created_at: string
+          embedding: string | null
+          id: string
+          last_seen_at: string
+          mention_count: number
+          metadata: Json
+          name: string
+          salience: number
+          type: string
+        }
+        Insert: {
+          aliases?: string[]
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          last_seen_at?: string
+          mention_count?: number
+          metadata?: Json
+          name: string
+          salience?: number
+          type: string
+        }
+        Update: {
+          aliases?: string[]
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          last_seen_at?: string
+          mention_count?: number
+          metadata?: Json
+          name?: string
+          salience?: number
+          type?: string
+        }
+        Relationships: []
+      }
+      entity_edges: {
+        Row: {
+          created_at: string
+          dst_entity: string
+          evidence_claim_ids: string[]
+          id: string
+          last_seen: string
+          relation: string
+          src_entity: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          dst_entity: string
+          evidence_claim_ids?: string[]
+          id?: string
+          last_seen?: string
+          relation: string
+          src_entity: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          dst_entity?: string
+          evidence_claim_ids?: string[]
+          id?: string
+          last_seen?: string
+          relation?: string
+          src_entity?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_edges_dst_entity_fkey"
+            columns: ["dst_entity"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_edges_src_entity_fkey"
+            columns: ["src_entity"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_mentions: {
+        Row: {
+          claim_id: string
+          confidence: number
+          created_at: string
+          entity_id: string
+          id: string
+          span: string | null
+        }
+        Insert: {
+          claim_id: string
+          confidence?: number
+          created_at?: string
+          entity_id: string
+          id?: string
+          span?: string | null
+        }
+        Update: {
+          claim_id?: string
+          confidence?: number
+          created_at?: string
+          entity_id?: string
+          id?: string
+          span?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_mentions_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_mentions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_clusters: {
+        Row: {
+          broadcasted_at: string | null
+          claim_ids: string[]
+          embedding: string | null
+          entity_ids: string[]
+          hotness: number
+          id: string
+          label: string
+          last_updated: string
+          started_at: string
+          summary: string | null
+        }
+        Insert: {
+          broadcasted_at?: string | null
+          claim_ids?: string[]
+          embedding?: string | null
+          entity_ids?: string[]
+          hotness?: number
+          id?: string
+          label: string
+          last_updated?: string
+          started_at?: string
+          summary?: string | null
+        }
+        Update: {
+          broadcasted_at?: string | null
+          claim_ids?: string[]
+          embedding?: string | null
+          entity_ids?: string[]
+          hotness?: number
+          id?: string
+          label?: string
+          last_updated?: string
+          started_at?: string
+          summary?: string | null
+        }
+        Relationships: []
+      }
       generated_videos: {
         Row: {
           category: string | null
+          claim_ids: string[]
           created_at: string | null
           duration: string | null
+          event_cluster_id: string | null
           generated_at: string | null
           id: string
+          newsletter_md: string | null
           raw_headlines: Json | null
           script: string
+          short_script: string | null
+          social_caption: string | null
           thumbnail_prompt: string | null
           thumbnail_url: string | null
           title: string
         }
         Insert: {
           category?: string | null
+          claim_ids?: string[]
           created_at?: string | null
           duration?: string | null
+          event_cluster_id?: string | null
           generated_at?: string | null
           id?: string
+          newsletter_md?: string | null
           raw_headlines?: Json | null
           script: string
+          short_script?: string | null
+          social_caption?: string | null
           thumbnail_prompt?: string | null
           thumbnail_url?: string | null
           title: string
         }
         Update: {
           category?: string | null
+          claim_ids?: string[]
           created_at?: string | null
           duration?: string | null
+          event_cluster_id?: string | null
           generated_at?: string | null
           id?: string
+          newsletter_md?: string | null
           raw_headlines?: Json | null
           script?: string
+          short_script?: string | null
+          social_caption?: string | null
           thumbnail_prompt?: string | null
           thumbnail_url?: string | null
           title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_videos_event_cluster_id_fkey"
+            columns: ["event_cluster_id"]
+            isOneToOne: false
+            referencedRelation: "event_clusters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ground_truth_labels: {
+        Row: {
+          claim_id: string
+          created_at: string
+          id: string
+          label: string
+          labeled_by: string
+          rationale: string | null
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string
+          id?: string
+          label: string
+          labeled_by: string
+          rationale?: string | null
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          labeled_by?: string
+          rationale?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ground_truth_labels_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_broadcasts: {
+        Row: {
+          current_segment_id: string | null
+          ended_at: string | null
+          headline: string | null
+          id: string
+          metadata: Json
+          started_at: string
+          status: string
+        }
+        Insert: {
+          current_segment_id?: string | null
+          ended_at?: string | null
+          headline?: string | null
+          id?: string
+          metadata?: Json
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          current_segment_id?: string | null
+          ended_at?: string | null
+          headline?: string | null
+          id?: string
+          metadata?: Json
+          started_at?: string
+          status?: string
         }
         Relationships: []
       }
@@ -211,6 +539,9 @@ export type Database = {
           categories: string[]
           created_at: string
           id: string
+          interest_embedding: string | null
+          last_signal_at: string | null
+          regional_weights: Json
           regions: string[]
           updated_at: string
           user_id: string
@@ -219,6 +550,9 @@ export type Database = {
           categories?: string[]
           created_at?: string
           id?: string
+          interest_embedding?: string | null
+          last_signal_at?: string | null
+          regional_weights?: Json
           regions?: string[]
           updated_at?: string
           user_id: string
@@ -227,9 +561,57 @@ export type Database = {
           categories?: string[]
           created_at?: string
           id?: string
+          interest_embedding?: string | null
+          last_signal_at?: string | null
+          regional_weights?: Json
           regions?: string[]
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      pipeline_decisions: {
+        Row: {
+          category: string | null
+          created_at: string
+          endpoint: string
+          fallback_reason: string | null
+          flag_enabled: boolean | null
+          id: string
+          latency_ms: number | null
+          region: string | null
+          rollout_pct: number | null
+          route: string
+          run_id: string | null
+          topic: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          endpoint: string
+          fallback_reason?: string | null
+          flag_enabled?: boolean | null
+          id?: string
+          latency_ms?: number | null
+          region?: string | null
+          rollout_pct?: number | null
+          route: string
+          run_id?: string | null
+          topic?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          endpoint?: string
+          fallback_reason?: string | null
+          flag_enabled?: boolean | null
+          id?: string
+          latency_ms?: number | null
+          region?: string | null
+          rollout_pct?: number | null
+          route?: string
+          run_id?: string | null
+          topic?: string | null
         }
         Relationships: []
       }
@@ -395,6 +777,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_events: {
+        Row: {
+          article_id: string
+          category: string | null
+          dwell_ms: number | null
+          event_type: string
+          id: string
+          metadata: Json
+          ts: string
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          category?: string | null
+          dwell_ms?: number | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          ts?: string
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          category?: string | null
+          dwell_ms?: number | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          ts?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -495,6 +910,33 @@ export type Database = {
           similarity: number
           status: string
           topic: string
+        }[]
+      }
+      match_entities: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          id: string
+          name: string
+          similarity: number
+          type: string
+        }[]
+      }
+      match_events: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          hotness: number
+          id: string
+          label: string
+          similarity: number
+          summary: string
         }[]
       }
       match_topics: {
