@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +22,61 @@ serve(async (req) => {
     }
 
     const NEWSAPI_KEY = Deno.env.get("NEWSAPI_KEY");
-    const { topic, category } = await req.json();
+    const { topic, category, event_cluster_id } = await req.json();
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const svc = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+      ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+      : null;
+
+    // ── Phase 4: pull verified claims + entities from the knowledge layer ──
+    let verifiedClaims: Array<{ id: string; claim_text: string; confidence: number }> = [];
+    let topEntities: Array<{ name: string; type: string }> = [];
+    let clusterRow: { id: string; label: string; summary: string | null } | null = null;
+    if (svc) {
+      try {
+        if (event_cluster_id) {
+          const { data: c } = await svc
+            .from("event_clusters")
+            .select("id, label, summary, claim_ids, entity_ids")
+            .eq("id", event_cluster_id)
+            .maybeSingle();
+          if (c) {
+            clusterRow = { id: c.id, label: c.label, summary: c.summary };
+            if (c.claim_ids?.length) {
+              const { data: cs } = await svc
+                .from("claims")
+                .select("id, claim_text, confidence")
+                .in("id", c.claim_ids)
+                .order("confidence", { ascending: false })
+                .limit(10);
+              verifiedClaims = cs ?? [];
+            }
+            if (c.entity_ids?.length) {
+              const { data: es } = await svc
+                .from("entities")
+                .select("name, type")
+                .in("id", c.entity_ids)
+                .order("salience", { ascending: false })
+                .limit(8);
+              topEntities = es ?? [];
+            }
+          }
+        } else if (topic) {
+          const { data: cs } = await svc
+            .from("claims")
+            .select("id, claim_text, confidence")
+            .ilike("topic", `%${topic}%`)
+            .eq("status", "verified")
+            .order("confidence", { ascending: false })
+            .limit(10);
+          verifiedClaims = cs ?? [];
+        }
+      } catch (e) {
+        console.warn("knowledge fetch failed:", (e as Error).message);
+      }
+    }
 
     // 1. Fetch latest headlines for the topic/category
     let headlines: string[] = [];
@@ -49,11 +104,20 @@ serve(async (req) => {
     }
 
     const topicLabel = topic || category || "Global Affairs";
+    const claimsBlock = verifiedClaims.length
+      ? `\n\nVerified claims from GAINN's knowledge graph (confidence-ordered):\n${verifiedClaims.map((c, i) => `${i + 1}. [${c.confidence.toFixed(2)}] ${c.claim_text}`).join("\n")}`
+      : "";
+    const entitiesBlock = topEntities.length
+      ? `\n\nKey entities: ${topEntities.map((e) => `${e.name} (${e.type})`).join(", ")}`
+      : "";
+    const clusterBlock = clusterRow
+      ? `\n\nEvent cluster: "${clusterRow.label}"${clusterRow.summary ? ` — ${clusterRow.summary}` : ""}`
+      : "";
     const headlineContext = headlines.length > 0
-      ? `\n\nCurrent live headlines on this topic:\n${headlines.map((h, i) => `${i + 1}. ${h}`).join("\n")}\n\nKey story summaries:\n${articleSummaries.join("\n")}`
+      ? `\n\nLive headlines:\n${headlines.map((h, i) => `${i + 1}. ${h}`).join("\n")}\n\nSummaries:\n${articleSummaries.join("\n")}`
       : "";
 
-    const systemPrompt = `You are GAINN's senior AI news anchor and scriptwriter. You produce professional, long-form video news scripts for the Global AI News Network.
+    const systemPrompt = `You are GAINN's senior AI news anchor and scriptwriter. You produce professional, multi-format video news content for the Global AI News Network.
 
 STRICT EDITORIAL RULES:
 - Always present MULTIPLE perspectives on every issue — never favor one side
@@ -61,7 +125,8 @@ STRICT EDITORIAL RULES:
 - Cite sources and regions whenever possible
 - Acknowledge uncertainty with phrases like "according to reports", "officials say", "sources indicate"
 - End every segment with context, not conclusions
-- Structure: Opening Hook → Background → Key Developments → Multiple Viewpoints → Global Impact → Closing Context
+- Prefer verified claims from the knowledge graph when available
+- Structure long-form: Opening Hook → Background → Key Developments → Multiple Viewpoints → Global Impact → Closing Context
 
 FORMAT YOUR OUTPUT EXACTLY LIKE THIS:
 [TITLE]: The video title
@@ -70,10 +135,16 @@ FORMAT YOUR OUTPUT EXACTLY LIKE THIS:
 [THUMBNAIL_PROMPT]: A cinematic, photorealistic image description for the video thumbnail (no text, no faces)
 [SCRIPT]:
 The full anchor script with clear section headers like **OPENING**, **BACKGROUND**, **KEY DEVELOPMENTS**, **PERSPECTIVES**, **GLOBAL IMPACT**, **CLOSING**
+[SHORT_SCRIPT]:
+A vertical 60-second hook-driven script for TikTok/Reels/Shorts (≤180 words, single voice, punchy).
+[SOCIAL_CAPTION]:
+A single ≤280-character social post with one neutral hashtag.
+[NEWSLETTER_MD]:
+A 120-180 word markdown newsletter blurb with a bolded lede and a "**What's next**" bullet line.
 
 Each section should be substantial (150-300 words). Total script should be 800-1200 words for a 6-10 minute video.`;
 
-    const userPrompt = `Create a professional, neutral long-form video news script about: "${topicLabel}"${headlineContext}
+    const userPrompt = `Create a multi-format news package about: "${topicLabel}"${clusterBlock}${claimsBlock}${entitiesBlock}${headlineContext}
 
 Make it a 6-10 minute deep-dive video that covers all sides of the story with global context. The tone should be authoritative but accessible, like a premium documentary news channel.`;
 
@@ -122,20 +193,46 @@ Make it a 6-10 minute deep-dive video that covers all sides of the story with gl
     const durationMatch = rawScript.match(/\[DURATION\]:\s*(.+)/);
     const categoryMatch = rawScript.match(/\[CATEGORY\]:\s*(.+)/);
     const thumbnailMatch = rawScript.match(/\[THUMBNAIL_PROMPT\]:\s*(.+)/);
-    const scriptMatch = rawScript.match(/\[SCRIPT\]:\s*([\s\S]+)/);
+    const scriptMatch = rawScript.match(/\[SCRIPT\]:\s*([\s\S]+?)(?=\n\[SHORT_SCRIPT\]:|\n\[SOCIAL_CAPTION\]:|\n\[NEWSLETTER_MD\]:|$)/);
+    const shortMatch = rawScript.match(/\[SHORT_SCRIPT\]:\s*([\s\S]+?)(?=\n\[SOCIAL_CAPTION\]:|\n\[NEWSLETTER_MD\]:|$)/);
+    const socialMatch = rawScript.match(/\[SOCIAL_CAPTION\]:\s*([\s\S]+?)(?=\n\[NEWSLETTER_MD\]:|$)/);
+    const newsletterMatch = rawScript.match(/\[NEWSLETTER_MD\]:\s*([\s\S]+)$/);
 
-    return new Response(
-      JSON.stringify({
-        title: titleMatch?.[1]?.trim() || `GAINN Report: ${topicLabel}`,
-        duration: durationMatch?.[1]?.trim() || "6-8 min",
-        category: categoryMatch?.[1]?.trim() || topicLabel,
-        thumbnailPrompt: thumbnailMatch?.[1]?.trim() || `Cinematic global news broadcast studio, ${topicLabel}, dramatic lighting, professional news set`,
-        script: scriptMatch?.[1]?.trim() || rawScript,
-        rawHeadlines: headlines,
-        generatedAt: new Date().toISOString(),
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const result = {
+      title: titleMatch?.[1]?.trim() || `GAINN Report: ${topicLabel}`,
+      duration: durationMatch?.[1]?.trim() || "6-8 min",
+      category: categoryMatch?.[1]?.trim() || topicLabel,
+      thumbnailPrompt: thumbnailMatch?.[1]?.trim() || `Cinematic global news broadcast studio, ${topicLabel}, dramatic lighting, professional news set`,
+      script: scriptMatch?.[1]?.trim() || rawScript,
+      shortScript: shortMatch?.[1]?.trim() || null,
+      socialCaption: socialMatch?.[1]?.trim() || null,
+      newsletterMd: newsletterMatch?.[1]?.trim() || null,
+      rawHeadlines: headlines,
+      verifiedClaimIds: verifiedClaims.map((c) => c.id),
+      eventClusterId: clusterRow?.id ?? null,
+      generatedAt: new Date().toISOString(),
+    };
+
+    // Best-effort persist (don't block the response on it)
+    if (svc) {
+      svc.from("generated_videos").insert({
+        title: result.title,
+        category: result.category,
+        duration: result.duration,
+        script: result.script,
+        thumbnail_prompt: result.thumbnailPrompt,
+        raw_headlines: headlines,
+        short_script: result.shortScript,
+        social_caption: result.socialCaption,
+        newsletter_md: result.newsletterMd,
+        claim_ids: result.verifiedClaimIds,
+        event_cluster_id: result.eventClusterId,
+      }).then(() => {}, (err) => console.warn("generated_videos insert:", err?.message));
+    }
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("generate-video-script error:", err);
     return new Response(
