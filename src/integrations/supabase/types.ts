@@ -469,6 +469,41 @@ export type Database = {
           },
         ]
       }
+      ground_truth_labels: {
+        Row: {
+          claim_id: string
+          created_at: string
+          id: string
+          label: string
+          labeled_by: string
+          rationale: string | null
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string
+          id?: string
+          label: string
+          labeled_by: string
+          rationale?: string | null
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          labeled_by?: string
+          rationale?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ground_truth_labels_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_broadcasts: {
         Row: {
           current_segment_id: string | null
@@ -504,6 +539,9 @@ export type Database = {
           categories: string[]
           created_at: string
           id: string
+          interest_embedding: string | null
+          last_signal_at: string | null
+          regional_weights: Json
           regions: string[]
           updated_at: string
           user_id: string
@@ -512,6 +550,9 @@ export type Database = {
           categories?: string[]
           created_at?: string
           id?: string
+          interest_embedding?: string | null
+          last_signal_at?: string | null
+          regional_weights?: Json
           regions?: string[]
           updated_at?: string
           user_id: string
@@ -520,6 +561,9 @@ export type Database = {
           categories?: string[]
           created_at?: string
           id?: string
+          interest_embedding?: string | null
+          last_signal_at?: string | null
+          regional_weights?: Json
           regions?: string[]
           updated_at?: string
           user_id?: string
@@ -730,6 +774,39 @@ export type Database = {
           story_count?: number
           summary?: string | null
           topic?: string
+        }
+        Relationships: []
+      }
+      user_events: {
+        Row: {
+          article_id: string
+          category: string | null
+          dwell_ms: number | null
+          event_type: string
+          id: string
+          metadata: Json
+          ts: string
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          category?: string | null
+          dwell_ms?: number | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          ts?: string
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          category?: string | null
+          dwell_ms?: number | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          ts?: string
+          user_id?: string
         }
         Relationships: []
       }
