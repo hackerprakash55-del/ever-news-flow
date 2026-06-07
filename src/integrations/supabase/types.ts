@@ -65,6 +65,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       claim_evidence: {
         Row: {
           claim_id: string
@@ -230,6 +248,51 @@ export type Database = {
           regions?: string[]
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      pipeline_decisions: {
+        Row: {
+          category: string | null
+          created_at: string
+          endpoint: string
+          fallback_reason: string | null
+          flag_enabled: boolean | null
+          id: string
+          latency_ms: number | null
+          region: string | null
+          rollout_pct: number | null
+          route: string
+          run_id: string | null
+          topic: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          endpoint: string
+          fallback_reason?: string | null
+          flag_enabled?: boolean | null
+          id?: string
+          latency_ms?: number | null
+          region?: string | null
+          rollout_pct?: number | null
+          route: string
+          run_id?: string | null
+          topic?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          endpoint?: string
+          fallback_reason?: string | null
+          flag_enabled?: boolean | null
+          id?: string
+          latency_ms?: number | null
+          region?: string | null
+          rollout_pct?: number | null
+          route?: string
+          run_id?: string | null
+          topic?: string | null
         }
         Relationships: []
       }
