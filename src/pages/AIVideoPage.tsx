@@ -626,6 +626,11 @@ export default function AIVideoPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SeoHead
+        title="AI Video News Channel — GAINN"
+        description="Generate AI-narrated video news briefings on demand. Pick any topic and GAINN's autonomous newsroom produces a verified, broadcast-ready report."
+        path="/video"
+      />
       <VideoModal open={!!activeVideo} video={activeVideo} onClose={() => setActiveVideo(null)} />
       <GlobalHeader />
       <NewsTickerBar />
