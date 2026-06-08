@@ -299,6 +299,7 @@ export const GlobalHeader = ({
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted md:hidden"
             onClick={() => setSearchOpen(true)}
+            aria-label="Open search"
           >
             <Search className="w-4 h-4" />
           </Button>
@@ -309,6 +310,7 @@ export const GlobalHeader = ({
             className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
@@ -319,6 +321,8 @@ export const GlobalHeader = ({
             size="icon"
             className="h-8 w-8 lg:hidden text-muted-foreground hover:text-foreground"
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </Button>
