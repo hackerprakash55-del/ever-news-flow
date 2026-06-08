@@ -520,6 +520,10 @@ export default function AIVideoPage() {
       }).select("id").single();
       // Refresh library
       loadLibrary();
+      // Kick off thumbnail in the background.
+      if (inserted?.id && supabaseUrl && anonKey) {
+        generateThumbnailFor(inserted.id, video.title, video.thumbnailPrompt, supabaseUrl, anonKey);
+      }
       return inserted?.id ?? null;
     } catch (e) {
       console.error("Failed to save video:", e);
