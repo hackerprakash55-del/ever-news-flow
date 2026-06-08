@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 import { getVideoGradient } from "@/lib/videoVisuals";
+import { SeoHead } from "@/components/SeoHead";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
