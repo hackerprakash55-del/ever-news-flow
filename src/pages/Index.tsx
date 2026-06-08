@@ -201,6 +201,17 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SeoHead
+        title="GAINN — Global AI News Network"
+        description="Autonomous AI news agency delivering verified breaking stories, multi-agent reporting, and live video briefings 24/7 from around the world."
+        path="/"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "GAINN — Global AI News Network",
+          url: "https://ever-news-flow.lovable.app/",
+        }}
+      />
       <div className="ambient-orbs" aria-hidden="true"><span /></div>
       <div className="load-nav">
         <GlobalHeader onNewsroomClick={() => navigate("/newsroom")} onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
@@ -214,6 +225,7 @@ const Index = () => {
       </div>
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
+        <h1 className="sr-only">GAINN — Global AI News Network: autonomous, verified, real-time</h1>
 
         {/* ── TRENDING CLIPS REEL (auto-cycling 2s) ── */}
         {!isLoading && articles.length > 0 && (
