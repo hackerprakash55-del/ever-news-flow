@@ -424,6 +424,31 @@ export default function AIVideoPage() {
     }
   };
 
+  // Fire-and-forget thumbnail generation. Updates the DB row + library state when ready.
+  const generateThumbnailFor = async (
+    videoId: string,
+    title: string,
+    thumbnailPrompt: string,
+    supabaseUrl: string,
+    anonKey: string,
+  ) => {
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ thumbnailPrompt: thumbnailPrompt || title, title }),
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const imageUrl = json?.imageUrl as string | undefined;
+      if (!imageUrl) return;
+      await supabase.from("generated_videos").update({ thumbnail_url: imageUrl }).eq("id", videoId);
+      setLibrary(prev => prev.map(v => (v.id === videoId ? { ...v, thumbnail_url: imageUrl } : v)));
+    } catch (e) {
+      console.warn("Thumbnail generation failed:", e);
+    }
+  };
+
   // Helper: generate script + thumbnail for one topic and save to DB
   const autoGenerateOneTopic = async (t: typeof SUGGESTED_TOPICS[0], supabaseUrl: string, anonKey: string) => {
     try {
