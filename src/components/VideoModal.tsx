@@ -43,6 +43,9 @@ export function VideoModal({ open, onClose, video }: Props) {
     if (!narration || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     await waitForVoices();
+    // Chrome occasionally drops a speak() call that immediately follows
+    // cancel(); a small yield avoids that race and is inaudible to users.
+    await new Promise((r) => setTimeout(r, 60));
     const utterance = new SpeechSynthesisUtterance(narration);
     tuneUtterance(utterance);
     utterance.onend = () => {
@@ -52,7 +55,8 @@ export function VideoModal({ open, onClose, video }: Props) {
       setIsPlaying(false);
       setIsPaused(false);
     };
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+      console.warn("Speech synthesis error:", e);
       setIsPlaying(false);
       setIsPaused(false);
     };
@@ -63,6 +67,18 @@ export function VideoModal({ open, onClose, video }: Props) {
     setIsPlaying(true);
     setIsPaused(false);
     window.speechSynthesis.speak(utterance);
+    // Some Chromium builds pause the speech queue after ~15s of silence;
+    // a manual resume tick keeps long narrations alive.
+    const keepAlive = window.setInterval(() => {
+      if (!window.speechSynthesis.speaking) {
+        window.clearInterval(keepAlive);
+        return;
+      }
+      if (!window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 10000);
   }, [duration, narration]);
 
   const togglePause = useCallback(() => {

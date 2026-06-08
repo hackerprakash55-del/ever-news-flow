@@ -459,6 +459,11 @@ export default function AIVideoPage() {
         generated_at: data.generatedAt,
         created_at: new Date().toISOString(),
       }, ...prev]);
+
+      // Fire-and-forget thumbnail generation (~5-10s); update row + library when ready.
+      if (inserted?.id) {
+        generateThumbnailFor(inserted.id, data.title, data.thumbnailPrompt, supabaseUrl, anonKey);
+      }
     } catch (e) {
       console.error("Auto-generate failed for topic:", t.label, e);
     }
