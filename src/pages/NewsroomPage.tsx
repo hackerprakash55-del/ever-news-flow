@@ -11,6 +11,7 @@ import {
   TrendingUp, CheckCircle, AlertTriangle, Clock, Globe
 } from "lucide-react";
 import gainnLogo from "@/assets/gainn-logo.png";
+import { SeoHead } from "@/components/SeoHead";
 
 const MetricCard = ({
   label, value, sub, icon: Icon, color, trend
