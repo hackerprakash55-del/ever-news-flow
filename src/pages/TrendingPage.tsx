@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { GlobalHeader } from "@/components/GlobalHeader";
+import { SeoHead } from "@/components/SeoHead";
 import { ArticleCard, ArticleListItem } from "@/components/ArticleCards";
 import { HeroGridSkeleton } from "@/components/ArticleSkeletons";
 import { useNews } from "@/hooks/useNews";
@@ -40,6 +41,11 @@ export default function TrendingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SeoHead
+        title="Trending Now — GAINN"
+        description="The stories driving global conversation right now. Real-time trending headlines verified by GAINN's autonomous AI newsroom."
+        path="/trending"
+      />
       <GlobalHeader onNewsroomClick={() => navigate("/newsroom")} onCategoryChange={(c) => setParams({ category: c })} activeCategory={category} />
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
