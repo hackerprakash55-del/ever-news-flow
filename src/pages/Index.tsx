@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
+import { SeoHead } from "@/components/SeoHead";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner } from "@/components/BreakingNewsBanner";
 import { TrendingClipsReel } from "@/components/TrendingClipsReel";
