@@ -2,7 +2,7 @@ import { TICKER_ITEMS } from "@/data/mockData";
 import { useNews } from "@/hooks/useNews";
 
 export const NewsTickerBar = () => {
-  const { articles, isLive } = useNews({ pageSize: 20 });
+  const { articles, isLive } = useNews({ pageSize: 30 });
 
   const items: string[] =
     articles.length > 0
