@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { getVideoGradient } from "@/lib/videoVisuals";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
+import { SeoHead } from "@/components/SeoHead";
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
