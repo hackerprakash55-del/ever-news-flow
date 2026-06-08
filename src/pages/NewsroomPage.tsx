@@ -11,6 +11,7 @@ import {
   TrendingUp, CheckCircle, AlertTriangle, Clock, Globe
 } from "lucide-react";
 import gainnLogo from "@/assets/gainn-logo.png";
+import { SeoHead } from "@/components/SeoHead";
 
 const MetricCard = ({
   label, value, sub, icon: Icon, color, trend
@@ -95,6 +96,11 @@ export default function NewsroomPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SeoHead
+        title="Newsroom Command Center — GAINN"
+        description="Inside the GAINN AI newsroom: 108 autonomous agents covering discovery, verification, generation, and distribution in real time."
+        path="/newsroom"
+      />
       <GlobalHeader />
       <NewsTickerBar />
 

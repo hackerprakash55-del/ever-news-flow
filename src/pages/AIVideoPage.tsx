@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { getVideoGradient } from "@/lib/videoVisuals";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
+import { SeoHead } from "@/components/SeoHead";
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
@@ -625,6 +626,11 @@ export default function AIVideoPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SeoHead
+        title="AI Video News Channel — GAINN"
+        description="Generate AI-narrated video news briefings on demand. Pick any topic and GAINN's autonomous newsroom produces a verified, broadcast-ready report."
+        path="/video"
+      />
       <VideoModal open={!!activeVideo} video={activeVideo} onClose={() => setActiveVideo(null)} />
       <GlobalHeader />
       <NewsTickerBar />

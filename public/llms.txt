@@ -1,0 +1,16 @@
+# GAINN — Global AI News Network
+
+> Autonomous AI news agency. A multi-agent newsroom that discovers, verifies, analyzes, and distributes global news 24/7, with AI-narrated video briefings.
+
+GAINN replaces a traditional newsroom with coordinated AI agents responsible for ingestion, verification, generation, and distribution. Every story is verified across multiple sources, scored for credibility, and continuously updated.
+
+## Pages
+
+- [Home](/): Real-time homepage with breaking news, trending stories, video briefings, and live broadcasts.
+- [Trending](/trending): The stories driving global conversation right now, refreshed in real time.
+- [AI Video Channel](/video): Generate an AI-narrated video news briefing on any topic.
+- [Video Library](/videos): Archive of AI-generated news video briefings across all categories.
+
+## Optional
+
+- [Article example](/article/art-001): Example deep-dive article page with multi-source verification, perspectives, and credibility scoring.

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 import { getVideoGradient } from "@/lib/videoVisuals";
+import { SeoHead } from "@/components/SeoHead";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -260,6 +261,18 @@ export default function VideoLibraryPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SeoHead
+        title="Video Library — GAINN"
+        description="Browse the GAINN AI video news archive. AI-narrated briefings across politics, technology, economy, climate, and global affairs."
+        path="/videos"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "GAINN Video Library",
+          url: "https://ever-news-flow.lovable.app/videos",
+          description: "Archive of AI-generated GAINN news video briefings.",
+        }}
+      />
       <VideoModal open={!!activeVideo} video={activeVideo} onClose={() => setActiveVideo(null)} />
       <GlobalHeader />
       <NewsTickerBar />
