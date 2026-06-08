@@ -25,7 +25,9 @@ function useCountUp(target: number, duration = 1200) {
 // ── Breaking Banner ────────────────────────────────────────
 export const BreakingNewsBanner = () => {
   const [currentIdx, setCurrentIdx] = useState(0);
-  const { articles, isLive } = useNews({ pageSize: 20 });
+  // Use pageSize=30 so this shares the React-Query cache with Index/AIAnchorPanel
+  // (one network call powers the whole homepage instead of three).
+  const { articles, isLive } = useNews({ pageSize: 30 });
 
   const alerts: BreakingAlert[] = useMemo(() => {
     if (!isLive || articles.length === 0) return BREAKING_ALERTS;

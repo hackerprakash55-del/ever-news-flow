@@ -6,7 +6,9 @@ import { useNews } from "@/hooks/useNews";
 export const AIAnchorPanel = () => {
   const [selected, setSelected] = useState(0);
   const [typedWords, setTypedWords] = useState(1);
-  const { articles, isLoading } = useNews({ pageSize: 6 });
+  // Share the homepage news cache (pageSize=30) — avoids a second slow
+  // fetch-news edge-function call on every page load.
+  const { articles, isLoading } = useNews({ pageSize: 30 });
   const navigate = useNavigate();
 
   const segments = articles.slice(0, 6).map((a, i) => ({

@@ -78,7 +78,7 @@ function getViewCount(id: string): string {
 
 export function TrendingVideosSection() {
   const navigate = useNavigate();
-  const { articles, isLoading: newsLoading } = useNews({ pageSize: 10 });
+  const { articles, isLoading: newsLoading } = useNews({ pageSize: 30 });
   const [videos, setVideos] = useState<VideoRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);

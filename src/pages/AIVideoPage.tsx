@@ -424,6 +424,31 @@ export default function AIVideoPage() {
     }
   };
 
+  // Fire-and-forget thumbnail generation. Updates the DB row + library state when ready.
+  const generateThumbnailFor = async (
+    videoId: string,
+    title: string,
+    thumbnailPrompt: string,
+    supabaseUrl: string,
+    anonKey: string,
+  ) => {
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ thumbnailPrompt: thumbnailPrompt || title, title }),
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const imageUrl = json?.imageUrl as string | undefined;
+      if (!imageUrl) return;
+      await supabase.from("generated_videos").update({ thumbnail_url: imageUrl }).eq("id", videoId);
+      setLibrary(prev => prev.map(v => (v.id === videoId ? { ...v, thumbnail_url: imageUrl } : v)));
+    } catch (e) {
+      console.warn("Thumbnail generation failed:", e);
+    }
+  };
+
   // Helper: generate script + thumbnail for one topic and save to DB
   const autoGenerateOneTopic = async (t: typeof SUGGESTED_TOPICS[0], supabaseUrl: string, anonKey: string) => {
     try {
@@ -459,6 +484,11 @@ export default function AIVideoPage() {
         generated_at: data.generatedAt,
         created_at: new Date().toISOString(),
       }, ...prev]);
+
+      // Fire-and-forget thumbnail generation (~5-10s); update row + library when ready.
+      if (inserted?.id) {
+        generateThumbnailFor(inserted.id, data.title, data.thumbnailPrompt, supabaseUrl, anonKey);
+      }
     } catch (e) {
       console.error("Auto-generate failed for topic:", t.label, e);
     }
@@ -490,6 +520,10 @@ export default function AIVideoPage() {
       }).select("id").single();
       // Refresh library
       loadLibrary();
+      // Kick off thumbnail in the background.
+      if (inserted?.id && supabaseUrl && anonKey) {
+        generateThumbnailFor(inserted.id, video.title, video.thumbnailPrompt, supabaseUrl, anonKey);
+      }
       return inserted?.id ?? null;
     } catch (e) {
       console.error("Failed to save video:", e);
