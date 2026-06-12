@@ -3,27 +3,14 @@ import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner } from "@/components/BreakingNewsBanner";
-import { TrendingClipsReel } from "@/components/TrendingClipsReel";
-import { AIMorningBriefing } from "@/components/AIMorningBriefing";
-import { HeroArticleCard, ArticleCard, ArticleListItem, SponsoredSlot } from "@/components/ArticleCards";
-import { WorldNewsMap } from "@/components/WorldNewsMap";
-import { AIAnchorPanel } from "@/components/AIAnchorPanel";
+import { HeroArticleCard, ArticleCard, ArticleListItem } from "@/components/ArticleCards";
 import { TrendingVideosSection } from "@/components/TrendingVideosSection";
-import { TrendingTopicsSidebar } from "@/components/TrendingTopicsSidebar";
 import { JustInFeed } from "@/components/JustInFeed";
-import { NewsletterBanner } from "@/components/NewsletterBanner";
-import { MarketTicker } from "@/components/MarketTicker";
-import { HeroAnnouncementBar } from "@/components/HeroAnnouncementBar";
-import { PremiumUpgradeModal } from "@/components/PremiumUpgradeModal";
-import { StickyUpgradeBar } from "@/components/StickyUpgradeBar";
-import { SocialProofStrip } from "@/components/SocialProofStrip";
 import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/components/ArticleSkeletons";
 import { useNews } from "@/hooks/useNews";
-import { CATEGORIES, WORLD_NEWS_PINS } from "@/data/mockData";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, Star, X,
-  Globe, ChevronRight,
+  RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
@@ -40,8 +27,6 @@ const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string |
 const FEED_TABS = [
   { id: "top", label: "Top Stories", icon: TrendingUp },
   { id: "just-in", label: "Just In", icon: Zap },
-  { id: "most-read", label: "Most Read Today", icon: Star },
-  { id: "editors", label: "Editor's Pick", icon: Star },
 ];
 
 // ── Footer ─────────────────────────────────────────────────
@@ -103,56 +88,10 @@ function SystemFooter({ isLive }: { isLive: boolean }) {
   );
 }
 
-// ── Global Radar Pick ─────────────────────────────────────
-function GlobalRadarPick({ articles }: { articles: any[] }) {
-  const navigate = useNavigate();
-  const topPin = WORLD_NEWS_PINS.find(p => p.severity === "breaking") || WORLD_NEWS_PINS[0];
-  // Try to find an article matching a global/breaking pin
-  const radarArticle = articles.find(a => a.isBreaking && a.region !== "Global") || articles.find(a => a.region && a.region !== "Global") || articles[0];
-  if (!radarArticle) return null;
-
-  return (
-    <div className="card-glass rounded-lg overflow-hidden border border-gainn-cyan/20 hover:border-gainn-cyan/40 transition-all cursor-pointer group"
-      onClick={() => {
-        try { sessionStorage.setItem(`article-${radarArticle.id}`, JSON.stringify(radarArticle)); } catch {}
-        navigate(`/article/${radarArticle.id}`);
-      }}
-    >
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-gainn-cyan/5">
-        <span className="text-base">🌍</span>
-        <span className="text-xs font-semibold font-mono text-gainn-cyan uppercase tracking-wider">From the Global Radar</span>
-        <span className="ml-auto text-[10px] font-mono text-gainn-green flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-gainn-green live-dot" /> Live Tracking
-        </span>
-      </div>
-      <div className="flex gap-4 p-4">
-        {/* Mini map thumbnail */}
-        <div className="w-24 h-20 rounded-lg bg-surface-2 border border-border flex-shrink-0 overflow-hidden relative flex items-center justify-center">
-          <Globe className="w-10 h-10 text-gainn-cyan/30" />
-          <div className="absolute w-2 h-2 rounded-full bg-gainn-red live-dot" style={{ top: "40%", left: "55%" }} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-display text-foreground group-hover:text-gainn-cyan transition-colors line-clamp-2 leading-snug mb-1">
-            {radarArticle.headline}
-          </h3>
-          <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{radarArticle.summary}</p>
-          <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
-            <span className="text-gainn-cyan">{radarArticle.region || topPin?.region}</span>
-            <span>·</span>
-            <span>{radarArticle.readTime}m read</span>
-            <span className="ml-auto text-gainn-cyan font-semibold group-hover:underline">Read Full Story →</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const Index = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const feedRef = useRef<HTMLDivElement>(null);
-  const [premiumOpen, setPremiumOpen] = useState(false);
 
   const catFromUrl = searchParams.get("cat") ?? "All";
   const [activeCategory, setActiveCategory] = useState(catFromUrl);
@@ -166,9 +105,7 @@ const Index = () => {
   const location = geoToQuery(geo);
   const { articles, isLive, isLoading, isError, error, fetchedAt, refresh } = useNews({ category: newsCategory, pageSize: 30, location });
 
-  const mostRead = [...articles].sort((a, b) => b.credibilityScore - a.credibilityScore);
-  const editorsPick = articles.filter((a) => a.isBreaking || a.credibilityScore >= 95).slice(0, 8);
-  const displayArticles = feedTab === "most-read" ? mostRead : feedTab === "editors" ? (editorsPick.length > 0 ? editorsPick : articles) : articles;
+  const displayArticles = articles;
 
   // Derive trending category from top articles
   const trendingCategory = useMemo(() => {
@@ -216,24 +153,14 @@ const Index = () => {
       <div className="load-nav">
         <GlobalHeader onNewsroomClick={() => navigate("/newsroom")} onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
       </div>
-      <div className="load-announce">
-        <HeroAnnouncementBar onUpgradeClick={() => setPremiumOpen(true)} />
-      </div>
       <div className="load-ticker">
         <NewsTickerBar />
-        <MarketTicker />
       </div>
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-6 space-y-6">
         <h1 className="sr-only">GAINN — Global AI News Network: autonomous, verified, real-time</h1>
 
-        {/* ── TRENDING CLIPS REEL (auto-cycling 2s) ── */}
-        {!isLoading && articles.length > 0 && (
-          <TrendingClipsReel articles={articles} />
-        )}
-
         <BreakingNewsBanner />
-        <AIMorningBriefing />
 
         {/* ── Combined filter + feed tabs row ── */}
         <div ref={feedRef}>
@@ -284,10 +211,7 @@ const Index = () => {
             ════════════════════════════════════════════════════ */}
 
         {feedTab === "just-in" ? (
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
-            <JustInFeed />
-            <div className="space-y-4"><TrendingTopicsSidebar onTagClick={() => {}} /></div>
-          </div>
+          <JustInFeed />
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
             <div className="space-y-8">
@@ -333,15 +257,6 @@ const Index = () => {
                   </div>
                 </div>
               )}
-
-              {/* ── SECTION 5: GLOBAL RADAR PICK ── */}
-              {!isLoading && radarArticle && (
-                <GlobalRadarPick articles={[radarArticle]} />
-              )}
-
-              {/* ── SECTION 6: NEWSLETTER CTA ── */}
-              <SocialProofStrip />
-              <NewsletterBanner />
 
               {/* ── SECTION 7: MORE HEADLINES (paginated 6) ── */}
               {!isLoading && moreVisible.length > 0 && (
@@ -399,15 +314,12 @@ const Index = () => {
                     : displayArticles.slice(0, 8).map((a, i) => <ArticleListItem key={a.id} article={a} index={i} />)}
                 </div>
               </div>
-              <TrendingTopicsSidebar />
             </div>
           </div>
         )}
       </main>
 
       <SystemFooter isLive={isLive} />
-      <StickyUpgradeBar onUpgradeClick={() => setPremiumOpen(true)} />
-      <PremiumUpgradeModal open={premiumOpen} onClose={() => setPremiumOpen(false)} />
     </div>
   );
 };
