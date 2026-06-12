@@ -609,13 +609,30 @@ export default function AIVideoPage() {
     }
   };
 
-  const generateAudio = (script: string, _title: string) => {
-    // Use browser Web Speech API directly — ElevenLabs free tier is blocked
-    // from server environments. When a paid ElevenLabs key is available the
-    // edge function will return audioContent and we'll use that instead.
+  const generateAudio = async (script: string, title: string) => {
+    setIsGeneratingAudio(true);
     setAudioUrl(null);
-    setUseBrowserVoice(true);
-    setIsGeneratingAudio(false);
+    setUseBrowserVoice(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
+        body: { script, title },
+      });
+      if (error || !data?.audioContent) {
+        console.warn("ElevenLabs TTS unavailable, using browser voice:", error || data?.error);
+        setUseBrowserVoice(true);
+        if (data?.error) {
+          toast({ title: "Using browser voice", description: data.error });
+        }
+        return;
+      }
+      // Browser natively decodes base64 audio via data URI (avoids atob corruption).
+      setAudioUrl(`data:audio/mpeg;base64,${data.audioContent}`);
+    } catch (e) {
+      console.warn("TTS request failed, falling back to browser voice:", e);
+      setUseBrowserVoice(true);
+    } finally {
+      setIsGeneratingAudio(false);
+    }
   };
 
   const copyScript = () => {
