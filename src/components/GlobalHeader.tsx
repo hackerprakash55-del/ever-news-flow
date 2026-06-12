@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut,
-  Bookmark, User, ChevronDown, Sun, Moon, History, Mail, BarChart2,
+  User, ChevronDown, Sun, Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import gainnLogo from "@/assets/gainn-logo.png";
 import { cn } from "@/lib/utils";
 
 const SearchOverlay    = lazy(() => import("@/components/SearchOverlay").then(m => ({ default: m.SearchOverlay })));
-const NotificationBell = lazy(() => import("@/components/NotificationPanel").then(m => ({ default: m.NotificationBell })));
 
 const CATEGORIES = [
   { label: "Home",        cat: null },
@@ -61,10 +60,6 @@ function UserMenu() {
 
   const menuItems = [
     { icon: User,     label: "Account Settings",        href: "/settings" },
-    { icon: Bookmark, label: "My Saved Articles",       href: "/settings?tab=saved" },
-    { icon: History,  label: "Reading History",         href: "/settings?tab=history" },
-    { icon: Mail,     label: "Newsletter Preferences",  href: "/settings?tab=newsletter" },
-    { icon: BarChart2,label: "Editor Dashboard",        href: "/settings?tab=analytics", adminOnly: true },
   ];
 
   return (
@@ -193,31 +188,6 @@ export const GlobalHeader = ({
 
   return (
     <header className="sticky top-0 z-50 nav-glass animate-slide-down">
-      {/* Top utility bar */}
-      <div className="border-b border-border/50 px-4 py-1.5 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-            <span>108 Agents Active</span>
-          </div>
-          <span className="text-border">|</span>
-          <span>UTC {now}</span>
-          <span className="text-border">|</span>
-          <span className="text-accent">24/7 AI Newsroom</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-xs gap-1.5 text-gainn-amber border border-gainn-amber/30 hover:bg-gainn-amber/10"
-            onClick={onNewsroomClick}
-          >
-            <Radio className="w-3 h-3 animate-live-pulse" />
-            Newsroom Command
-          </Button>
-        </div>
-      </div>
-
       {/* Main header row */}
       <div className="px-4 md:px-6 py-3 flex items-center gap-4">
         {/* Logo */}
@@ -289,6 +259,17 @@ export const GlobalHeader = ({
           >
             <Library className="w-3.5 h-3.5" />Video Library
           </Link>
+          <Link
+            to="/newsroom"
+            className={cn(
+              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
+              location.pathname === "/newsroom"
+                ? "bg-gainn-red/20 text-gainn-red border-gainn-red/50"
+                : "text-gainn-red hover:bg-gainn-red/10 border-gainn-red/25 hover:border-gainn-red/50"
+            )}
+          >
+            <Radio className="w-3.5 h-3.5 animate-live-pulse" />Live
+          </Link>
         </nav>
 
         {/* Right actions */}
@@ -314,7 +295,6 @@ export const GlobalHeader = ({
           >
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
-          <Suspense fallback={<div className="h-8 w-8" />}><NotificationBell /></Suspense>
           <UserMenu />
           <Button
             variant="ghost"
@@ -370,6 +350,11 @@ export const GlobalHeader = ({
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-accent rounded-md hover:bg-accent/10"
           >
             <Library className="w-3.5 h-3.5" /> Video Library
+          </Link>
+          <Link to="/newsroom" onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-red rounded-md hover:bg-gainn-red/10"
+          >
+            <Radio className="w-3.5 h-3.5" /> Live Broadcast
           </Link>
           <div className="border-t border-border/50 mt-2 pt-2">
             {user ? (
