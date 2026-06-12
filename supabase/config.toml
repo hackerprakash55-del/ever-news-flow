@@ -26,6 +26,7 @@ verify_jwt = true
 
 [functions.broadcast-orchestrate]
 verify_jwt = false
+# Auth is enforced in-code: requires service-role bearer (pg_cron) or admin JWT.
 
 [functions.personalize-feed]
 verify_jwt = true
