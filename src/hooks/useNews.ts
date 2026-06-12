@@ -54,16 +54,33 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   });
   if (location) params.set("location", location);
 
-  const response = await fetch(
-    `${supabaseUrl}/functions/v1/fetch-news?${params}`,
-    {
-      headers: {
-        Authorization: `Bearer ${anonKey}`,
-        apikey: anonKey,
-        "Content-Type": "application/json",
-      },
+  // Hard 15s timeout — a stalled NewsAPI / Gemini call must never leave
+  // the UI spinning forever. AbortController cancels the request and
+  // react-query falls back to mock data via the hook below.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${supabaseUrl}/functions/v1/fetch-news?${params}`,
+      {
+        headers: {
+          Authorization: `Bearer ${anonKey}`,
+          apikey: anonKey,
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      }
+    );
+  } catch (err) {
+    if ((err as Error)?.name === "AbortError") {
+      throw new Error("News feed timed out after 15s");
     }
-  );
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const errBody = await response.json().catch(() => ({}));
@@ -94,10 +111,15 @@ export function useNews({ category = "all", pageSize = 20, location = "" }: UseN
     queryKey,
     queryFn: () => fetchLiveNews(category, pageSize, location),
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
     refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
     retry: 1,
     retryDelay: 2000,
+    // Keep previous results visible while a refetch is in flight so the
+    // feed never blanks out and the page never appears "frozen".
+    placeholderData: (prev) => prev,
   });
 
   const refresh = useCallback(() => {
