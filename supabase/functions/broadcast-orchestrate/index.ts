@@ -10,6 +10,30 @@ import { chat, MODELS, tryParseJson } from "../_shared/ai.ts";
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Auth: this function is intended to be invoked only by pg_cron (which
+  // includes the service-role key) or by an admin. Reject anything else so
+  // anonymous internet callers can't create broadcasts or burn AI credits.
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const cronSecret = req.headers.get("x-cron-secret") ?? "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const isServiceCall = serviceKey && (bearer === serviceKey || cronSecret === serviceKey);
+
+  let isAdmin = false;
+  if (!isServiceCall && bearer) {
+    try {
+      const { requireAdmin } = await import("../_shared/supa.ts");
+      const auth = await requireAdmin(authHeader);
+      isAdmin = auth.ok;
+    } catch (_e) {
+      isAdmin = false;
+    }
+  }
+
+  if (!isServiceCall && !isAdmin) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
   try {
     const supa = serviceClient();
 
