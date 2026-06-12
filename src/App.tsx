@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
-import { SoftSignInPrompt } from "@/components/SoftSignInPrompt";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { ThemeProvider } from "next-themes";
 import { lazy, Suspense } from "react";
@@ -43,7 +42,6 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <SmoothScroll />
-            <SoftSignInPrompt />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public — no auth required */}
