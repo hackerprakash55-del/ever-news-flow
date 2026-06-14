@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { NewsTickerBar } from "@/components/NewsTickerBar";
@@ -8,10 +8,13 @@ import { AGENTS, DEPARTMENT_STATS, MOCK_ARTICLES } from "@/data/mockData";
 import { StatsBar } from "@/components/BreakingNewsBanner";
 import {
   Activity, Cpu, Shield, Eye, Radio, Database, Zap,
-  TrendingUp, CheckCircle, AlertTriangle, Clock, Globe
+  TrendingUp, CheckCircle, AlertTriangle, Clock, Globe, Play, Pause, SkipForward
 } from "lucide-react";
 import gainnLogo from "@/assets/gainn-logo.png";
 import { SeoHead } from "@/components/SeoHead";
+import { useNews } from "@/hooks/useNews";
+import { cleanNarrationText } from "@/lib/videoVisuals";
+import { tuneUtterance, waitForVoices } from "@/lib/voice";
 
 const MetricCard = ({
   label, value, sub, icon: Icon, color, trend
