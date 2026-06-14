@@ -108,8 +108,8 @@ serve(async (req) => {
     if (!finalUrl) {
       console.error("No image in response. Full response:", JSON.stringify(aiData).slice(0, 500));
       return new Response(
-        JSON.stringify({ error: "No image returned from AI" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ imageUrl: fallbackThumbnail(title), fallback: true, error: "No image returned from AI" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -120,8 +120,8 @@ serve(async (req) => {
   } catch (err) {
     console.error("generate-video-thumbnail error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ imageUrl: fallbackThumbnail("GAINN Live Report"), fallback: true, error: "Thumbnail generation failed" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
