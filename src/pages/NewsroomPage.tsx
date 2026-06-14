@@ -94,6 +94,7 @@ function LiveBroadcastDesk() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const playStoryRef = useRef<((story: BroadcastStory | undefined, nextIndex: number) => Promise<void>) | null>(null);
 
   const stories = useMemo<BroadcastStory[]>(() => articles.slice(0, 10).map((article, i) => ({
     id: article.id,
@@ -122,7 +123,7 @@ function LiveBroadcastDesk() {
     utter.onend = () => {
       const following = (nextIndex + 1) % Math.max(stories.length, 1);
       setIndex(following);
-      if (stories[following]) void playStory(stories[following], following);
+      if (stories[following]) void playStoryRef.current?.(stories[following], following);
     };
     utter.onerror = (event) => {
       console.warn("Live broadcast voice failed:", event.error);
@@ -134,6 +135,10 @@ function LiveBroadcastDesk() {
     setIsPaused(false);
     window.speechSynthesis.speak(utter);
   }, [index, stories]);
+
+  useEffect(() => {
+    playStoryRef.current = playStory;
+  }, [playStory]);
 
   const toggle = useCallback(() => {
     if (!isPlaying) {
