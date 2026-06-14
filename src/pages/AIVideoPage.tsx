@@ -634,7 +634,7 @@ export default function AIVideoPage() {
       const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
         body: { script, title },
       });
-      if (error || !data?.audioContent) {
+      if (error || !data?.audioContent || data?.useClientFallback) {
         console.warn("ElevenLabs TTS unavailable, using browser voice:", error || data?.error);
         setUseBrowserVoice(true);
         if (data?.error) {
@@ -642,8 +642,11 @@ export default function AIVideoPage() {
         }
         return;
       }
-      // Browser natively decodes base64 audio via data URI (avoids atob corruption).
-      setAudioUrl(`data:audio/mpeg;base64,${data.audioContent}`);
+      const byteString = atob(data.audioContent);
+      const bytes = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i += 1) bytes[i] = byteString.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: data.contentType || "audio/mpeg" }));
+      setAudioUrl(url);
     } catch (e) {
       console.warn("TTS request failed, falling back to browser voice:", e);
       setUseBrowserVoice(true);
