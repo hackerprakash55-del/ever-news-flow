@@ -480,6 +480,7 @@ export default function AIVideoPage() {
         duration: data.duration,
         script: data.script,
         thumbnail_prompt: data.thumbnailPrompt,
+        thumbnail_url: makeFallbackThumbnail(data.title, data.category),
         raw_headlines: data.rawHeadlines,
         generated_at: data.generatedAt,
       }).select("id").single();
@@ -492,7 +493,7 @@ export default function AIVideoPage() {
         duration: data.duration,
         script: data.script,
         thumbnail_prompt: data.thumbnailPrompt,
-        thumbnail_url: null,
+        thumbnail_url: makeFallbackThumbnail(data.title, data.category),
         raw_headlines: data.rawHeadlines as any,
         generated_at: data.generatedAt,
         created_at: new Date().toISOString(),
@@ -522,12 +523,14 @@ export default function AIVideoPage() {
 
   const saveVideoToDb = async (video: VideoScript) => {
     try {
+      const fallbackThumbnail = video.thumbnailUrl || makeFallbackThumbnail(video.title, video.category);
       const { data: inserted } = await supabase.from("generated_videos").insert({
         title: video.title,
         category: video.category,
         duration: video.duration,
         script: video.script,
         thumbnail_prompt: video.thumbnailPrompt,
+        thumbnail_url: fallbackThumbnail,
         raw_headlines: video.rawHeadlines,
         generated_at: video.generatedAt,
       }).select("id").single();
