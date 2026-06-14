@@ -213,23 +213,6 @@ Make it a 6-10 minute deep-dive video that covers all sides of the story with gl
       generatedAt: new Date().toISOString(),
     };
 
-    // Best-effort persist (don't block the response on it)
-    if (svc) {
-      svc.from("generated_videos").insert({
-        title: result.title,
-        category: result.category,
-        duration: result.duration,
-        script: result.script,
-        thumbnail_prompt: result.thumbnailPrompt,
-        raw_headlines: headlines,
-        short_script: result.shortScript,
-        social_caption: result.socialCaption,
-        newsletter_md: result.newsletterMd,
-        claim_ids: result.verifiedClaimIds,
-        event_cluster_id: result.eventClusterId,
-      }).then(() => {}, (err) => console.warn("generated_videos insert:", err?.message));
-    }
-
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
