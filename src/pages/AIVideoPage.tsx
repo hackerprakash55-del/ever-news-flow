@@ -435,23 +435,30 @@ export default function AIVideoPage() {
     videoId: string,
     title: string,
     thumbnailPrompt: string,
+    category: string | null,
     supabaseUrl: string,
     anonKey: string,
   ) => {
+    const fallbackUrl = makeFallbackThumbnail(title, category);
     try {
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${anonKey}`, apikey: anonKey, "Content-Type": "application/json" },
         body: JSON.stringify({ thumbnailPrompt: thumbnailPrompt || title, title }),
       });
-      if (!res.ok) return;
-      const json = await res.json();
-      const imageUrl = json?.imageUrl as string | undefined;
-      if (!imageUrl) return;
+      const json = await res.json().catch(() => ({}));
+      const imageUrl = (res.ok && json?.imageUrl ? json.imageUrl : fallbackUrl) as string;
       await supabase.from("generated_videos").update({ thumbnail_url: imageUrl }).eq("id", videoId);
       setLibrary(prev => prev.map(v => (v.id === videoId ? { ...v, thumbnail_url: imageUrl } : v)));
+      setVideoScript(prev => prev?.title === title ? { ...prev, thumbnailUrl: imageUrl } : prev);
+      if (!res.ok) console.warn("AI thumbnail unavailable, used fallback:", json?.error || res.status);
+      return imageUrl;
     } catch (e) {
       console.warn("Thumbnail generation failed:", e);
+      await supabase.from("generated_videos").update({ thumbnail_url: fallbackUrl }).eq("id", videoId);
+      setLibrary(prev => prev.map(v => (v.id === videoId ? { ...v, thumbnail_url: fallbackUrl } : v)));
+      setVideoScript(prev => prev?.title === title ? { ...prev, thumbnailUrl: fallbackUrl } : prev);
+      return fallbackUrl;
     }
   };
 
