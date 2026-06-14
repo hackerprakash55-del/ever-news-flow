@@ -80,6 +80,120 @@ const PipelineDiagram = () => {
   );
 };
 
+type BroadcastStory = {
+  id: string;
+  headline: string;
+  category: string;
+  script: string;
+  publishedAt: string;
+};
+
+function LiveBroadcastDesk() {
+  const { articles, isLoading, isLive, refresh } = useNews({ pageSize: 12 });
+  const [index, setIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const stories = useMemo<BroadcastStory[]>(() => articles.slice(0, 10).map((article, i) => ({
+    id: article.id,
+    headline: article.headline,
+    category: article.category,
+    publishedAt: article.publishedAt,
+    script: cleanNarrationText(`${i === 0 ? "Breaking now on GAINN. " : "Next on GAINN. "}${article.headline}. ${article.summary}. ${article.body}`),
+  })), [articles]);
+
+  const active = stories[index] ?? stories[0];
+
+  const stop = useCallback(() => {
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    utteranceRef.current = null;
+    setIsPlaying(false);
+    setIsPaused(false);
+  }, []);
+
+  const playStory = useCallback(async (story: BroadcastStory | undefined, nextIndex = index) => {
+    if (!story || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    await waitForVoices();
+    await new Promise((r) => setTimeout(r, 60));
+    const utter = new SpeechSynthesisUtterance(story.script);
+    tuneUtterance(utter);
+    utter.onend = () => {
+      const following = (nextIndex + 1) % Math.max(stories.length, 1);
+      setIndex(following);
+      if (stories[following]) void playStory(stories[following], following);
+    };
+    utter.onerror = (event) => {
+      console.warn("Live broadcast voice failed:", event.error);
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+    utteranceRef.current = utter;
+    setIsPlaying(true);
+    setIsPaused(false);
+    window.speechSynthesis.speak(utter);
+  }, [index, stories]);
+
+  const toggle = useCallback(() => {
+    if (!isPlaying) {
+      void playStory(active, index);
+    } else if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+    } else {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+    }
+  }, [active, index, isPaused, isPlaying, playStory]);
+
+  const next = useCallback(() => {
+    const nextIndex = (index + 1) % Math.max(stories.length, 1);
+    setIndex(nextIndex);
+    if (isPlaying) void playStory(stories[nextIndex], nextIndex);
+  }, [index, isPlaying, playStory, stories]);
+
+  useEffect(() => stop, [stop]);
+
+  return (
+    <div className="card-glass rounded-lg overflow-hidden border border-gainn-red/20">
+      <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-gainn-red live-dot" />
+        <Radio className="w-4 h-4 text-gainn-red" />
+        <span className="text-sm font-bold uppercase tracking-wider text-gainn-red">Live Broadcast</span>
+        <span className="ml-auto text-[10px] font-mono text-muted-foreground">{isLive ? "Live feed" : "Fallback feed"}</span>
+      </div>
+      <div className="p-4 space-y-4">
+        {isLoading ? (
+          <div className="h-28 rounded-lg shimmer-bg" />
+        ) : active ? (
+          <>
+            <div className="rounded-lg bg-surface-2 border border-border p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-mono text-gainn-cyan uppercase">{active.category}</span>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">{new Date(active.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+              <h2 className="text-xl font-display leading-tight text-foreground">{active.headline}</h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-4">{active.script}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={toggle} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gainn-red text-white hover:bg-gainn-red/85 transition-colors" aria-label="Play live broadcast">
+                {!isPlaying || isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              </button>
+              <button onClick={next} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 border border-border text-muted-foreground hover:text-foreground transition-colors" aria-label="Next story">
+                <SkipForward className="w-4 h-4" />
+              </button>
+              <button onClick={() => { stop(); refresh(); }} className="ml-auto text-xs font-mono text-gainn-blue hover:text-gainn-cyan">Refresh feed</button>
+            </div>
+          </>
+        ) : (
+          <div className="text-sm text-muted-foreground">No live stories are available right now.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function NewsroomPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "agents" | "pipeline">("overview");
   const [agentFilter, setAgentFilter] = useState("All");
