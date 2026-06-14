@@ -390,7 +390,7 @@ export default function AIVideoPage() {
       duration: navVideo.duration,
       script: navVideo.script,
       thumbnailPrompt: navVideo.thumbnail_prompt,
-      thumbnailUrl: navVideo.thumbnail_url,
+      thumbnailUrl: navVideo.thumbnail_url || makeFallbackThumbnail(navVideo.title, navVideo.category),
       rawHeadlines: navVideo.raw_headlines || [],
       generatedAt: navVideo.generated_at,
     } : null
@@ -555,7 +555,7 @@ export default function AIVideoPage() {
       thumbnailPrompt: record.thumbnail_prompt ?? "",
       script: record.script ?? "",
       rawHeadlines: Array.isArray(record.raw_headlines) ? record.raw_headlines : [],
-      thumbnailUrl: record.thumbnail_url,
+      thumbnailUrl: record.thumbnail_url || makeFallbackThumbnail(record.title, record.category),
       generatedAt: record.generated_at ?? new Date().toISOString(),
     });
     setError(null);
@@ -1028,6 +1028,7 @@ export default function AIVideoPage() {
               const category = record.category ?? "Global Affairs";
               const gradient = getVideoGradient(category);
               const badge = CATEGORY_COLORS[category] || "bg-surface-2 text-muted-foreground border-border";
+              const thumbnail = record.thumbnail_url || makeFallbackThumbnail(record.title, category);
               return (
                 <button
                   key={record.id}
@@ -1036,7 +1037,7 @@ export default function AIVideoPage() {
                 >
                   {/* Thumbnail */}
                   <div className="relative h-32 flex items-center justify-center" style={{ background: gradient }}>
-                    {record.thumbnail_url && <img src={record.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-[1.03]" loading="lazy" />}
+                    <img src={thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-[1.03]" loading="lazy" />
                     <div className="absolute inset-0 bg-black/25" />
                     <PlayCircle className="w-10 h-10 text-white/30 group-hover:text-white/60 transition-colors" />
                     <div className="absolute top-2 left-2">
