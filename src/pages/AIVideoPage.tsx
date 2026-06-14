@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
-import { getVideoGradient } from "@/lib/videoVisuals";
+import { cleanNarrationText, getVideoGradient, makeFallbackThumbnail } from "@/lib/videoVisuals";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 import { SeoHead } from "@/components/SeoHead";
 
@@ -33,6 +33,7 @@ interface VideoScript {
   duration: string;
   category: string;
   thumbnailPrompt: string;
+  thumbnailUrl?: string | null;
   script: string;
   rawHeadlines: string[];
   generatedAt: string;
