@@ -569,7 +569,7 @@ export default function AIVideoPage() {
     title: record.title,
     category: record.category ?? "Global Affairs",
     script: record.script,
-    poster: null,
+    poster: record.thumbnail_url,
   });
 
 
@@ -780,6 +780,7 @@ export default function AIVideoPage() {
 
               {/* AI SCRIPT READER STAGE */}
               <div className="relative w-full overflow-hidden" style={{ aspectRatio: "16/9", background: getVideoGradient(videoScript.category) }}>
+                {videoScript.thumbnailUrl && <img src={videoScript.thumbnailUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
                 <div className="absolute inset-0 film-grain opacity-35 pointer-events-none" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/20 flex flex-col justify-between p-4 md:p-6">
                       <div className="flex items-center justify-between">
@@ -798,7 +799,7 @@ export default function AIVideoPage() {
                       </div>
                       <div className="flex items-center justify-center">
                         <button
-                          onClick={() => setActiveVideo({ title: videoScript.title, category: videoScript.category, script: videoScript.script, poster: null })}
+                          onClick={() => setActiveVideo({ title: videoScript.title, category: videoScript.category, script: videoScript.script, poster: videoScript.thumbnailUrl })}
                           className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center transition-transform hover:scale-[1.03]"
                           aria-label="Play AI video report"
                         >
