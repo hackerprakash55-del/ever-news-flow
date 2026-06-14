@@ -1025,20 +1025,23 @@ export default function AIVideoPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {library.map((record) => {
-              const gradient = getVideoGradient(record.category);
-              const badge = CATEGORY_COLORS[record.category] || "bg-surface-2 text-muted-foreground border-border";
+              const category = record.category ?? "Global Affairs";
+              const gradient = getVideoGradient(category);
+              const badge = CATEGORY_COLORS[category] || "bg-surface-2 text-muted-foreground border-border";
               return (
                 <button
                   key={record.id}
                   onClick={() => playReport(record)}
                   className="card-glass rounded-xl overflow-hidden border border-border hover:border-gainn-blue/40 hover:shadow-lg transition-all text-left group"
                 >
-                  {/* Thumbnail placeholder */}
+                  {/* Thumbnail */}
                   <div className="relative h-32 flex items-center justify-center" style={{ background: gradient }}>
+                    {record.thumbnail_url && <img src={record.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-[1.03]" loading="lazy" />}
+                    <div className="absolute inset-0 bg-black/25" />
                     <PlayCircle className="w-10 h-10 text-white/30 group-hover:text-white/60 transition-colors" />
                     <div className="absolute top-2 left-2">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge} uppercase tracking-wider`}>
-                        {record.category}
+                        {category}
                       </span>
                     </div>
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
