@@ -136,8 +136,12 @@ function AudioPlayer({
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play();
-      setIsPlaying(true);
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.warn("Audio playback blocked:", err);
+          setIsPlaying(false);
+        });
     }
   }, [isPlaying]);
 
