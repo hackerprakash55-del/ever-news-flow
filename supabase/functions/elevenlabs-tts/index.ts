@@ -19,8 +19,8 @@ serve(async (req) => {
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     if (!ELEVENLABS_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "ELEVENLABS_API_KEY is not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "ElevenLabs is not configured. Browser voice is available.", useClientFallback: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -45,6 +45,8 @@ serve(async (req) => {
       ? cleanScript.slice(0, 4500) + "..."
       : cleanScript;
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
       {
@@ -64,8 +66,10 @@ serve(async (req) => {
             speed: 0.95,
           },
         }),
+        signal: controller.signal,
       }
     );
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errText = await response.text();
@@ -85,7 +89,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ error: userMessage, useClientFallback: true }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -95,6 +99,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         audioContent: audioBase64,
+        contentType: response.headers.get("content-type") || "audio/mpeg",
         characterCount: textToSpeak.length,
         generatedAt: new Date().toISOString(),
       }),
@@ -103,8 +108,8 @@ serve(async (req) => {
   } catch (err) {
     console.error("elevenlabs-tts error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Voice service timed out or failed. Browser voice is available.", useClientFallback: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
