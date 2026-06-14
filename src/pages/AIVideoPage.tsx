@@ -390,6 +390,7 @@ export default function AIVideoPage() {
       duration: navVideo.duration,
       script: navVideo.script,
       thumbnailPrompt: navVideo.thumbnail_prompt,
+      thumbnailUrl: navVideo.thumbnail_url,
       rawHeadlines: navVideo.raw_headlines || [],
       generatedAt: navVideo.generated_at,
     } : null
