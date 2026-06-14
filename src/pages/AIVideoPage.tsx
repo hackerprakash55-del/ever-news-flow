@@ -282,22 +282,21 @@ function BrowserVoicePlayer({ script, title }: { script: string; title: string }
   const [isPaused, setIsPaused] = useState(false);
   const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const cleanText = script
-    .replace(/\*\*[A-Z\s]+\*\*/g, "")
-    .replace(/#{1,3}\s+\w+/g, "")
-    .replace(/\*\*/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, 5000);
+  const cleanText = cleanNarrationText(script);
 
   const play = useCallback(async () => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     await waitForVoices();
+    await new Promise((r) => setTimeout(r, 60));
     const utter = new SpeechSynthesisUtterance(cleanText);
     tuneUtterance(utter);
     utter.onend = () => { setIsPlaying(false); setIsPaused(false); };
-    utter.onerror = () => { setIsPlaying(false); setIsPaused(false); };
+    utter.onerror = (event) => {
+      console.warn("Browser voice failed:", event.error);
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
     uttRef.current = utter;
     window.speechSynthesis.speak(utter);
     setIsPlaying(true);
