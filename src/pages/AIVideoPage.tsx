@@ -500,7 +500,7 @@ export default function AIVideoPage() {
 
       // Fire-and-forget thumbnail generation (~5-10s); update row + library when ready.
       if (inserted?.id) {
-        generateThumbnailFor(inserted.id, data.title, data.thumbnailPrompt, supabaseUrl, anonKey);
+        generateThumbnailFor(inserted.id, data.title, data.thumbnailPrompt, data.category, supabaseUrl, anonKey);
       }
     } catch (e) {
       console.error("Auto-generate failed for topic:", t.label, e);
@@ -535,7 +535,7 @@ export default function AIVideoPage() {
       loadLibrary();
       // Kick off thumbnail in the background.
       if (inserted?.id && supabaseUrl && anonKey) {
-        generateThumbnailFor(inserted.id, video.title, video.thumbnailPrompt, supabaseUrl, anonKey);
+        generateThumbnailFor(inserted.id, video.title, video.thumbnailPrompt, video.category, supabaseUrl, anonKey);
       }
       return inserted?.id ?? null;
     } catch (e) {
