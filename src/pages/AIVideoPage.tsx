@@ -555,6 +555,7 @@ export default function AIVideoPage() {
       thumbnailPrompt: record.thumbnail_prompt ?? "",
       script: record.script ?? "",
       rawHeadlines: Array.isArray(record.raw_headlines) ? record.raw_headlines : [],
+      thumbnailUrl: record.thumbnail_url,
       generatedAt: record.generated_at ?? new Date().toISOString(),
     });
     setError(null);
@@ -610,11 +611,12 @@ export default function AIVideoPage() {
         return;
       }
 
-      setVideoScript(data);
+      const videoWithThumbnail = { ...data, thumbnailUrl: data.thumbnailUrl || makeFallbackThumbnail(data.title, data.category) };
+      setVideoScript(videoWithThumbnail);
       if (topicOverride) setTopic(topicOverride);
 
       // Save to library DB
-      saveVideoToDb(data);
+      saveVideoToDb(videoWithThumbnail);
 
       generateAudio(data.script, data.title);
     } catch (e) {
