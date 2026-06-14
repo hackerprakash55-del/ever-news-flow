@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
-import { getVideoGradient } from "@/lib/videoVisuals";
+import { cleanNarrationText, getVideoGradient, makeFallbackThumbnail } from "@/lib/videoVisuals";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 import { SeoHead } from "@/components/SeoHead";
 
@@ -33,6 +33,7 @@ interface VideoScript {
   duration: string;
   category: string;
   thumbnailPrompt: string;
+  thumbnailUrl?: string | null;
   script: string;
   rawHeadlines: string[];
   generatedAt: string;
@@ -135,8 +136,12 @@ function AudioPlayer({
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play();
-      setIsPlaying(true);
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.warn("Audio playback blocked:", err);
+          setIsPlaying(false);
+        });
     }
   }, [isPlaying]);
 
@@ -277,22 +282,21 @@ function BrowserVoicePlayer({ script, title }: { script: string; title: string }
   const [isPaused, setIsPaused] = useState(false);
   const uttRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const cleanText = script
-    .replace(/\*\*[A-Z\s]+\*\*/g, "")
-    .replace(/#{1,3}\s+\w+/g, "")
-    .replace(/\*\*/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()
-    .slice(0, 5000);
+  const cleanText = cleanNarrationText(script);
 
   const play = useCallback(async () => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     await waitForVoices();
+    await new Promise((r) => setTimeout(r, 60));
     const utter = new SpeechSynthesisUtterance(cleanText);
     tuneUtterance(utter);
     utter.onend = () => { setIsPlaying(false); setIsPaused(false); };
-    utter.onerror = () => { setIsPlaying(false); setIsPaused(false); };
+    utter.onerror = (event) => {
+      console.warn("Browser voice failed:", event.error);
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
     uttRef.current = utter;
     window.speechSynthesis.speak(utter);
     setIsPlaying(true);
@@ -386,6 +390,7 @@ export default function AIVideoPage() {
       duration: navVideo.duration,
       script: navVideo.script,
       thumbnailPrompt: navVideo.thumbnail_prompt,
+      thumbnailUrl: navVideo.thumbnail_url || makeFallbackThumbnail(navVideo.title, navVideo.category),
       rawHeadlines: navVideo.raw_headlines || [],
       generatedAt: navVideo.generated_at,
     } : null
@@ -430,23 +435,30 @@ export default function AIVideoPage() {
     videoId: string,
     title: string,
     thumbnailPrompt: string,
+    category: string | null,
     supabaseUrl: string,
     anonKey: string,
   ) => {
+    const fallbackUrl = makeFallbackThumbnail(title, category);
     try {
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${anonKey}`, apikey: anonKey, "Content-Type": "application/json" },
         body: JSON.stringify({ thumbnailPrompt: thumbnailPrompt || title, title }),
       });
-      if (!res.ok) return;
-      const json = await res.json();
-      const imageUrl = json?.imageUrl as string | undefined;
-      if (!imageUrl) return;
+      const json = await res.json().catch(() => ({}));
+      const imageUrl = (res.ok && json?.imageUrl ? json.imageUrl : fallbackUrl) as string;
       await supabase.from("generated_videos").update({ thumbnail_url: imageUrl }).eq("id", videoId);
       setLibrary(prev => prev.map(v => (v.id === videoId ? { ...v, thumbnail_url: imageUrl } : v)));
+      setVideoScript(prev => prev?.title === title ? { ...prev, thumbnailUrl: imageUrl } : prev);
+      if (!res.ok) console.warn("AI thumbnail unavailable, used fallback:", json?.error || res.status);
+      return imageUrl;
     } catch (e) {
       console.warn("Thumbnail generation failed:", e);
+      await supabase.from("generated_videos").update({ thumbnail_url: fallbackUrl }).eq("id", videoId);
+      setLibrary(prev => prev.map(v => (v.id === videoId ? { ...v, thumbnail_url: fallbackUrl } : v)));
+      setVideoScript(prev => prev?.title === title ? { ...prev, thumbnailUrl: fallbackUrl } : prev);
+      return fallbackUrl;
     }
   };
 
@@ -468,6 +480,7 @@ export default function AIVideoPage() {
         duration: data.duration,
         script: data.script,
         thumbnail_prompt: data.thumbnailPrompt,
+        thumbnail_url: makeFallbackThumbnail(data.title, data.category),
         raw_headlines: data.rawHeadlines,
         generated_at: data.generatedAt,
       }).select("id").single();
@@ -480,7 +493,7 @@ export default function AIVideoPage() {
         duration: data.duration,
         script: data.script,
         thumbnail_prompt: data.thumbnailPrompt,
-        thumbnail_url: null,
+        thumbnail_url: makeFallbackThumbnail(data.title, data.category),
         raw_headlines: data.rawHeadlines as any,
         generated_at: data.generatedAt,
         created_at: new Date().toISOString(),
@@ -488,7 +501,7 @@ export default function AIVideoPage() {
 
       // Fire-and-forget thumbnail generation (~5-10s); update row + library when ready.
       if (inserted?.id) {
-        generateThumbnailFor(inserted.id, data.title, data.thumbnailPrompt, supabaseUrl, anonKey);
+        generateThumbnailFor(inserted.id, data.title, data.thumbnailPrompt, data.category, supabaseUrl, anonKey);
       }
     } catch (e) {
       console.error("Auto-generate failed for topic:", t.label, e);
@@ -510,12 +523,14 @@ export default function AIVideoPage() {
 
   const saveVideoToDb = async (video: VideoScript) => {
     try {
+      const fallbackThumbnail = video.thumbnailUrl || makeFallbackThumbnail(video.title, video.category);
       const { data: inserted } = await supabase.from("generated_videos").insert({
         title: video.title,
         category: video.category,
         duration: video.duration,
         script: video.script,
         thumbnail_prompt: video.thumbnailPrompt,
+        thumbnail_url: fallbackThumbnail,
         raw_headlines: video.rawHeadlines,
         generated_at: video.generatedAt,
       }).select("id").single();
@@ -523,7 +538,7 @@ export default function AIVideoPage() {
       loadLibrary();
       // Kick off thumbnail in the background.
       if (inserted?.id && supabaseUrl && anonKey) {
-        generateThumbnailFor(inserted.id, video.title, video.thumbnailPrompt, supabaseUrl, anonKey);
+        generateThumbnailFor(inserted.id, video.title, video.thumbnailPrompt, video.category, supabaseUrl, anonKey);
       }
       return inserted?.id ?? null;
     } catch (e) {
@@ -540,6 +555,7 @@ export default function AIVideoPage() {
       thumbnailPrompt: record.thumbnail_prompt ?? "",
       script: record.script ?? "",
       rawHeadlines: Array.isArray(record.raw_headlines) ? record.raw_headlines : [],
+      thumbnailUrl: record.thumbnail_url || makeFallbackThumbnail(record.title, record.category),
       generatedAt: record.generated_at ?? new Date().toISOString(),
     });
     setError(null);
@@ -553,7 +569,7 @@ export default function AIVideoPage() {
     title: record.title,
     category: record.category ?? "Global Affairs",
     script: record.script,
-    poster: null,
+    poster: record.thumbnail_url,
   });
 
 
@@ -595,11 +611,12 @@ export default function AIVideoPage() {
         return;
       }
 
-      setVideoScript(data);
+      const videoWithThumbnail = { ...data, thumbnailUrl: data.thumbnailUrl || makeFallbackThumbnail(data.title, data.category) };
+      setVideoScript(videoWithThumbnail);
       if (topicOverride) setTopic(topicOverride);
 
       // Save to library DB
-      saveVideoToDb(data);
+      saveVideoToDb(videoWithThumbnail);
 
       generateAudio(data.script, data.title);
     } catch (e) {
@@ -617,7 +634,7 @@ export default function AIVideoPage() {
       const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
         body: { script, title },
       });
-      if (error || !data?.audioContent) {
+      if (error || !data?.audioContent || data?.useClientFallback) {
         console.warn("ElevenLabs TTS unavailable, using browser voice:", error || data?.error);
         setUseBrowserVoice(true);
         if (data?.error) {
@@ -625,8 +642,11 @@ export default function AIVideoPage() {
         }
         return;
       }
-      // Browser natively decodes base64 audio via data URI (avoids atob corruption).
-      setAudioUrl(`data:audio/mpeg;base64,${data.audioContent}`);
+      const byteString = atob(data.audioContent);
+      const bytes = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i += 1) bytes[i] = byteString.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([bytes], { type: data.contentType || "audio/mpeg" }));
+      setAudioUrl(url);
     } catch (e) {
       console.warn("TTS request failed, falling back to browser voice:", e);
       setUseBrowserVoice(true);
@@ -760,6 +780,7 @@ export default function AIVideoPage() {
 
               {/* AI SCRIPT READER STAGE */}
               <div className="relative w-full overflow-hidden" style={{ aspectRatio: "16/9", background: getVideoGradient(videoScript.category) }}>
+                {videoScript.thumbnailUrl && <img src={videoScript.thumbnailUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
                 <div className="absolute inset-0 film-grain opacity-35 pointer-events-none" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/20 flex flex-col justify-between p-4 md:p-6">
                       <div className="flex items-center justify-between">
@@ -778,7 +799,7 @@ export default function AIVideoPage() {
                       </div>
                       <div className="flex items-center justify-center">
                         <button
-                          onClick={() => setActiveVideo({ title: videoScript.title, category: videoScript.category, script: videoScript.script, poster: null })}
+                          onClick={() => setActiveVideo({ title: videoScript.title, category: videoScript.category, script: videoScript.script, poster: videoScript.thumbnailUrl })}
                           className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center transition-transform hover:scale-[1.03]"
                           aria-label="Play AI video report"
                         >
@@ -1004,20 +1025,24 @@ export default function AIVideoPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {library.map((record) => {
-              const gradient = getVideoGradient(record.category);
-              const badge = CATEGORY_COLORS[record.category] || "bg-surface-2 text-muted-foreground border-border";
+              const category = record.category ?? "Global Affairs";
+              const gradient = getVideoGradient(category);
+              const badge = CATEGORY_COLORS[category] || "bg-surface-2 text-muted-foreground border-border";
+              const thumbnail = record.thumbnail_url || makeFallbackThumbnail(record.title, category);
               return (
                 <button
                   key={record.id}
                   onClick={() => playReport(record)}
                   className="card-glass rounded-xl overflow-hidden border border-border hover:border-gainn-blue/40 hover:shadow-lg transition-all text-left group"
                 >
-                  {/* Thumbnail placeholder */}
+                  {/* Thumbnail */}
                   <div className="relative h-32 flex items-center justify-center" style={{ background: gradient }}>
+                    <img src={thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-[1.03]" loading="lazy" />
+                    <div className="absolute inset-0 bg-black/25" />
                     <PlayCircle className="w-10 h-10 text-white/30 group-hover:text-white/60 transition-colors" />
                     <div className="absolute top-2 left-2">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${badge} uppercase tracking-wider`}>
-                        {record.category}
+                        {category}
                       </span>
                     </div>
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">

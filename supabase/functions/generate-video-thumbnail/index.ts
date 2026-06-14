@@ -6,6 +6,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function fallbackThumbnail(title = "GAINN Live Report") {
+  const safeTitle = title.replace(/[<>&]/g, "").slice(0, 90);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#060910"/><stop offset="1" stop-color="#172033"/></linearGradient></defs><rect width="1280" height="720" fill="url(#g)"/><circle cx="1060" cy="130" r="190" fill="#06b6d4" opacity=".22"/><path d="M0 520 C280 420 470 610 760 500 S1040 410 1280 500 V720 H0Z" fill="#ef4444" opacity=".18"/><rect x="72" y="72" width="186" height="44" rx="22" fill="#ef4444"/><text x="98" y="101" fill="#fff" font-family="Arial" font-size="24" font-weight="700">GAINN LIVE</text><foreignObject x="78" y="235" width="870" height="250"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Georgia,serif;font-size:66px;line-height:1.05;color:white;font-weight:700">${safeTitle}</div></foreignObject><text x="82" y="642" fill="#94a3b8" font-family="Arial" font-size="26">Autonomous AI news briefing</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -15,8 +21,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ imageUrl: fallbackThumbnail("GAINN Live Report"), fallback: true, error: "Image service unavailable" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -53,19 +59,19 @@ serve(async (req) => {
       console.error("Image generation error:", aiRes.status, errText);
       if (aiRes.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit reached — please wait a moment and try again." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ imageUrl: fallbackThumbnail(title), fallback: true, error: "Rate limit reached" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (aiRes.status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits required — please add funds to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ imageUrl: fallbackThumbnail(title), fallback: true, error: "AI credits required" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       return new Response(
-        JSON.stringify({ error: "Image generation failed", details: errText }),
-        { status: aiRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ imageUrl: fallbackThumbnail(title), fallback: true, error: "Image generation failed" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -102,8 +108,8 @@ serve(async (req) => {
     if (!finalUrl) {
       console.error("No image in response. Full response:", JSON.stringify(aiData).slice(0, 500));
       return new Response(
-        JSON.stringify({ error: "No image returned from AI" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ imageUrl: fallbackThumbnail(title), fallback: true, error: "No image returned from AI" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -114,8 +120,8 @@ serve(async (req) => {
   } catch (err) {
     console.error("generate-video-thumbnail error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ imageUrl: fallbackThumbnail("GAINN Live Report"), fallback: true, error: "Thumbnail generation failed" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
