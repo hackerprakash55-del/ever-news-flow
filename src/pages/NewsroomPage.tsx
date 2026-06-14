@@ -281,6 +281,7 @@ export default function NewsroomPage() {
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
             <div className="space-y-4">
+              <LiveBroadcastDesk />
               <PipelineDiagram />
               <DepartmentOverview />
               {/* Recent output */}
