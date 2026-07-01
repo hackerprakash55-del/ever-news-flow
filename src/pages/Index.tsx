@@ -95,14 +95,14 @@ const Index = () => {
 
   const catFromUrl = searchParams.get("cat") ?? "All";
   const [activeCategory, setActiveCategory] = useState(catFromUrl);
-  const [geo, setGeo] = useState<GeoSelection>({ country: null, state: null, city: null });
+  const [geo, setGeo] = useState<GeoSelection>({ country: "India", state: null, city: null });
   const [feedTab, setFeedTab] = useState("top");
   const [moreCount, setMoreCount] = useState(6); // Load More pagination
 
   useEffect(() => { setActiveCategory(searchParams.get("cat") ?? "All"); }, [searchParams]);
 
   const newsCategory = activeCategory === "All" ? "all" : activeCategory;
-  const location = geoToQuery(geo);
+  const location = geoToQuery(geo) || "India";
   const { articles, isLive, isLoading, isError, error, fetchedAt, refresh } = useNews({ category: newsCategory, pageSize: 30, location });
 
   const displayArticles = articles;

@@ -5,7 +5,7 @@
  * Ordering (best → fallback):
  *  1. Premium / neural cloud voices (Google, Microsoft Online, Apple Siri, Premium)
  *  2. High-quality named voices (Daniel, Samantha, Karen, Aria, Guy, Jenny)
- *  3. Any en-US / en-GB voice
+ *  3. Any Indian-English / en-US / en-GB voice
  *  4. First English voice
  */
 export function pickBestVoice(): SpeechSynthesisVoice | null {
@@ -20,7 +20,9 @@ export function pickBestVoice(): SpeechSynthesisVoice | null {
     if (/google/.test(n)) s += 50;
     if (/microsoft.*(aria|guy|jenny|davis|tony|emma)/.test(n)) s += 60;
     if (/siri|samantha|daniel|karen|moira|tessa|fiona/.test(n)) s += 40;
-    if (v.lang === "en-US") s += 20;
+    if (v.lang === "en-IN") s += 28;
+    else if (/india|ravi|heera|aditi|neerja|prabhat/.test(n)) s += 24;
+    else if (v.lang === "en-US") s += 20;
     else if (v.lang === "en-GB") s += 18;
     else if (v.lang?.startsWith("en")) s += 10;
     if (v.localService) s += 2;

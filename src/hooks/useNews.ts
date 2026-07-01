@@ -97,7 +97,7 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   };
 }
 
-export function useNews({ category = "all", pageSize = 20, location = "" }: UseNewsOptions = {}): NewsResult {
+export function useNews({ category = "all", pageSize = 20, location = "India" }: UseNewsOptions = {}): NewsResult {
   const queryClient = useQueryClient();
   const queryKey = ["news", category, pageSize, location];
 
