@@ -16,6 +16,7 @@ import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { cleanNarrationText, getVideoGradient, makeFallbackThumbnail } from "@/lib/videoVisuals";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 import { SeoHead } from "@/components/SeoHead";
+import { fetchNarration, releaseNarration } from "@/lib/tts";
 
 const SUGGESTED_TOPICS = [
   { label: "Iran Conflict & Middle East", icon: "🌍", category: "Global Affairs" },
@@ -284,11 +285,11 @@ function BrowserVoicePlayer({ script, title }: { script: string; title: string }
 
   const cleanText = cleanNarrationText(script);
 
-  const play = useCallback(async () => {
+  useEffect(() => { void waitForVoices(); }, []);
+
+  const play = useCallback(() => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    await waitForVoices();
-    await new Promise((r) => setTimeout(r, 60));
     const utter = new SpeechSynthesisUtterance(cleanText);
     tuneUtterance(utter);
     utter.onend = () => { setIsPlaying(false); setIsPaused(false); };
@@ -628,25 +629,20 @@ export default function AIVideoPage() {
 
   const generateAudio = async (script: string, title: string) => {
     setIsGeneratingAudio(true);
+    releaseNarration(audioUrl);
     setAudioUrl(null);
     setUseBrowserVoice(false);
     try {
-      const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
-        body: { script, title },
-      });
-      if (error || !data?.audioContent || data?.useClientFallback) {
-        console.warn("ElevenLabs TTS unavailable, using browser voice:", error || data?.error);
+      const result = await fetchNarration(script, title);
+      if (!result.audioUrl) {
+        console.warn("ElevenLabs TTS unavailable, using browser voice:", result.message);
         setUseBrowserVoice(true);
-        if (data?.error) {
-          toast({ title: "Using browser voice", description: data.error });
+        if (result.message) {
+          toast({ title: "Using browser voice", description: result.message });
         }
         return;
       }
-      const byteString = atob(data.audioContent);
-      const bytes = new Uint8Array(byteString.length);
-      for (let i = 0; i < byteString.length; i += 1) bytes[i] = byteString.charCodeAt(i);
-      const url = URL.createObjectURL(new Blob([bytes], { type: data.contentType || "audio/mpeg" }));
-      setAudioUrl(url);
+      setAudioUrl(result.audioUrl);
     } catch (e) {
       console.warn("TTS request failed, falling back to browser voice:", e);
       setUseBrowserVoice(true);
