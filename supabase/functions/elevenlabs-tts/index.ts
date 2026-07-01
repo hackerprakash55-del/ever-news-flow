@@ -1,14 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 // George - deep, authoritative news anchor voice
 const VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
+const MAX_TTS_CHARS = 750;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,8 +20,10 @@ serve(async (req) => {
       );
     }
 
-    const { script, title } = await req.json();
-    if (!script) {
+    const body = await req.json().catch(() => ({}));
+    const script = typeof body.script === "string" ? body.script : "";
+    const title = typeof body.title === "string" ? body.title : "";
+    if (!script.trim()) {
       return new Response(
         JSON.stringify({ error: "script is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -40,15 +38,18 @@ serve(async (req) => {
       .replace(/\n{3,}/g, "\n\n")        // collapse excessive newlines
       .trim();
 
-    // Limit to ~4500 chars to stay within ElevenLabs limits
-    const textToSpeak = cleanScript.length > 4500
-      ? cleanScript.slice(0, 4500) + "..."
-      : cleanScript;
+    // Keep requests small so low-quota API keys still produce audible reports.
+    // Full long-form scripts continue to work through the browser voice fallback.
+    const intro = title ? `GAINN report. ${title}. ` : "GAINN report. ";
+    const merged = `${intro}${cleanScript}`.replace(/\s+/g, " ").trim();
+    const textToSpeak = merged.length > MAX_TTS_CHARS
+      ? `${merged.slice(0, MAX_TTS_CHARS).replace(/\s+\S*$/, "")}. More details are available in the on-screen report.`
+      : merged;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15_000);
+    const timeout = setTimeout(() => controller.abort(), 8_000);
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_22050_32`,
       {
         method: "POST",
         headers: {
@@ -57,11 +58,11 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text: textToSpeak,
-          model_id: "eleven_multilingual_v2",
+          model_id: "eleven_turbo_v2_5",
           voice_settings: {
-            stability: 0.75,
-            similarity_boost: 0.80,
-            style: 0.3,
+            stability: 0.65,
+            similarity_boost: 0.78,
+            style: 0.2,
             use_speaker_boost: true,
             speed: 0.95,
           },
@@ -82,6 +83,8 @@ serve(async (req) => {
         const detail = parsed?.detail?.message || parsed?.detail?.status;
         if (detail?.includes("unusual_activity") || detail?.includes("Free Tier")) {
           userMessage = "ElevenLabs Free Tier is blocked from server environments. Please upgrade to a paid ElevenLabs plan, or use the browser voice-over below.";
+        } else if (detail?.includes("quota") || parsed?.detail?.code === "quota_exceeded") {
+          userMessage = "ElevenLabs quota is too low for this report. Browser voice-over is available.";
         } else if (detail) {
           userMessage = detail;
         }
@@ -101,6 +104,7 @@ serve(async (req) => {
         audioContent: audioBase64,
         contentType: response.headers.get("content-type") || "audio/mpeg",
         characterCount: textToSpeak.length,
+        truncated: merged.length > MAX_TTS_CHARS,
         generatedAt: new Date().toISOString(),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

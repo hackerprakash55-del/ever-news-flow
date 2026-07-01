@@ -191,10 +191,28 @@ function buildNewsApiUrl(
   const base = "https://newsapi.org/v2";
   const sizeParam = `pageSize=${pageSize}`;
   const langParam = "language=en";
+  const normalizedLocation = location.trim();
+  const isIndia = !normalizedLocation || /^india$/i.test(normalizedLocation);
+  const indiaCategory = category === "Economy" ? "business"
+    : ["Technology", "Science", "Health"].includes(category) ? category.toLowerCase()
+    : "";
+
+  // India-first fast path: country=in top-headlines is quicker and more relevant
+  // than broad /everything queries for the platform's main audience.
+  if (isIndia) {
+    const categoryParam = indiaCategory ? `&category=${indiaCategory}` : "";
+    if (category === "AI") {
+      return `${base}/everything?q=${encodeURIComponent("India AND (AI OR artificial intelligence OR technology OR startup)")}&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
+    }
+    if (category === "Environment") {
+      return `${base}/everything?q=${encodeURIComponent("India AND (climate OR environment OR pollution OR monsoon)")}&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
+    }
+    return `${base}/top-headlines?country=in${categoryParam}&${sizeParam}&apiKey=${apiKey}`;
+  }
 
   // Location-based query takes priority — use /everything with geo query
-  if (location && location !== "" && location !== "Global") {
-    const locQuery = encodeURIComponent(`"${location}"`);
+  if (normalizedLocation && normalizedLocation !== "Global") {
+    const locQuery = encodeURIComponent(`("${normalizedLocation}" AND India) OR "${normalizedLocation}"`);
     let catExtra = "";
     if (category === "AI") catExtra = `+OR+(artificial+intelligence+OR+ChatGPT+OR+OpenAI)`;
     else if (category === "Technology") catExtra = `+OR+technology`;
@@ -251,9 +269,10 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const category = url.searchParams.get("category") || "all";
-    const location = url.searchParams.get("location") || "";
+    const location = url.searchParams.get("location") || "India";
     const pageSize = Math.min(Number(url.searchParams.get("pageSize") || "20"), 30);
     const searchQuery = url.searchParams.get("q") || ""; // free-text keyword search
+    const shouldExpand = url.searchParams.get("expand") === "true";
 
     const t0 = Date.now();
 
@@ -309,14 +328,17 @@ serve(async (req) => {
     // and use NewsAPI /everything with the keyword
     let newsApiUrl: string;
     if (searchQuery) {
-      const encoded = encodeURIComponent(searchQuery);
+      const encoded = encodeURIComponent(location ? `${searchQuery} ${location}` : searchQuery);
       newsApiUrl = `https://newsapi.org/v2/everything?q=${encoded}&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
     } else {
       newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
     }
 
     console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
-    const response = await fetch(newsApiUrl);
+    const newsController = new AbortController();
+    const newsTimeout = setTimeout(() => newsController.abort(), 7_000);
+    const response = await fetch(newsApiUrl, { signal: newsController.signal });
+    clearTimeout(newsTimeout);
     const data = await response.json();
 
     if (!response.ok) {
@@ -338,8 +360,8 @@ serve(async (req) => {
       (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
     );
 
-    // Expand only the first 3 articles with AI — keeps edge fn fast (<3s total)
-    const toExpand = rawArticles.slice(0, Math.min(rawArticles.length, 3));
+    // Expansion is opt-in. The live feed must return fast for India/local news.
+    const toExpand = shouldExpand ? rawArticles.slice(0, Math.min(rawArticles.length, 1)) : [];
     const rest = rawArticles.slice(toExpand.length);
     let expandedBodies: string[] = [];
 

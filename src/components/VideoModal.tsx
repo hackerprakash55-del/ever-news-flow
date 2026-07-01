@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Play, Pause, Radio } from "lucide-react";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { cleanNarrationText, estimateNarrationSeconds, getVideoGradient } from "@/lib/videoVisuals";
-import { fetchNarration, releaseNarration } from "@/lib/tts";
+import { releaseNarration } from "@/lib/tts";
 
 export interface VideoModalSource {
   title: string;
@@ -27,7 +27,7 @@ export function VideoModal({ open, onClose, video }: Props) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [voiceLabel, setVoiceLabel] = useState<"Premium AI voice" | "Web Speech API">("Premium AI voice");
+  const [voiceLabel, setVoiceLabel] = useState<"Premium AI voice" | "Web Speech API">("Web Speech API");
 
   const narration = useMemo(() => cleanNarrationText(video?.script || video?.title), [video?.script, video?.title]);
   const duration = useMemo(() => estimateNarrationSeconds(narration), [narration]);
@@ -50,53 +50,10 @@ export function VideoModal({ open, onClose, video }: Props) {
     setIsPaused(false);
   }, []);
 
-  const startNarration = useCallback(async () => {
+  const startNarration = useCallback(() => {
     if (!narration || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-
-    // 1) Try premium ElevenLabs narration first.
-    const { audioUrl } = await fetchNarration(narration, video?.title);
-    if (audioUrl) {
-      releaseNarration(audioUrlRef.current);
-      audioUrlRef.current = audioUrl;
-      const audio = new Audio(audioUrl);
-      audio.preload = "auto";
-      audioRef.current = audio;
-      setVoiceLabel("Premium AI voice");
-      audio.onloadedmetadata = () => {
-        elapsedBeforePauseRef.current = 0;
-        startedAtRef.current = Date.now();
-        setElapsed(0);
-        setIsPlaying(true);
-        setIsPaused(false);
-      };
-      audio.ontimeupdate = () => setElapsed(audio.currentTime);
-      audio.onended = () => {
-        setElapsed(audio.duration || duration);
-        setIsPlaying(false);
-        setIsPaused(false);
-      };
-      audio.onerror = () => {
-        console.warn("Premium narration playback failed, falling back to Web Speech");
-        void speakWithWebSpeech();
-      };
-      try {
-        await audio.play();
-        return;
-      } catch (err) {
-        console.warn("Autoplay blocked for premium narration, falling back to Web Speech", err);
-      }
-    }
-
-    // 2) Fallback: browser Web Speech.
-    await speakWithWebSpeech();
-  }, [narration, video?.title, duration]);
-
-  const speakWithWebSpeech = useCallback(async () => {
-    if (!narration || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     setVoiceLabel("Web Speech API");
-    await waitForVoices();
-    await new Promise((r) => setTimeout(r, 60));
     const utterance = new SpeechSynthesisUtterance(narration);
     tuneUtterance(utterance);
     utterance.onend = () => {
@@ -162,14 +119,13 @@ export function VideoModal({ open, onClose, video }: Props) {
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const t = window.setTimeout(() => { startNarration(); }, 80);
+    void waitForVoices();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
-      window.clearTimeout(t);
       stopNarration();
     };
-  }, [open, onClose, startNarration, stopNarration]);
+  }, [open, onClose, stopNarration]);
 
   useEffect(() => {
     if (!open || !isPlaying || isPaused) return;
@@ -225,16 +181,21 @@ export function VideoModal({ open, onClose, video }: Props) {
               ))}
             </div>
 
-            <div className="mt-7 flex items-center justify-center gap-3">
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               {!isPlaying ? (
                 <button onClick={startNarration} className="inline-flex items-center gap-2 rounded-full bg-gainn-cyan px-5 py-2.5 text-sm font-bold text-background transition-transform hover:scale-[1.03]">
                   <Play className="h-4 w-4" /> Play narration
                 </button>
               ) : (
-                <button onClick={togglePause} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold text-white border border-white/15 transition-transform hover:scale-[1.03]">
-                  {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-                  {isPaused ? "Resume" : "Pause"}
-                </button>
+                <>
+                  <button onClick={togglePause} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold text-white border border-white/15 transition-transform hover:scale-[1.03]">
+                    {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                    {isPaused ? "Resume" : "Pause"}
+                  </button>
+                  <button onClick={stopNarration} className="inline-flex items-center gap-2 rounded-full bg-gainn-red/20 px-4 py-2.5 text-sm font-bold text-white border border-gainn-red/30 transition-transform hover:scale-[1.03]">
+                    Stop
+                  </button>
+                </>
               )}
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-mono text-white/60">
                 <Radio className="h-3 w-3 text-gainn-red" /> {voiceLabel}

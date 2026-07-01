@@ -15,7 +15,7 @@ import { SeoHead } from "@/components/SeoHead";
 import { useNews } from "@/hooks/useNews";
 import { cleanNarrationText } from "@/lib/videoVisuals";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
-import { fetchNarration, releaseNarration } from "@/lib/tts";
+import { releaseNarration } from "@/lib/tts";
 
 const MetricCard = ({
   label, value, sub, icon: Icon, color, trend
@@ -90,7 +90,7 @@ type BroadcastStory = {
 };
 
 function LiveBroadcastDesk() {
-  const { articles, isLoading, isLive, refresh } = useNews({ pageSize: 12 });
+  const { articles, isLoading, isLive, refresh } = useNews({ pageSize: 12, location: "India" });
   const [index, setIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -140,37 +140,12 @@ function LiveBroadcastDesk() {
       if (stories[following]) void playStoryRef.current?.(stories[following], following);
     };
 
-    // 1) Try premium ElevenLabs narration first.
-    const { audioUrl } = await fetchNarration(story.script, story.headline);
-    if (audioUrl) {
-      audioUrlRef.current = audioUrl;
-      const audio = new Audio(audioUrl);
-      audio.preload = "auto";
-      audioRef.current = audio;
-      setVoiceLabel("Premium");
-      audio.onended = advance;
-      audio.onerror = () => {
-        console.warn("Live broadcast premium playback failed, using browser voice");
-        void speakStory(story, advance);
-      };
-      try {
-        setIsPlaying(true);
-        setIsPaused(false);
-        await audio.play();
-        return;
-      } catch (err) {
-        console.warn("Autoplay blocked for live broadcast premium voice", err);
-      }
-    }
-
-    // 2) Fallback: browser Web Speech.
     setVoiceLabel("Browser");
-    await speakStory(story, advance);
+    speakStory(story, advance);
   }, [index, stories]);
 
-  const speakStory = useCallback(async (story: BroadcastStory, onDone: () => void) => {
-    await waitForVoices();
-    await new Promise((r) => setTimeout(r, 60));
+  const speakStory = useCallback((story: BroadcastStory, onDone: () => void) => {
+    void waitForVoices();
     const utter = new SpeechSynthesisUtterance(story.script);
     tuneUtterance(utter);
     utter.onend = onDone;

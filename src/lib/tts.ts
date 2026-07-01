@@ -20,11 +20,8 @@ export async function fetchNarration(script: string, title?: string): Promise<Tt
     if (error || !data?.audioContent || data?.useClientFallback) {
       return { audioUrl: null, message: data?.error ?? error?.message };
     }
-    const binary = atob(data.audioContent as string);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: data.contentType || "audio/mpeg" });
-    return { audioUrl: URL.createObjectURL(blob) };
+    const contentType = data.contentType || "audio/mpeg";
+    return { audioUrl: `data:${contentType};base64,${data.audioContent}` };
   } catch (err) {
     console.warn("fetchNarration failed:", err);
     return { audioUrl: null, message: (err as Error)?.message };
