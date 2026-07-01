@@ -15,6 +15,7 @@ import { SeoHead } from "@/components/SeoHead";
 import { useNews } from "@/hooks/useNews";
 import { cleanNarrationText } from "@/lib/videoVisuals";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
+import { fetchNarration, releaseNarration } from "@/lib/tts";
 
 const MetricCard = ({
   label, value, sub, icon: Icon, color, trend
@@ -93,7 +94,10 @@ function LiveBroadcastDesk() {
   const [index, setIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [voiceLabel, setVoiceLabel] = useState<"Premium" | "Browser">("Premium");
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
   const playStoryRef = useRef<((story: BroadcastStory | undefined, nextIndex: number) => Promise<void>) | null>(null);
 
   const stories = useMemo<BroadcastStory[]>(() => articles.slice(0, 10).map((article, i) => ({
@@ -108,6 +112,13 @@ function LiveBroadcastDesk() {
 
   const stop = useCallback(() => {
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    releaseNarration(audioUrlRef.current);
+    audioUrlRef.current = null;
     utteranceRef.current = null;
     setIsPlaying(false);
     setIsPaused(false);
@@ -116,15 +127,53 @@ function LiveBroadcastDesk() {
   const playStory = useCallback(async (story: BroadcastStory | undefined, nextIndex = index) => {
     if (!story || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    await waitForVoices();
-    await new Promise((r) => setTimeout(r, 60));
-    const utter = new SpeechSynthesisUtterance(story.script);
-    tuneUtterance(utter);
-    utter.onend = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    releaseNarration(audioUrlRef.current);
+    audioUrlRef.current = null;
+
+    const advance = () => {
       const following = (nextIndex + 1) % Math.max(stories.length, 1);
       setIndex(following);
       if (stories[following]) void playStoryRef.current?.(stories[following], following);
     };
+
+    // 1) Try premium ElevenLabs narration first.
+    const { audioUrl } = await fetchNarration(story.script, story.headline);
+    if (audioUrl) {
+      audioUrlRef.current = audioUrl;
+      const audio = new Audio(audioUrl);
+      audio.preload = "auto";
+      audioRef.current = audio;
+      setVoiceLabel("Premium");
+      audio.onended = advance;
+      audio.onerror = () => {
+        console.warn("Live broadcast premium playback failed, using browser voice");
+        void speakStory(story, advance);
+      };
+      try {
+        setIsPlaying(true);
+        setIsPaused(false);
+        await audio.play();
+        return;
+      } catch (err) {
+        console.warn("Autoplay blocked for live broadcast premium voice", err);
+      }
+    }
+
+    // 2) Fallback: browser Web Speech.
+    setVoiceLabel("Browser");
+    await speakStory(story, advance);
+  }, [index, stories]);
+
+  const speakStory = useCallback(async (story: BroadcastStory, onDone: () => void) => {
+    await waitForVoices();
+    await new Promise((r) => setTimeout(r, 60));
+    const utter = new SpeechSynthesisUtterance(story.script);
+    tuneUtterance(utter);
+    utter.onend = onDone;
     utter.onerror = (event) => {
       console.warn("Live broadcast voice failed:", event.error);
       setIsPlaying(false);
@@ -134,7 +183,7 @@ function LiveBroadcastDesk() {
     setIsPlaying(true);
     setIsPaused(false);
     window.speechSynthesis.speak(utter);
-  }, [index, stories]);
+  }, []);
 
   useEffect(() => {
     playStoryRef.current = playStory;
@@ -143,13 +192,15 @@ function LiveBroadcastDesk() {
   const toggle = useCallback(() => {
     if (!isPlaying) {
       void playStory(active, index);
-    } else if (isPaused) {
-      window.speechSynthesis.resume();
-      setIsPaused(false);
-    } else {
-      window.speechSynthesis.pause();
-      setIsPaused(true);
+      return;
     }
+    if (audioRef.current) {
+      if (isPaused) { void audioRef.current.play(); setIsPaused(false); }
+      else { audioRef.current.pause(); setIsPaused(true); }
+      return;
+    }
+    if (isPaused) { window.speechSynthesis.resume(); setIsPaused(false); }
+    else { window.speechSynthesis.pause(); setIsPaused(true); }
   }, [active, index, isPaused, isPlaying, playStory]);
 
   const next = useCallback(() => {
@@ -166,7 +217,7 @@ function LiveBroadcastDesk() {
         <span className="w-2 h-2 rounded-full bg-gainn-red live-dot" />
         <Radio className="w-4 h-4 text-gainn-red" />
         <span className="text-sm font-bold uppercase tracking-wider text-gainn-red">Live Broadcast</span>
-        <span className="ml-auto text-[10px] font-mono text-muted-foreground">{isLive ? "Live feed" : "Fallback feed"}</span>
+        <span className="ml-auto text-[10px] font-mono text-muted-foreground">{isLive ? "Live feed" : "Fallback feed"} · {voiceLabel} voice</span>
       </div>
       <div className="p-4 space-y-4">
         {isLoading ? (

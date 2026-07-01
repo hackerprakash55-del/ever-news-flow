@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Play, Pause, Radio } from "lucide-react";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { cleanNarrationText, estimateNarrationSeconds, getVideoGradient } from "@/lib/videoVisuals";
+import { fetchNarration, releaseNarration } from "@/lib/tts";
 
 export interface VideoModalSource {
   title: string;
@@ -19,11 +20,14 @@ interface Props {
 /** Full-screen AI video script reader — no brittle video URLs, only Web Speech narration. */
 export function VideoModal({ open, onClose, video }: Props) {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const elapsedBeforePauseRef = useRef(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [voiceLabel, setVoiceLabel] = useState<"Premium AI voice" | "Web Speech API">("Premium AI voice");
 
   const narration = useMemo(() => cleanNarrationText(video?.script || video?.title), [video?.script, video?.title]);
   const duration = useMemo(() => estimateNarrationSeconds(narration), [narration]);
@@ -31,6 +35,13 @@ export function VideoModal({ open, onClose, video }: Props) {
 
   const stopNarration = useCallback(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    releaseNarration(audioUrlRef.current);
+    audioUrlRef.current = null;
     utteranceRef.current = null;
     startedAtRef.current = null;
     elapsedBeforePauseRef.current = 0;
@@ -42,9 +53,49 @@ export function VideoModal({ open, onClose, video }: Props) {
   const startNarration = useCallback(async () => {
     if (!narration || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
+
+    // 1) Try premium ElevenLabs narration first.
+    const { audioUrl } = await fetchNarration(narration, video?.title);
+    if (audioUrl) {
+      releaseNarration(audioUrlRef.current);
+      audioUrlRef.current = audioUrl;
+      const audio = new Audio(audioUrl);
+      audio.preload = "auto";
+      audioRef.current = audio;
+      setVoiceLabel("Premium AI voice");
+      audio.onloadedmetadata = () => {
+        elapsedBeforePauseRef.current = 0;
+        startedAtRef.current = Date.now();
+        setElapsed(0);
+        setIsPlaying(true);
+        setIsPaused(false);
+      };
+      audio.ontimeupdate = () => setElapsed(audio.currentTime);
+      audio.onended = () => {
+        setElapsed(audio.duration || duration);
+        setIsPlaying(false);
+        setIsPaused(false);
+      };
+      audio.onerror = () => {
+        console.warn("Premium narration playback failed, falling back to Web Speech");
+        void speakWithWebSpeech();
+      };
+      try {
+        await audio.play();
+        return;
+      } catch (err) {
+        console.warn("Autoplay blocked for premium narration, falling back to Web Speech", err);
+      }
+    }
+
+    // 2) Fallback: browser Web Speech.
+    await speakWithWebSpeech();
+  }, [narration, video?.title, duration]);
+
+  const speakWithWebSpeech = useCallback(async () => {
+    if (!narration || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    setVoiceLabel("Web Speech API");
     await waitForVoices();
-    // Chrome occasionally drops a speak() call that immediately follows
-    // cancel(); a small yield avoids that race and is inaudible to users.
     await new Promise((r) => setTimeout(r, 60));
     const utterance = new SpeechSynthesisUtterance(narration);
     tuneUtterance(utterance);
@@ -67,8 +118,6 @@ export function VideoModal({ open, onClose, video }: Props) {
     setIsPlaying(true);
     setIsPaused(false);
     window.speechSynthesis.speak(utterance);
-    // Some Chromium builds pause the speech queue after ~15s of silence;
-    // a manual resume tick keeps long narrations alive.
     const keepAlive = window.setInterval(() => {
       if (!window.speechSynthesis.speaking) {
         window.clearInterval(keepAlive);
@@ -82,7 +131,19 @@ export function VideoModal({ open, onClose, video }: Props) {
   }, [duration, narration]);
 
   const togglePause = useCallback(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window) || !isPlaying) return;
+    if (typeof window === "undefined" || !isPlaying) return;
+    // Premium audio path
+    if (audioRef.current) {
+      if (isPaused) {
+        void audioRef.current.play();
+        setIsPaused(false);
+      } else {
+        audioRef.current.pause();
+        setIsPaused(true);
+      }
+      return;
+    }
+    if (!("speechSynthesis" in window)) return;
     if (isPaused) {
       window.speechSynthesis.resume();
       startedAtRef.current = Date.now();
@@ -176,7 +237,7 @@ export function VideoModal({ open, onClose, video }: Props) {
                 </button>
               )}
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-mono text-white/60">
-                <Radio className="h-3 w-3 text-gainn-red" /> Web Speech API
+                <Radio className="h-3 w-3 text-gainn-red" /> {voiceLabel}
               </span>
             </div>
 
