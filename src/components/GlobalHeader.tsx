@@ -270,6 +270,17 @@ export const GlobalHeader = ({
           >
             <Radio className="w-3.5 h-3.5 animate-live-pulse" />Live
           </Link>
+          <Link
+            to="/shorts"
+            className={cn(
+              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
+              location.pathname.startsWith("/shorts")
+                ? "bg-cyan-500/20 text-cyan-300 border-cyan-400/50"
+                : "text-cyan-300 hover:bg-cyan-500/10 border-cyan-400/25 hover:border-cyan-400/50"
+            )}
+          >
+            <Zap className="w-3.5 h-3.5" />Shorts
+          </Link>
         </nav>
 
         {/* Right actions */}
