@@ -154,6 +154,7 @@ export default function ShortsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SeoHead
+        path="/shorts"
         title="GAINN Shorts — AI News Reels, India Live"
         description="Vertical AI-narrated news shorts. India-first, continuously updated. Swipe to explore breaking stories back-to-back."
       />
