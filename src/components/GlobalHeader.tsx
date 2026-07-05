@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut,
-  User, ChevronDown, Sun, Moon,
+  User, ChevronDown, Sun, Moon, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
