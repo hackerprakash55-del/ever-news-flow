@@ -367,6 +367,11 @@ export const GlobalHeader = ({
           >
             <Radio className="w-3.5 h-3.5" /> Live Broadcast
           </Link>
+          <Link to="/shorts" onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-cyan-300 rounded-md hover:bg-cyan-500/10"
+          >
+            <Zap className="w-3.5 h-3.5" /> AI Shorts
+          </Link>
           <div className="border-t border-border/50 mt-2 pt-2">
             {user ? (
               <Link to="/settings" className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md"
