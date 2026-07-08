@@ -8,6 +8,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { ThemeProvider } from "next-themes";
 import { lazy, Suspense } from "react";
+import { ShortsFloatingButton } from "@/components/ShortsFloatingButton";
 
 // Eagerly load auth for fastest /auth startup; lazy-load everything else
 import AuthPage from "./pages/AuthPage";
@@ -63,6 +64,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            <ShortsFloatingButton />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
