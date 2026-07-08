@@ -7,6 +7,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ── In-memory response cache ──────────────────────────────────────────────
+// NewsAPI developer plan is limited to 100 req / 24h. Cache successful
+// responses per (category|location|pageSize|q) for CACHE_TTL_MS, and serve
+// STALE cached data when NewsAPI returns 429 / any error so the UI never
+// blanks out with a rate-limit runtime error.
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min fresh window matches client refetch
+const STALE_MAX_MS = 6 * 60 * 60 * 1000; // serve stale up to 6h on upstream failure
+interface CacheEntry { at: number; payload: unknown; }
+const responseCache = new Map<string, CacheEntry>();
+function cacheKey(category: string, location: string, pageSize: number, q: string, expand: boolean) {
+  return `${category}|${location}|${pageSize}|${q}|${expand ? 1 : 0}`;
+}
+
 const SOURCE_CATEGORY_MAP: Record<string, string> = {
   "techcrunch": "Technology",
   "the-verge": "Technology",
