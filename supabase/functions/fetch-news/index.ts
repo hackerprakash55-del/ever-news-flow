@@ -289,6 +289,15 @@ serve(async (req) => {
 
     const t0 = Date.now();
 
+    // ── Serve fresh cache immediately if within TTL ──
+    const ckey = cacheKey(category, location, pageSize, searchQuery, shouldExpand);
+    const cached = responseCache.get(ckey);
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      return new Response(JSON.stringify({ ...(cached.payload as object), cached: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── Phase 2: feature-flagged routing through the multi-agent newsroom ──
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -350,22 +359,33 @@ serve(async (req) => {
     console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
     const newsController = new AbortController();
     const newsTimeout = setTimeout(() => newsController.abort(), 7_000);
-    const response = await fetch(newsApiUrl, { signal: newsController.signal });
-    clearTimeout(newsTimeout);
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("NewsAPI error:", data);
-      return new Response(
-        JSON.stringify({ error: data.message || "NewsAPI request failed", code: data.code }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let response: Response;
+    let data: any;
+    try {
+      response = await fetch(newsApiUrl, { signal: newsController.signal });
+      data = await response.json();
+    } catch (netErr) {
+      clearTimeout(newsTimeout);
+      if (cached && Date.now() - cached.at < STALE_MAX_MS) {
+        return new Response(JSON.stringify({ ...(cached.payload as object), cached: true, stale: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw netErr;
     }
+    clearTimeout(newsTimeout);
 
-    if (data.status !== "ok") {
+    if (!response.ok || data?.status !== "ok") {
+      console.error("NewsAPI error:", data);
+      // Fall back to stale cache so the app keeps working through rate limits.
+      if (cached && Date.now() - cached.at < STALE_MAX_MS) {
+        return new Response(JSON.stringify({ ...(cached.payload as object), cached: true, stale: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(
-        JSON.stringify({ error: data.message || "NewsAPI returned error status" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: data?.message || "NewsAPI request failed", code: data?.code, articles: [], totalResults: 0 }),
+        { status: response.ok ? 400 : response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -466,18 +486,19 @@ serve(async (req) => {
       }).then(() => {}, (err) => console.warn("pipeline_decisions insert:", err?.message));
     }
 
-    return new Response(
-      JSON.stringify({
-        articles,
-        totalResults: data.totalResults,
-        source: "NewsAPI + Gemini",
-        fetchedAt: new Date().toISOString(),
-        location: location || null,
-        verification: orchestratorVerification,
-        route,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const payload = {
+      articles,
+      totalResults: data.totalResults,
+      source: "NewsAPI + Gemini",
+      fetchedAt: new Date().toISOString(),
+      location: location || null,
+      verification: orchestratorVerification,
+      route,
+    };
+    responseCache.set(ckey, { at: Date.now(), payload });
+    return new Response(JSON.stringify(payload), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("fetch-news error:", err);
     return new Response(
