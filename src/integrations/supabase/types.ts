@@ -777,6 +777,54 @@ export type Database = {
         }
         Relationships: []
       }
+      twitter_posts: {
+        Row: {
+          article_id: string
+          article_url: string
+          category: string
+          created_at: string
+          error_message: string | null
+          headline: string
+          id: string
+          posted_at: string | null
+          source_name: string
+          status: string
+          trust_score: number
+          tweet_id: string | null
+          tweet_text: string
+        }
+        Insert: {
+          article_id: string
+          article_url: string
+          category: string
+          created_at?: string
+          error_message?: string | null
+          headline: string
+          id?: string
+          posted_at?: string | null
+          source_name: string
+          status?: string
+          trust_score: number
+          tweet_id?: string | null
+          tweet_text: string
+        }
+        Update: {
+          article_id?: string
+          article_url?: string
+          category?: string
+          created_at?: string
+          error_message?: string | null
+          headline?: string
+          id?: string
+          posted_at?: string | null
+          source_name?: string
+          status?: string
+          trust_score?: number
+          tweet_id?: string | null
+          tweet_text?: string
+        }
+        Relationships: []
+      }
       user_events: {
         Row: {
           article_id: string
