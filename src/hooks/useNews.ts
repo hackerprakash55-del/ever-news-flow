@@ -89,6 +89,13 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
 
   const json = await response.json();
 
+  // Edge function signals graceful upstream failure (e.g. NewsAPI 429)
+  // with { fallback: true, articles: [] } and HTTP 200. Treat as error
+  // so react-query falls back to mock data via the hook below.
+  if (json?.fallback && (!json.articles || json.articles.length === 0)) {
+    throw new Error(json.error || "News source temporarily unavailable");
+  }
+
   return {
     articles: (json.articles || []).map(mapToArticle) as Article[],
     isLive: true as const,
