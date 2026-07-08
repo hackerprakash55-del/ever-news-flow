@@ -383,9 +383,17 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      // Return 200 with fallback signal so the client SDK does not throw
+      // a runtime error on upstream rate-limit / server outages.
       return new Response(
-        JSON.stringify({ error: data?.message || "NewsAPI request failed", code: data?.code, articles: [], totalResults: 0 }),
-        { status: response.ok ? 400 : response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: data?.message || "NewsAPI request failed",
+          code: data?.code,
+          fallback: true,
+          articles: [],
+          totalResults: 0,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
