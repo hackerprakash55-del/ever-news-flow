@@ -33,3 +33,7 @@ verify_jwt = true
 
 [functions.label-claim]
 verify_jwt = true
+
+[functions.twitter-post]
+verify_jwt = false
+# Auth is enforced in-code: cron job posts with service-role bearer.
