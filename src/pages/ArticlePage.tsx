@@ -687,6 +687,19 @@ export default function ArticlePage() {
                 {article.headline}
               </h1>
 
+              <Link
+                to="/shorts"
+                className="group flex items-center gap-3 mb-4 px-4 py-3 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-red-500/10 hover:from-cyan-500/20 hover:to-red-500/20 transition-all"
+              >
+                <span className="flex-shrink-0 w-10 h-10 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold shadow-lg group-hover:scale-110 transition-transform">
+                  ▶
+                </span>
+                <span className="flex flex-col">
+                  <span className="text-[10px] font-black tracking-widest text-cyan-300">⚡ AI SHORTS</span>
+                  <span className="text-sm text-foreground font-medium">Watch this story as a 30-second AI news short →</span>
+                </span>
+              </Link>
+
               <AuthorCard article={article} />
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
