@@ -52,7 +52,9 @@ const KEYWORD_CATEGORY_MAP: [RegExp, string][] = [
   [/\b(quantum|physics|biology|chemistry|NASA|space|asteroid|mars|moon|telescope|genome|CERN)\b/i, "Science"],
   [/\b(climate|environment|carbon|emission|fossil|renewable|solar|wind|glacier|arctic|ocean|drought|wildfire)\b/i, "Environment"],
   [/\b(stock|market|economy|GDP|inflation|Fed|Federal Reserve|bank|cryptocurrency|bitcoin|crypto|interest rate|recession)\b/i, "Economy"],
-  [/\b(election|congress|senate|president|parliament|government|democrat|republican|vote|policy|law|legislation)\b/i, "Politics"],
+  [/\b(crime|murder|arrest|FIR|police|rape|fraud|scam|CBI|ED raid|encounter|kidnap|assault|robbery)\b/i, "Crime"],
+  [/\b(ministry|scheme|cabinet|notification|Niti Aayog|RBI|budget|policy|governance|Rajya Sabha|Lok Sabha)\b/i, "Government"],
+  [/\b(election|congress|senate|president|parliament|democrat|republican|vote|BJP|Modi|Rahul Gandhi|opposition|minister)\b/i, "Politics"],
   [/\b(health|medical|drug|vaccine|hospital|FDA|cancer|covid|disease|treatment|clinical|pharma)\b/i, "Health"],
   [/\b(tech|software|hardware|startup|app|code|developer|cloud|cyber|hack|data breach)\b/i, "Technology"],
 ];
