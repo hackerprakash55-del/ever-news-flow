@@ -206,21 +206,62 @@ function buildNewsApiUrl(
   const langParam = "language=en";
   const normalizedLocation = location.trim();
   const isIndia = !normalizedLocation || /^india$/i.test(normalizedLocation);
-  const indiaCategory = category === "Economy" ? "business"
-    : ["Technology", "Science", "Health"].includes(category) ? category.toLowerCase()
-    : "";
+  // Trusted Indian news sources for /everything queries — gives us far more
+  // local coverage (crime, state govt, political parties, regional issues)
+  // than NewsAPI's tiny country=in top-headlines pool.
+  const INDIA_DOMAINS = [
+    "timesofindia.indiatimes.com",
+    "thehindu.com",
+    "hindustantimes.com",
+    "ndtv.com",
+    "indianexpress.com",
+    "news18.com",
+    "indiatoday.in",
+    "livemint.com",
+    "business-standard.com",
+    "deccanherald.com",
+    "thewire.in",
+    "scroll.in",
+    "firstpost.com",
+    "moneycontrol.com",
+    "financialexpress.com",
+    "theprint.in",
+  ].join(",");
 
-  // India-first fast path: country=in top-headlines is quicker and more relevant
-  // than broad /everything queries for the platform's main audience.
+  // India-first fast path with rich local-category coverage.
   if (isIndia) {
-    const categoryParam = indiaCategory ? `&category=${indiaCategory}` : "";
-    if (category === "AI") {
-      return `${base}/everything?q=${encodeURIComponent("India AND (AI OR artificial intelligence OR technology OR startup)")}&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
+    const everything = (q: string) =>
+      `${base}/everything?q=${encodeURIComponent(q)}&domains=${INDIA_DOMAINS}&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
+
+    switch (category) {
+      case "AI":
+        return everything("India AND (AI OR \"artificial intelligence\" OR ChatGPT OR startup OR IT)");
+      case "Environment":
+        return everything("India AND (climate OR environment OR pollution OR monsoon OR flood OR heatwave)");
+      case "Politics":
+        return everything("India AND (BJP OR Congress OR Modi OR Rahul OR parliament OR \"Lok Sabha\" OR \"Rajya Sabha\" OR election OR minister OR CM OR opposition)");
+      case "Crime":
+        return everything("India AND (crime OR murder OR arrest OR police OR FIR OR rape OR fraud OR scam OR CBI OR ED OR raid OR encounter)");
+      case "Government":
+        return everything("India AND (government OR ministry OR scheme OR policy OR Modi OR cabinet OR budget OR RBI OR Niti Aayog OR notification)");
+      case "Economy":
+        return everything("India AND (economy OR GDP OR inflation OR RBI OR Sensex OR Nifty OR rupee OR budget OR business OR IPO)");
+      case "Technology":
+        return everything("India AND (technology OR tech OR startup OR Infosys OR TCS OR Wipro OR Reliance OR Jio OR smartphone)");
+      case "Science":
+        return everything("India AND (ISRO OR Chandrayaan OR science OR research OR IIT OR IISc)");
+      case "Health":
+        return everything("India AND (health OR AIIMS OR hospital OR disease OR vaccine OR dengue OR outbreak)");
+      case "Sports":
+        return everything("India AND (cricket OR IPL OR BCCI OR Kohli OR Rohit OR hockey OR Olympics OR badminton)");
+      case "Entertainment":
+        return everything("India AND (Bollywood OR film OR movie OR Shah Rukh OR Salman OR box office OR OTT)");
+      case "Global Affairs":
+        return everything("India AND (foreign OR diplomacy OR China OR Pakistan OR US OR G20 OR UN OR border)");
+      default:
+        // "all" or unknown: broad India-local firehose.
+        return everything("India OR Delhi OR Mumbai OR Bengaluru OR Chennai OR Kolkata OR Hyderabad OR Modi OR BJP OR Congress");
     }
-    if (category === "Environment") {
-      return `${base}/everything?q=${encodeURIComponent("India AND (climate OR environment OR pollution OR monsoon)")}&${langParam}&sortBy=publishedAt&${sizeParam}&apiKey=${apiKey}`;
-    }
-    return `${base}/top-headlines?country=in${categoryParam}&${sizeParam}&apiKey=${apiKey}`;
   }
 
   // Location-based query takes priority — use /everything with geo query
@@ -230,7 +271,9 @@ function buildNewsApiUrl(
     if (category === "AI") catExtra = `+OR+(artificial+intelligence+OR+ChatGPT+OR+OpenAI)`;
     else if (category === "Technology") catExtra = `+OR+technology`;
     else if (category === "Economy") catExtra = `+OR+economy+OR+business`;
-    else if (category === "Politics") catExtra = `+OR+politics+OR+government`;
+    else if (category === "Politics") catExtra = `+OR+politics+OR+election+OR+minister`;
+    else if (category === "Crime") catExtra = `+OR+crime+OR+police+OR+arrest+OR+FIR`;
+    else if (category === "Government") catExtra = `+OR+government+OR+ministry+OR+scheme+OR+policy`;
     else if (category === "Science") catExtra = `+OR+science+OR+research`;
     else if (category === "Environment") catExtra = `+OR+environment+OR+climate`;
     else if (category === "Health") catExtra = `+OR+health+OR+medical`;
