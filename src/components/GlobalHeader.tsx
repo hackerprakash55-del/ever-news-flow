@@ -15,8 +15,10 @@ const SearchOverlay    = lazy(() => import("@/components/SearchOverlay").then(m 
 
 const CATEGORIES = [
   { label: "Home",        cat: null },
-  { label: "Technology",  cat: "Technology" },
   { label: "Politics",    cat: "Politics" },
+  { label: "Government",  cat: "Government" },
+  { label: "Crime",       cat: "Crime" },
+  { label: "Technology",  cat: "Technology" },
   { label: "Science",     cat: "Science" },
   { label: "Economy",     cat: "Economy" },
   { label: "Environment", cat: "Environment" },
