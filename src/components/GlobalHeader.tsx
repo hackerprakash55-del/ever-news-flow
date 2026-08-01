@@ -251,6 +251,28 @@ export const GlobalHeader = ({
             <Video className="w-3.5 h-3.5" />AI Video
           </Link>
           <Link
+            to="/prime-time"
+            className={cn(
+              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-md transition-colors border",
+              location.pathname === "/prime-time"
+                ? "bg-primary/20 text-primary border-primary/60"
+                : "text-primary hover:bg-primary/10 border-primary/30 hover:border-primary/60"
+            )}
+          >
+            <Clapperboard className="w-3.5 h-3.5" />Prime Time
+          </Link>
+          <Link
+            to="/__unused_video"
+            className={cn(
+              "hidden",
+              location.pathname === "/video"
+                ? "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/50"
+                : "text-gainn-purple hover:bg-gainn-purple/10 border-gainn-purple/25 hover:border-gainn-purple/50"
+            )}
+          >
+            <Video className="w-3.5 h-3.5" />AI Video
+          </Link>
+          <Link
             to="/videos"
             className={cn(
               "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
