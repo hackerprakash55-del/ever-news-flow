@@ -5,6 +5,7 @@ import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { BreakingNewsBanner } from "@/components/BreakingNewsBanner";
 import { HeroArticleCard, ArticleCard, ArticleListItem } from "@/components/ArticleCards";
 import { ShortsPreviewStrip } from "@/components/ShortsPreviewStrip";
+import { PrimeTimeHero } from "@/components/PrimeTimeHero";
 import { TrendingVideosSection } from "@/components/TrendingVideosSection";
 import { JustInFeed } from "@/components/JustInFeed";
 import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/components/ArticleSkeletons";
@@ -162,6 +163,8 @@ const Index = () => {
         <h1 className="sr-only">GAINN — Global AI News Network: autonomous, verified, real-time</h1>
 
         <BreakingNewsBanner />
+
+        <PrimeTimeHero />
 
         <ShortsPreviewStrip />
 
