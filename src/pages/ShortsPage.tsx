@@ -5,7 +5,7 @@ import { fetchNarration, releaseNarration } from "@/lib/tts";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
-import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio, Heart, Download, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Article } from "@/data/mockData";
 
@@ -220,8 +220,14 @@ export default function ShortsPage() {
                 <div className="relative z-10 h-full flex flex-col justify-end px-5 pb-8 pt-16 max-w-2xl mx-auto">
                   <div className="flex items-center gap-2 mb-3">
                     {a.isBreaking && <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold tracking-wider">BREAKING</span>}
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/25 text-white text-[10px] font-bold tracking-wider">
+                      <Sparkles className="w-3 h-3" />AI
+                    </span>
                     <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-semibold">{a.category}</span>
-                    <span className="flex items-center gap-1 text-[10px] text-emerald-300"><ShieldCheck className="w-3 h-3" />{a.credibilityScore}%</span>
+                    <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-300"><ShieldCheck className="w-3 h-3" />{a.credibilityScore}% TRUST</span>
+                    <span className="px-2 py-0.5 rounded-full border border-white/20 text-white/70 text-[10px] font-mono">
+                      {a.isBreaking ? "TRENDING" : "RECENT"}
+                    </span>
                   </div>
                   <h1 className="font-serif text-3xl md:text-4xl leading-tight font-bold text-white drop-shadow-lg">
                     {a.headline}
@@ -256,8 +262,23 @@ export default function ShortsPage() {
                   </div>
                 </div>
 
+                {/* Action rail */}
+                <div className="absolute right-3 bottom-28 z-20 flex flex-col items-center gap-4">
+                  <button aria-label="Like" className="flex flex-col items-center text-white/85 hover:text-red-400 transition">
+                    <Heart className="w-6 h-6" />
+                    <span className="text-[10px] font-mono">{(a.headline.length * 7) % 900 + 42}</span>
+                  </button>
+                  <button aria-label="Share" onClick={() => share(a)} className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition">
+                    <Share2 className="w-6 h-6" />
+                    <span className="text-[10px] font-mono">{(a.headline.length * 3) % 300 + 11}</span>
+                  </button>
+                  <button aria-label="Export" className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition">
+                    <Download className="w-6 h-6" />
+                  </button>
+                </div>
+
                 {/* Side rail counter */}
-                <div className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 flex-col gap-1.5">
+                <div className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 flex-col gap-1.5">
                   {articles.slice(0, Math.min(articles.length, 20)).map((_, k) => (
                     <span key={k} className={cn("w-1 rounded-full transition-all", k === i ? "h-6 bg-cyan-400" : "h-2 bg-white/25")} />
                   ))}
