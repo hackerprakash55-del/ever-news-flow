@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import {
   Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut,
   User, ChevronDown, Sun, Moon, Zap,
+  Clapperboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -251,6 +252,17 @@ export const GlobalHeader = ({
             <Video className="w-3.5 h-3.5" />AI Video
           </Link>
           <Link
+            to="/prime-time"
+            className={cn(
+              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-md transition-colors border",
+              location.pathname === "/prime-time"
+                ? "bg-primary/20 text-primary border-primary/60"
+                : "text-primary hover:bg-primary/10 border-primary/30 hover:border-primary/60"
+            )}
+          >
+            <Clapperboard className="w-3.5 h-3.5" />Prime Time
+          </Link>
+          <Link
             to="/videos"
             className={cn(
               "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
@@ -359,6 +371,11 @@ export const GlobalHeader = ({
               </button>
             );
           })}
+          <Link to="/prime-time" onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-primary rounded-md hover:bg-primary/10"
+          >
+            <Clapperboard className="w-4 h-4" />Prime Time
+          </Link>
           <Link to="/video" onClick={() => setMobileOpen(false)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md hover:bg-gainn-purple/10"
           >
