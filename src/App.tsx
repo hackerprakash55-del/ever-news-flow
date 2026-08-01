@@ -21,6 +21,7 @@ const VideoLibraryPage = lazy(() => import("./pages/VideoLibraryPage"));
 const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
 const TrendingPage     = lazy(() => import("./pages/TrendingPage"));
 const ShortsPage       = lazy(() => import("./pages/ShortsPage"));
+const PrimeTimePage    = lazy(() => import("./pages/PrimeTimePage"));
 const NotFound         = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/trending"   element={<TrendingPage />} />
                 <Route path="/shorts"     element={<ShortsPage />} />
                 <Route path="/shorts/:id" element={<ShortsPage />} />
+                <Route path="/prime-time" element={<PrimeTimePage />} />
 
                 {/* Protected — must be signed in */}
                 <Route path="/newsroom"   element={<AuthGuard><NewsroomPage /></AuthGuard>} />
