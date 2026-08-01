@@ -371,6 +371,11 @@ export const GlobalHeader = ({
               </button>
             );
           })}
+          <Link to="/prime-time" onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-primary rounded-md hover:bg-primary/10"
+          >
+            <Clapperboard className="w-4 h-4" />Prime Time
+          </Link>
           <Link to="/video" onClick={() => setMobileOpen(false)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md hover:bg-gainn-purple/10"
           >
