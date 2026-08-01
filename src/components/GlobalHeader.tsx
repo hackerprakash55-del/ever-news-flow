@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import {
   Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut,
   User, ChevronDown, Sun, Moon, Zap,
+  Clapperboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
