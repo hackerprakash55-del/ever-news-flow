@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { Play, Volume2, VolumeX, Clapperboard, ShieldCheck } from "lucide-react";
 import { useNews } from "@/hooks/useNews";
-import { cn } from "@/lib/utils";
 
 const FALLBACK =
   "https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1600&q=80";
