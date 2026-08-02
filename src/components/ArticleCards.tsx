@@ -239,11 +239,6 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
               <span className="text-4xl opacity-20">📰</span>
             </div>
           )}
-          {article.isBreaking && (
-            <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-gainn-red text-white text-[9px] font-bold">
-              <Zap className="w-2.5 h-2.5" />LIVE
-            </div>
-          )}
           {isPremium && (
             <div className="absolute inset-0 bg-background/30 backdrop-blur-[1px] flex items-end justify-center pb-3">
               <span className="text-xs text-gainn-amber font-semibold">🔒 Premium Article</span>
@@ -251,70 +246,23 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
           )}
         </div>
 
-        <div className="p-4 flex flex-col flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <CategoryBadge category={article.category} />
-            <div className="flex items-center gap-1.5">
-              {alreadyRead && <ReadBadge articleId={article.id} />}
-              {article.isBreaking && (
-                <span className="text-[10px] font-bold text-gainn-red uppercase tracking-wider">Breaking</span>
-              )}
-            </div>
+        <div className="p-5 flex flex-col flex-1">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <StatusTag category={article.category} isBreaking={article.isBreaking} />
+            <TrustBadge score={article.credibilityScore} />
           </div>
 
-          <h3 className={`text-sm font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug flex-1 ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
+          <h3 className={`text-[15px] font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
             {article.headline}
           </h3>
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
-
-          {/* Author */}
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-[8px] font-bold text-primary flex-shrink-0">
-              {author.avatar}
-            </div>
-            <span className="text-[10px] text-muted-foreground truncate">{author.name}</span>
-            <span className="text-[10px] text-muted-foreground/40">·</span>
-            <span className={`text-[10px] font-mono ${reliability.color}`}>{article.sources[0]} — {reliability.label}</span>
-          </div>
-
-          {/* Trust Score & Sources */}
-          <div className="flex items-center gap-2 mb-2 text-[10px] font-mono">
-            <div className="flex items-center gap-1">
-              <div className="w-16 h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${article.credibilityScore}%`,
-                    background: article.credibilityScore >= 90
-                      ? "hsl(var(--gainn-green))"
-                      : article.credibilityScore >= 70
-                      ? "hsl(var(--gainn-amber))"
-                      : "hsl(var(--gainn-red))",
-                  }}
-                />
-              </div>
-              <span className="text-muted-foreground">Trust: {article.credibilityScore}</span>
-            </div>
-            <span className="text-muted-foreground/40">·</span>
-            <span className="text-muted-foreground">{article.sources.length} sources</span>
-            <span className="text-gainn-green">✓ Verified</span>
-          </div>
-
-          {/* Read More link */}
-          <div className="mb-2">
-            <span className="text-xs font-semibold text-accent relative inline-flex items-center gap-1 transition-colors duration-200 group-hover:text-primary">
-              {alreadyRead ? "Read Again" : "Read More"}
-              <span className="inline-block transition-transform duration-200 group-hover:translate-x-1">→</span>
-            </span>
-          </div>
+          <MetaLine parts={[article.sources?.[0], author.name, `${article.readTime} min read`]} />
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-2 mb-4">{article.summary}</p>
 
           {/* Footer row */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/50">
-            <div className="flex items-center gap-2">
-              <CredibilityBadge score={article.credibilityScore} />
-              <span className="flex items-center gap-1 font-mono text-[10px]"><Clock className="w-3 h-3" />{article.readTime}m</span>
-              <span className="flex items-center gap-1 font-mono text-[10px]"><MessageSquare className="w-3 h-3" />{comments}</span>
-            </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-3 border-t border-border/50">
+            <span className="text-xs font-medium text-accent inline-flex items-center gap-1 transition-transform duration-200 group-hover:translate-x-0.5">
+              {alreadyRead ? "Read again" : "Read"} →
+            </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={toggleSave}
