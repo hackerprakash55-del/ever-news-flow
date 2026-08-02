@@ -209,8 +209,8 @@ const Index = () => {
         {feedTab === "just-in" ? (
           <JustInFeed />
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
-            <div className="space-y-8">
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-10">
+            <div className="space-y-16">
 
               {/* ── SECTION 1: HERO ── */}
               {isLoading ? <HeroGridSkeleton /> : heroArticle && (
@@ -222,13 +222,13 @@ const Index = () => {
                 </div>
               )}
 
+              {/* ── SHORTS (below the lead story) ── */}
+              <ShortsPreviewStrip />
+
               {/* ── SECTION 2: MUST READ (3 articles) ── */}
               {!isLoading && mustRead.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="w-2 h-2 rounded-full bg-gainn-cyan" />
-                    <h2 className="text-sm font-semibold font-mono uppercase tracking-wider text-gainn-cyan">Must Read Right Now</h2>
-                  </div>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground/80 mb-5">Must read</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {mustRead.map((a) => <ArticleCard key={a.id} article={a} isPremium={false} />)}
                   </div>
@@ -241,12 +241,11 @@ const Index = () => {
               {/* ── SECTION 4: CATEGORY DEEP DIVE ── */}
               {!isLoading && categoryDiveArticles.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Zap className="w-4 h-4 text-gainn-amber" />
-                    <h2 className="text-sm font-semibold font-mono uppercase tracking-wider">
+                  <div className="flex items-center gap-2 mb-5">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground/80">
                       Top in {trendingCategory} Today
                     </h2>
-                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">{categoryDiveArticles.length} stories</span>
+                    <span className="ml-auto text-[11px] font-mono text-muted-foreground/60">{categoryDiveArticles.length} stories</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {categoryDiveArticles.map((a) => <ArticleCard key={a.id} article={a} isPremium={false} />)}
@@ -257,10 +256,9 @@ const Index = () => {
               {/* ── SECTION 7: MORE HEADLINES (paginated 6) ── */}
               {!isLoading && moreVisible.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                    <h2 className="text-sm font-semibold font-mono uppercase tracking-wider text-muted-foreground">More Headlines</h2>
-                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">
+                  <div className="flex items-center gap-2 mb-5">
+                    <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground/80">More headlines</h2>
+                    <span className="ml-auto text-[11px] font-mono text-muted-foreground/60">
                       {Math.min(moreCount, morePool.length)} of {morePool.length}
                     </span>
                   </div>
@@ -272,13 +270,13 @@ const Index = () => {
                     ))}
                   </div>
                   {hasMoreToLoad && (
-                    <div className="text-center mt-6">
+                    <div className="text-center mt-8">
                       <Button
                         variant="outline"
                         onClick={() => setMoreCount(c => c + 6)}
-                        className="px-8 text-sm font-mono gap-2"
+                        className="px-8 text-sm gap-2"
                       >
-                        Load More Stories <ChevronRight className="w-3.5 h-3.5" />
+                        Load more stories <ChevronRight className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   )}
@@ -287,11 +285,9 @@ const Index = () => {
 
               {!isLoading && displayArticles.length > 0 && (
                 <div className="text-center py-2">
-                  <span className="text-xs font-mono text-muted-foreground">
-                    {displayArticles.length} articles
-                    {location && <> • <span className="text-accent">{location}</span></>}
-                    {" "}• {isLive ? "Live from NewsAPI" : "Demo data"} •{" "}
-                    <button onClick={refresh} className="text-primary hover:text-accent transition-colors">Refresh</button>
+                  <span className="text-xs text-muted-foreground/60">
+                    {displayArticles.length} stories{location ? ` · ${location}` : ""}
+                    {!isLive && " · Showing recent stories"}
                   </span>
                 </div>
               )}
@@ -299,12 +295,11 @@ const Index = () => {
 
             {/* ── SIDEBAR ── */}
             <div className="space-y-4">
-              <div className="card-glass rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                  <span className="text-sm font-semibold">Trending Now</span>
-                  {isLive && <span className="text-[10px] font-mono text-gainn-green">● Live</span>}
+              <div className="card-glass rounded-lg overflow-hidden xl:sticky xl:top-24">
+                <div className="px-4 py-3 border-b border-border">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-foreground/80">Trending now</span>
                 </div>
-                <div className="p-2 space-y-1">
+                <div className="p-2">
                   {isLoading
                     ? Array.from({ length: 5 }).map((_, i) => <ListItemSkeleton key={i} />)
                     : displayArticles.slice(0, 8).map((a, i) => <ArticleListItem key={a.id} article={a} index={i} />)}
@@ -315,7 +310,7 @@ const Index = () => {
         )}
       </main>
 
-      <SystemFooter isLive={isLive} />
+      <SiteFooter />
     </div>
   );
 };
