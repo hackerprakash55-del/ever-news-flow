@@ -288,7 +288,7 @@ export default function VideoLibraryPage() {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs font-mono text-gainn-green">
                   <div className="w-1.5 h-1.5 rounded-full bg-gainn-green animate-pulse" />
-                  AI Video Library
+                  Video Library
                 </div>
               </div>
               <h1 className="text-2xl md:text-3xl font-display text-foreground">
