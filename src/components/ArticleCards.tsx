@@ -1,5 +1,5 @@
 import { Article } from "@/data/mockData";
-import { Shield, Clock, ExternalLink, Zap, Bookmark, BookmarkCheck, Share2, MessageSquare, Crown, CheckCircle2, CheckCheck } from "lucide-react";
+import { Shield, Zap, Bookmark, BookmarkCheck, Share2, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
 import { useState } from "react";
@@ -34,60 +34,40 @@ function ReadProgressBar({ articleId }: { articleId: string }) {
   );
 }
 
-// "Read" checkmark badge
-function ReadBadge({ articleId }: { articleId: string }) {
-  if (!isArticleRead(articleId)) return null;
-  return (
-    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-gainn-green bg-gainn-green/10 border border-gainn-green/25">
-      <CheckCheck className="w-2.5 h-2.5" />Read
-    </div>
-  );
-}
-
 // ── Sub-components ────────────────────────────────────────
-const CredibilityBadge = ({ score }: { score: number }) => {
-  const cls = score >= 90 ? "credibility-high" : score >= 70 ? "credibility-medium" : "credibility-low";
-  return (
-    <span className={`flex items-center gap-1 text-xs font-mono ${cls}`}>
-      <Shield className="w-3 h-3" />{score}%
-    </span>
-  );
-};
-
-const CategoryBadge = ({ category }: { category: string }) => {
-  const colorMap: Record<string, string> = {
-    AI: "text-gainn-cyan border-gainn-cyan/30 bg-gainn-cyan/10",
-    Technology: "text-primary border-primary/30 bg-primary/10",
-    Science: "text-gainn-purple border-gainn-purple/30 bg-gainn-purple/10",
-    Economy: "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10",
-    Environment: "text-gainn-green border-gainn-green/30 bg-gainn-green/10",
-    Politics: "text-orange-400 border-orange-400/30 bg-orange-400/10",
-    Health: "text-pink-400 border-pink-400/30 bg-pink-400/10",
-    Space: "text-gainn-purple border-gainn-purple/30 bg-gainn-purple/10",
-    Global: "text-gainn-cyan border-gainn-cyan/30 bg-gainn-cyan/10",
-  };
-  const c = colorMap[category] || "text-muted-foreground border-border bg-surface-2";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-mono font-semibold uppercase tracking-wider ${c}`}>
-      {category}
-    </span>
-  );
-};
-
-// Tooltip explaining AI Verified badge
-const AIVerifiedBadge = () => (
+// Single trust indicator: shield + score. Cyan is the only accent used for trust.
+const TrustBadge = ({ score }: { score: number }) => (
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-gainn-cyan cursor-help">
-          <CheckCircle2 className="w-3 h-3" />AI Verified
+        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-accent/90 cursor-help">
+          <Shield className="w-3 h-3" />{score}%
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[220px] text-xs">
-        This article was cross-checked by GAINN's AI fact-verification agents against 100+ primary sources. Bias and credibility scores are computed independently.
+        AI-verified trust score, cross-checked against primary sources.
       </TooltipContent>
     </Tooltip>
   </TooltipProvider>
+);
+
+// One neutral status tag — BREAKING in red only when actually breaking.
+const StatusTag = ({ category, isBreaking }: { category: string; isBreaking?: boolean }) =>
+  isBreaking ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider text-destructive border border-destructive/40 bg-destructive/10">
+      <Zap className="w-2.5 h-2.5" />Breaking
+    </span>
+  ) : (
+    <span className="inline-flex items-center px-2 py-0.5 rounded border border-border bg-surface-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      {category}
+    </span>
+  );
+
+// Quiet metadata line: source · author · read time
+const MetaLine = ({ parts }: { parts: (string | number | undefined)[] }) => (
+  <p className="text-[11px] text-muted-foreground/70 truncate">
+    {parts.filter(Boolean).join(" · ")}
+  </p>
 );
 
 // Bookmark + Share actions
