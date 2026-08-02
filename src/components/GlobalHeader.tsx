@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Search, Radio, Menu, X, Video, Library, LogIn, Settings, LogOut,
-  User, ChevronDown, Sun, Moon, Zap,
-  Clapperboard,
+  Search, Radio, Menu, X, Video, LogIn, Settings, LogOut,
+  User, ChevronDown, Sun, Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,18 +13,61 @@ import { cn } from "@/lib/utils";
 
 const SearchOverlay    = lazy(() => import("@/components/SearchOverlay").then(m => ({ default: m.SearchOverlay })));
 
-const CATEGORIES = [
-  { label: "Home",        cat: null },
-  { label: "Politics",    cat: "Politics" },
+// Max 6 visible nav items: Home, Video, Politics, Technology, Business, More
+const PRIMARY_CATEGORIES = [
+  { label: "Home",       cat: null },
+  { label: "Politics",   cat: "Politics" },
+  { label: "Technology", cat: "Technology" },
+  { label: "Business",   cat: "Economy" },
+];
+
+const MORE_CATEGORIES = [
   { label: "Government",  cat: "Government" },
   { label: "Crime",       cat: "Crime" },
-  { label: "Technology",  cat: "Technology" },
   { label: "Science",     cat: "Science" },
-  { label: "Economy",     cat: "Economy" },
   { label: "Environment", cat: "Environment" },
   { label: "AI",          cat: "AI" },
   { label: "Global",      cat: "Global Affairs" },
 ];
+
+const CATEGORIES = [...PRIMARY_CATEGORIES, ...MORE_CATEGORIES];
+
+const VIDEO_LINKS = [
+  { label: "Prime Time",    href: "/prime-time" },
+  { label: "Shorts",        href: "/shorts" },
+  { label: "Video Reports", href: "/video" },
+  { label: "Video Library", href: "/videos" },
+];
+
+// Lightweight dropdown used by the Video and More nav groups
+function NavDropdown({ label, active, children }: { label: string; active?: boolean; children: (close: () => void) => React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "flex items-center gap-1 px-3 py-1.5 text-sm rounded-md transition-colors font-medium whitespace-nowrap",
+          active ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+        )}
+      >
+        {label}
+        <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-elevated overflow-hidden z-50 py-1">
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── User Menu Dropdown ─────────────────────────────────────
 function UserMenu() {
@@ -223,7 +265,7 @@ export const GlobalHeader = ({
 
         {/* Desktop nav */}
         <nav className="hidden lg:flex items-center gap-0.5 ml-2 flex-shrink-0">
-          {CATEGORIES.map((item) => {
+          {PRIMARY_CATEGORIES.map((item) => {
             const active = isNavActive(item.cat);
             return (
               <button
@@ -240,65 +282,46 @@ export const GlobalHeader = ({
               </button>
             );
           })}
-          <Link
-            to="/video"
-            className={cn(
-              "ml-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
-              location.pathname === "/video"
-                ? "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/50"
-                : "text-gainn-purple hover:bg-gainn-purple/10 border-gainn-purple/25 hover:border-gainn-purple/50"
-            )}
+          <NavDropdown
+            label="Video"
+            active={["/video", "/videos", "/shorts", "/prime-time"].some((p) => location.pathname.startsWith(p))}
           >
-            <Video className="w-3.5 h-3.5" />AI Video
-          </Link>
-          <Link
-            to="/prime-time"
-            className={cn(
-              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-md transition-colors border",
-              location.pathname === "/prime-time"
-                ? "bg-primary/20 text-primary border-primary/60"
-                : "text-primary hover:bg-primary/10 border-primary/30 hover:border-primary/60"
-            )}
-          >
-            <Clapperboard className="w-3.5 h-3.5" />Prime Time
-          </Link>
-          <Link
-            to="/videos"
-            className={cn(
-              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
-              location.pathname === "/videos"
-                ? "bg-accent/20 text-accent border-accent/50"
-                : "text-accent hover:bg-accent/10 border-accent/25 hover:border-accent/50"
-            )}
-          >
-            <Library className="w-3.5 h-3.5" />Video Library
-          </Link>
+            {(close) =>
+              VIDEO_LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  to={l.href}
+                  onClick={close}
+                  className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  {l.label}
+                </Link>
+              ))
+            }
+          </NavDropdown>
+          <NavDropdown label="More" active={MORE_CATEGORIES.some((c) => isNavActive(c.cat))}>
+            {(close) =>
+              MORE_CATEGORIES.map((c) => (
+                <button
+                  key={c.label}
+                  onClick={() => { close(); handleCatClick(c.cat, c.label); }}
+                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  {c.label}
+                </button>
+              ))
+            }
+          </NavDropdown>
           <Link
             to="/newsroom"
             className={cn(
-              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
+              "ml-2 flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full transition-colors border",
               location.pathname === "/newsroom"
-                ? "bg-gainn-red/20 text-gainn-red border-gainn-red/50"
-                : "text-gainn-red hover:bg-gainn-red/10 border-gainn-red/25 hover:border-gainn-red/50"
+                ? "bg-destructive/15 text-destructive border-destructive/50"
+                : "text-destructive border-destructive/30 hover:bg-destructive/10"
             )}
           >
-            <Radio className="w-3.5 h-3.5 animate-live-pulse" />Live
-          </Link>
-          <Link
-            to="/shorts"
-            className={cn(
-              "relative ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-md transition-all border",
-              location.pathname.startsWith("/shorts")
-                ? "bg-gradient-to-r from-red-500/30 to-cyan-500/30 text-white border-cyan-400/60"
-                : "bg-gradient-to-r from-red-500/15 to-cyan-500/15 text-white border-cyan-400/40 hover:from-red-500/25 hover:to-cyan-500/25 hover:border-cyan-400/70"
-            )}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-            </span>
-            <Zap className="w-3.5 h-3.5" />Shorts
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-cyan-400/90 text-black text-[9px] font-black tracking-wider">NEW</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />Live
           </Link>
         </nav>
 
@@ -371,31 +394,20 @@ export const GlobalHeader = ({
               </button>
             );
           })}
-          <Link to="/prime-time" onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-primary rounded-md hover:bg-primary/10"
-          >
-            <Clapperboard className="w-4 h-4" />Prime Time
-          </Link>
-          <Link to="/video" onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-purple rounded-md hover:bg-gainn-purple/10"
-          >
-            <Video className="w-3.5 h-3.5" /> AI Video
-          </Link>
-          <Link to="/videos" onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-accent rounded-md hover:bg-accent/10"
-          >
-            <Library className="w-3.5 h-3.5" /> Video Library
-          </Link>
-          <Link to="/newsroom" onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gainn-red rounded-md hover:bg-gainn-red/10"
-          >
-            <Radio className="w-3.5 h-3.5" /> Live Broadcast
-          </Link>
-          <Link to="/shorts" onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-cyan-300 rounded-md hover:bg-cyan-500/10"
-          >
-            <Zap className="w-3.5 h-3.5" /> AI Shorts
-          </Link>
+          <div className="border-t border-border/50 mt-2 pt-2 flex flex-col gap-1">
+            {VIDEO_LINKS.map((l) => (
+              <Link key={l.href} to={l.href} onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm text-foreground rounded-md hover:bg-muted"
+              >
+                <Video className="w-3.5 h-3.5 text-muted-foreground" /> {l.label}
+              </Link>
+            ))}
+            <Link to="/newsroom" onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-destructive rounded-md hover:bg-destructive/10"
+            >
+              <Radio className="w-3.5 h-3.5" /> Live
+            </Link>
+          </div>
           <div className="border-t border-border/50 mt-2 pt-2">
             {user ? (
               <Link to="/settings" className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground rounded-md"

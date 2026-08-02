@@ -660,7 +660,7 @@ export default function AIVideoPage() {
   return (
     <div className="min-h-screen bg-background">
       <SeoHead
-        title="AI Video News Channel — GAINN"
+        title="Video Reports — GAINN"
         description="Generate AI-narrated video news briefings on demand. Pick any topic and GAINN's autonomous newsroom produces a verified, broadcast-ready report."
         path="/video"
       />
@@ -676,7 +676,7 @@ export default function AIVideoPage() {
             Powered by GAINN AI
           </div>
           <h1 className="text-4xl md:text-5xl font-display text-gradient-primary mb-3">
-            AI Video News Channel
+            Video Reports
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
             Generate long-form, balanced news videos on any global topic — AI-researched, fact-checked, and delivered from all perspectives.

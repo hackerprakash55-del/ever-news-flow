@@ -166,10 +166,10 @@ export function TrendingVideosSection() {
         <VideoSectionHeader generating={false} />
         <div className="card-glass rounded-xl p-6 flex flex-col items-center gap-3 text-center border border-dashed border-border">
           <Film className="w-8 h-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No videos yet. Visit the AI Video Studio to generate your first report.</p>
+          <p className="text-sm text-muted-foreground">No videos yet. Visit the Video Studio to generate your first report.</p>
           <button onClick={() => navigate("/video")}
             className="px-4 py-2 rounded-lg bg-gainn-blue text-background text-xs font-semibold hover:bg-gainn-blue/80 transition-colors">
-            Open AI Video Studio
+            Open Video Studio
           </button>
         </div>
       </div>
@@ -206,7 +206,7 @@ function VideoSectionHeader({ generating, onRefresh }: { generating: boolean; on
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
         <span className="text-base">📺</span>
-        <h2 className="text-sm font-semibold uppercase tracking-wider font-mono">AI Video Reports — Watch Now</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider font-mono">Video Reports</h2>
         {generating && (
           <span className="flex items-center gap-1 text-[10px] font-mono text-gainn-amber px-2 py-0.5 rounded-full border border-gainn-amber/30 bg-gainn-amber/10">
             <Loader2 className="w-2.5 h-2.5 animate-spin" /> Generating…

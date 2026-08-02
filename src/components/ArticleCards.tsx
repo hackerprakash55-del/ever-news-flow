@@ -1,5 +1,5 @@
 import { Article } from "@/data/mockData";
-import { Shield, Clock, ExternalLink, Zap, Bookmark, BookmarkCheck, Share2, MessageSquare, Crown, CheckCircle2, CheckCheck } from "lucide-react";
+import { Shield, Zap, Bookmark, BookmarkCheck, Share2, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
 import { useState } from "react";
@@ -34,60 +34,40 @@ function ReadProgressBar({ articleId }: { articleId: string }) {
   );
 }
 
-// "Read" checkmark badge
-function ReadBadge({ articleId }: { articleId: string }) {
-  if (!isArticleRead(articleId)) return null;
-  return (
-    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-gainn-green bg-gainn-green/10 border border-gainn-green/25">
-      <CheckCheck className="w-2.5 h-2.5" />Read
-    </div>
-  );
-}
-
 // ── Sub-components ────────────────────────────────────────
-const CredibilityBadge = ({ score }: { score: number }) => {
-  const cls = score >= 90 ? "credibility-high" : score >= 70 ? "credibility-medium" : "credibility-low";
-  return (
-    <span className={`flex items-center gap-1 text-xs font-mono ${cls}`}>
-      <Shield className="w-3 h-3" />{score}%
-    </span>
-  );
-};
-
-const CategoryBadge = ({ category }: { category: string }) => {
-  const colorMap: Record<string, string> = {
-    AI: "text-gainn-cyan border-gainn-cyan/30 bg-gainn-cyan/10",
-    Technology: "text-primary border-primary/30 bg-primary/10",
-    Science: "text-gainn-purple border-gainn-purple/30 bg-gainn-purple/10",
-    Economy: "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10",
-    Environment: "text-gainn-green border-gainn-green/30 bg-gainn-green/10",
-    Politics: "text-orange-400 border-orange-400/30 bg-orange-400/10",
-    Health: "text-pink-400 border-pink-400/30 bg-pink-400/10",
-    Space: "text-gainn-purple border-gainn-purple/30 bg-gainn-purple/10",
-    Global: "text-gainn-cyan border-gainn-cyan/30 bg-gainn-cyan/10",
-  };
-  const c = colorMap[category] || "text-muted-foreground border-border bg-surface-2";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-mono font-semibold uppercase tracking-wider ${c}`}>
-      {category}
-    </span>
-  );
-};
-
-// Tooltip explaining AI Verified badge
-const AIVerifiedBadge = () => (
+// Single trust indicator: shield + score. Cyan is the only accent used for trust.
+const TrustBadge = ({ score }: { score: number }) => (
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-gainn-cyan cursor-help">
-          <CheckCircle2 className="w-3 h-3" />AI Verified
+        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-accent/90 cursor-help">
+          <Shield className="w-3 h-3" />{score}%
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[220px] text-xs">
-        This article was cross-checked by GAINN's AI fact-verification agents against 100+ primary sources. Bias and credibility scores are computed independently.
+        AI-verified trust score, cross-checked against primary sources.
       </TooltipContent>
     </Tooltip>
   </TooltipProvider>
+);
+
+// One neutral status tag — BREAKING in red only when actually breaking.
+const StatusTag = ({ category, isBreaking }: { category: string; isBreaking?: boolean }) =>
+  isBreaking ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider text-destructive border border-destructive/40 bg-destructive/10">
+      <Zap className="w-2.5 h-2.5" />Breaking
+    </span>
+  ) : (
+    <span className="inline-flex items-center px-2 py-0.5 rounded border border-border bg-surface-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      {category}
+    </span>
+  );
+
+// Quiet metadata line: source · author · read time
+const MetaLine = ({ parts }: { parts: (string | number | undefined)[] }) => (
+  <p className="text-[11px] text-muted-foreground/70 truncate">
+    {parts.filter(Boolean).join(" · ")}
+  </p>
 );
 
 // Bookmark + Share actions
@@ -163,7 +143,6 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
   const navigate = useNavigate();
   const { isSaved, saving, toggleSave, share } = useArticleActions(article);
   const author = getAuthor(article);
-  const comments = getCommentCount(article);
 
   return (
     <div className="block group cursor-pointer animate-hero-rise" onClick={() => storeAndNavigate(article, navigate)}>
@@ -180,48 +159,19 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
 
         <div className="relative h-full flex flex-col justify-end p-6 min-h-[480px]">
-          <div className="flex items-center gap-2 mb-3">
-            {article.isBreaking && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-white bg-destructive breaking-pulse">
-                <Zap className="w-3 h-3" />BREAKING
-              </span>
-            )}
-            {article.aiGenerated && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-gainn-purple border border-gainn-purple/30 bg-gainn-purple/10">
-                <Crown className="w-2.5 h-2.5" />AI Authored
-              </span>
-            )}
-            <CategoryBadge category={article.category} />
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <StatusTag category={article.category} isBreaking={article.isBreaking} />
+            <TrustBadge score={article.credibilityScore} />
           </div>
 
           <h2 className="hero-headline text-foreground mb-3 group-hover:text-primary transition-colors">
             {article.headline}
           </h2>
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{article.summary}</p>
-
-          {/* Author + meta row */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary flex-shrink-0">
-                {author.avatar}
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-foreground">{author.name}</span>
-                <span className="text-[10px] text-muted-foreground block">{author.role}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <CredibilityBadge score={article.credibilityScore} />
-              <AIVerifiedBadge />
-              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{article.readTime} min read</span>
-              <span className="flex items-center gap-1 font-mono text-[10px]">
-                <MessageSquare className="w-3 h-3" />{comments}
-              </span>
-            </div>
-          </div>
+          <MetaLine parts={[article.sources?.[0], author.name, `${article.readTime} min read`]} />
+          <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{article.summary}</p>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center gap-2 mt-4">
             <button
               onClick={toggleSave}
               disabled={saving}
@@ -241,8 +191,7 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
               <Share2 className="w-3 h-3" />Share
             </button>
             <span className="ml-auto text-[10px] font-mono text-muted-foreground/50">
-              {new Date(article.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} •{" "}
-              <span className="text-gainn-green">{article.isBreaking ? "Updated live" : "Last updated"}</span>
+              {new Date(article.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
         </div>
@@ -256,8 +205,6 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
   const navigate = useNavigate();
   const { isSaved, saving, toggleSave, share } = useArticleActions(article);
   const author = getAuthor(article);
-  const comments = getCommentCount(article);
-  const reliability = getSourceReliability(article.credibilityScore);
   const alreadyRead = isArticleRead(article.id);
   const revealRef = useReveal<HTMLDivElement>();
 
@@ -290,11 +237,6 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
               <span className="text-4xl opacity-20">📰</span>
             </div>
           )}
-          {article.isBreaking && (
-            <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-gainn-red text-white text-[9px] font-bold">
-              <Zap className="w-2.5 h-2.5" />LIVE
-            </div>
-          )}
           {isPremium && (
             <div className="absolute inset-0 bg-background/30 backdrop-blur-[1px] flex items-end justify-center pb-3">
               <span className="text-xs text-gainn-amber font-semibold">🔒 Premium Article</span>
@@ -302,70 +244,23 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
           )}
         </div>
 
-        <div className="p-4 flex flex-col flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <CategoryBadge category={article.category} />
-            <div className="flex items-center gap-1.5">
-              {alreadyRead && <ReadBadge articleId={article.id} />}
-              {article.isBreaking && (
-                <span className="text-[10px] font-bold text-gainn-red uppercase tracking-wider">Breaking</span>
-              )}
-            </div>
+        <div className="p-5 flex flex-col flex-1">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <StatusTag category={article.category} isBreaking={article.isBreaking} />
+            <TrustBadge score={article.credibilityScore} />
           </div>
 
-          <h3 className={`text-sm font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug flex-1 ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
+          <h3 className={`text-[15px] font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
             {article.headline}
           </h3>
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{article.summary}</p>
-
-          {/* Author */}
-          <div className="flex items-center gap-1.5 mb-3">
-            <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-[8px] font-bold text-primary flex-shrink-0">
-              {author.avatar}
-            </div>
-            <span className="text-[10px] text-muted-foreground truncate">{author.name}</span>
-            <span className="text-[10px] text-muted-foreground/40">·</span>
-            <span className={`text-[10px] font-mono ${reliability.color}`}>{article.sources[0]} — {reliability.label}</span>
-          </div>
-
-          {/* Trust Score & Sources */}
-          <div className="flex items-center gap-2 mb-2 text-[10px] font-mono">
-            <div className="flex items-center gap-1">
-              <div className="w-16 h-1.5 rounded-full bg-surface-3 overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${article.credibilityScore}%`,
-                    background: article.credibilityScore >= 90
-                      ? "hsl(var(--gainn-green))"
-                      : article.credibilityScore >= 70
-                      ? "hsl(var(--gainn-amber))"
-                      : "hsl(var(--gainn-red))",
-                  }}
-                />
-              </div>
-              <span className="text-muted-foreground">Trust: {article.credibilityScore}</span>
-            </div>
-            <span className="text-muted-foreground/40">·</span>
-            <span className="text-muted-foreground">{article.sources.length} sources</span>
-            <span className="text-gainn-green">✓ Verified</span>
-          </div>
-
-          {/* Read More link */}
-          <div className="mb-2">
-            <span className="text-xs font-semibold text-accent relative inline-flex items-center gap-1 transition-colors duration-200 group-hover:text-primary">
-              {alreadyRead ? "Read Again" : "Read More"}
-              <span className="inline-block transition-transform duration-200 group-hover:translate-x-1">→</span>
-            </span>
-          </div>
+          <MetaLine parts={[article.sources?.[0], author.name, `${article.readTime} min read`]} />
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-2 mb-4">{article.summary}</p>
 
           {/* Footer row */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/50">
-            <div className="flex items-center gap-2">
-              <CredibilityBadge score={article.credibilityScore} />
-              <span className="flex items-center gap-1 font-mono text-[10px]"><Clock className="w-3 h-3" />{article.readTime}m</span>
-              <span className="flex items-center gap-1 font-mono text-[10px]"><MessageSquare className="w-3 h-3" />{comments}</span>
-            </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-3 border-t border-border/50">
+            <span className="text-xs font-medium text-accent inline-flex items-center gap-1 transition-transform duration-200 group-hover:translate-x-0.5">
+              {alreadyRead ? "Read again" : "Read"} →
+            </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={toggleSave}
@@ -394,42 +289,19 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
 // ── Compact List Card ──────────────────────────────────────
 export const ArticleListItem = ({ article, index }: { article: Article; index: number }) => {
   const navigate = useNavigate();
-  const { isSaved, saving, toggleSave } = useArticleActions(article);
 
   return (
     <div className="block group cursor-pointer" onClick={() => storeAndNavigate(article, navigate)}>
-      <div className="flex gap-3 p-3 rounded-lg hover:bg-surface-2 transition-colors">
-        <span className="text-xl font-mono font-bold text-muted-foreground/40 w-7 flex-shrink-0 pt-0.5">
+      <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-2 transition-colors">
+        <span className="text-xs font-mono text-muted-foreground/40 w-6 flex-shrink-0">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <CategoryBadge category={article.category} />
-            {article.isBreaking && <span className="text-[9px] font-bold text-gainn-red uppercase">⚡ Breaking</span>}
-          </div>
-          <h4 className="text-sm font-medium text-foreground group-hover:text-accent transition-colors line-clamp-2 leading-snug">
-            {article.headline}
-          </h4>
-          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            <CredibilityBadge score={article.credibilityScore} />
-            <span className="flex items-center gap-1 font-mono text-[10px]"><Clock className="w-3 h-3" />{article.readTime}m</span>
-            <span className="font-mono text-[10px]">
-              {new Date(article.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {article.imageUrl && (
-            <img src={article.imageUrl} alt="" className="w-16 h-12 object-cover rounded flex-shrink-0 opacity-70" />
-          )}
-          <button
-            onClick={toggleSave}
-            disabled={saving}
-            className={`p-0.5 rounded transition-colors ${isSaved ? "text-accent" : "text-muted-foreground/30 hover:text-accent"}`}
-          >
-            {isSaved ? <BookmarkCheck className="w-3 h-3" /> : <Bookmark className="w-3 h-3" />}
-          </button>
-        </div>
+        <h4 className="flex-1 min-w-0 text-[13px] text-foreground/90 group-hover:text-accent transition-colors truncate">
+          {article.headline}
+        </h4>
+        <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
+          {article.credibilityScore}%
+        </span>
       </div>
     </div>
   );
