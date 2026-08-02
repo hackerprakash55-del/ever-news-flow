@@ -291,42 +291,19 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
 // ── Compact List Card ──────────────────────────────────────
 export const ArticleListItem = ({ article, index }: { article: Article; index: number }) => {
   const navigate = useNavigate();
-  const { isSaved, saving, toggleSave } = useArticleActions(article);
 
   return (
     <div className="block group cursor-pointer" onClick={() => storeAndNavigate(article, navigate)}>
-      <div className="flex gap-3 p-3 rounded-lg hover:bg-surface-2 transition-colors">
-        <span className="text-xl font-mono font-bold text-muted-foreground/40 w-7 flex-shrink-0 pt-0.5">
+      <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-2 transition-colors">
+        <span className="text-xs font-mono text-muted-foreground/40 w-6 flex-shrink-0">
           {String(index + 1).padStart(2, "0")}
         </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <CategoryBadge category={article.category} />
-            {article.isBreaking && <span className="text-[9px] font-bold text-gainn-red uppercase">⚡ Breaking</span>}
-          </div>
-          <h4 className="text-sm font-medium text-foreground group-hover:text-accent transition-colors line-clamp-2 leading-snug">
-            {article.headline}
-          </h4>
-          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            <CredibilityBadge score={article.credibilityScore} />
-            <span className="flex items-center gap-1 font-mono text-[10px]"><Clock className="w-3 h-3" />{article.readTime}m</span>
-            <span className="font-mono text-[10px]">
-              {new Date(article.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {article.imageUrl && (
-            <img src={article.imageUrl} alt="" className="w-16 h-12 object-cover rounded flex-shrink-0 opacity-70" />
-          )}
-          <button
-            onClick={toggleSave}
-            disabled={saving}
-            className={`p-0.5 rounded transition-colors ${isSaved ? "text-accent" : "text-muted-foreground/30 hover:text-accent"}`}
-          >
-            {isSaved ? <BookmarkCheck className="w-3 h-3" /> : <Bookmark className="w-3 h-3" />}
-          </button>
-        </div>
+        <h4 className="flex-1 min-w-0 text-[13px] text-foreground/90 group-hover:text-accent transition-colors truncate">
+          {article.headline}
+        </h4>
+        <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
+          {article.credibilityScore}%
+        </span>
       </div>
     </div>
   );
