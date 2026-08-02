@@ -266,7 +266,7 @@ export const GlobalHeader = ({
 
         {/* Desktop nav */}
         <nav className="hidden lg:flex items-center gap-0.5 ml-2 flex-shrink-0">
-          {CATEGORIES.map((item) => {
+          {PRIMARY_CATEGORIES.map((item) => {
             const active = isNavActive(item.cat);
             return (
               <button
@@ -283,65 +283,46 @@ export const GlobalHeader = ({
               </button>
             );
           })}
-          <Link
-            to="/video"
-            className={cn(
-              "ml-2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
-              location.pathname === "/video"
-                ? "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/50"
-                : "text-gainn-purple hover:bg-gainn-purple/10 border-gainn-purple/25 hover:border-gainn-purple/50"
-            )}
+          <NavDropdown
+            label="Video"
+            active={["/video", "/videos", "/shorts", "/prime-time"].some((p) => location.pathname.startsWith(p))}
           >
-            <Video className="w-3.5 h-3.5" />AI Video
-          </Link>
-          <Link
-            to="/prime-time"
-            className={cn(
-              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-md transition-colors border",
-              location.pathname === "/prime-time"
-                ? "bg-primary/20 text-primary border-primary/60"
-                : "text-primary hover:bg-primary/10 border-primary/30 hover:border-primary/60"
-            )}
-          >
-            <Clapperboard className="w-3.5 h-3.5" />Prime Time
-          </Link>
-          <Link
-            to="/videos"
-            className={cn(
-              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
-              location.pathname === "/videos"
-                ? "bg-accent/20 text-accent border-accent/50"
-                : "text-accent hover:bg-accent/10 border-accent/25 hover:border-accent/50"
-            )}
-          >
-            <Library className="w-3.5 h-3.5" />Video Library
-          </Link>
+            {(close) =>
+              VIDEO_LINKS.map((l) => (
+                <Link
+                  key={l.href}
+                  to={l.href}
+                  onClick={close}
+                  className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  {l.label}
+                </Link>
+              ))
+            }
+          </NavDropdown>
+          <NavDropdown label="More" active={MORE_CATEGORIES.some((c) => isNavActive(c.cat))}>
+            {(close) =>
+              MORE_CATEGORIES.map((c) => (
+                <button
+                  key={c.label}
+                  onClick={() => { close(); handleCatClick(c.cat, c.label); }}
+                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  {c.label}
+                </button>
+              ))
+            }
+          </NavDropdown>
           <Link
             to="/newsroom"
             className={cn(
-              "ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors border",
+              "ml-2 flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full transition-colors border",
               location.pathname === "/newsroom"
-                ? "bg-gainn-red/20 text-gainn-red border-gainn-red/50"
-                : "text-gainn-red hover:bg-gainn-red/10 border-gainn-red/25 hover:border-gainn-red/50"
+                ? "bg-destructive/15 text-destructive border-destructive/50"
+                : "text-destructive border-destructive/30 hover:bg-destructive/10"
             )}
           >
-            <Radio className="w-3.5 h-3.5 animate-live-pulse" />Live
-          </Link>
-          <Link
-            to="/shorts"
-            className={cn(
-              "relative ml-1 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-md transition-all border",
-              location.pathname.startsWith("/shorts")
-                ? "bg-gradient-to-r from-red-500/30 to-cyan-500/30 text-white border-cyan-400/60"
-                : "bg-gradient-to-r from-red-500/15 to-cyan-500/15 text-white border-cyan-400/40 hover:from-red-500/25 hover:to-cyan-500/25 hover:border-cyan-400/70"
-            )}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-            </span>
-            <Zap className="w-3.5 h-3.5" />Shorts
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-cyan-400/90 text-black text-[9px] font-black tracking-wider">NEW</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />Live
           </Link>
         </nav>
 
