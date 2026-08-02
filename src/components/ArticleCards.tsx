@@ -143,7 +143,6 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
   const navigate = useNavigate();
   const { isSaved, saving, toggleSave, share } = useArticleActions(article);
   const author = getAuthor(article);
-  const comments = getCommentCount(article);
 
   return (
     <div className="block group cursor-pointer animate-hero-rise" onClick={() => storeAndNavigate(article, navigate)}>
@@ -160,48 +159,19 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
 
         <div className="relative h-full flex flex-col justify-end p-6 min-h-[480px]">
-          <div className="flex items-center gap-2 mb-3">
-            {article.isBreaking && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-white bg-destructive breaking-pulse">
-                <Zap className="w-3 h-3" />BREAKING
-              </span>
-            )}
-            {article.aiGenerated && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-gainn-purple border border-gainn-purple/30 bg-gainn-purple/10">
-                <Crown className="w-2.5 h-2.5" />AI Authored
-              </span>
-            )}
-            <CategoryBadge category={article.category} />
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <StatusTag category={article.category} isBreaking={article.isBreaking} />
+            <TrustBadge score={article.credibilityScore} />
           </div>
 
           <h2 className="hero-headline text-foreground mb-3 group-hover:text-primary transition-colors">
             {article.headline}
           </h2>
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{article.summary}</p>
-
-          {/* Author + meta row */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary flex-shrink-0">
-                {author.avatar}
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-foreground">{author.name}</span>
-                <span className="text-[10px] text-muted-foreground block">{author.role}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <CredibilityBadge score={article.credibilityScore} />
-              <AIVerifiedBadge />
-              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{article.readTime} min read</span>
-              <span className="flex items-center gap-1 font-mono text-[10px]">
-                <MessageSquare className="w-3 h-3" />{comments}
-              </span>
-            </div>
-          </div>
+          <MetaLine parts={[article.sources?.[0], author.name, `${article.readTime} min read`]} />
+          <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{article.summary}</p>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center gap-2 mt-4">
             <button
               onClick={toggleSave}
               disabled={saving}
@@ -221,8 +191,7 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
               <Share2 className="w-3 h-3" />Share
             </button>
             <span className="ml-auto text-[10px] font-mono text-muted-foreground/50">
-              {new Date(article.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} •{" "}
-              <span className="text-gainn-green">{article.isBreaking ? "Updated live" : "Last updated"}</span>
+              {new Date(article.publishedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
         </div>
