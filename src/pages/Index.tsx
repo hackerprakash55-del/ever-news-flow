@@ -12,19 +12,10 @@ import { HeroGridSkeleton, SmallGridSkeleton, ListItemSkeleton } from "@/compone
 import { useNews } from "@/hooks/useNews";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  RefreshCw, Wifi, WifiOff, AlertCircle, MapPin, TrendingUp, Zap, ChevronRight,
+  RefreshCw, TrendingUp, Zap, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
-
-const LiveBadge = ({ isLive, fetchedAt }: { isLive: boolean; fetchedAt: string | null }) => (
-  <div className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full border ${
-    isLive ? "text-gainn-green border-gainn-green/30 bg-gainn-green/10" : "text-gainn-amber border-gainn-amber/30 bg-gainn-amber/10"
-  }`}>
-    {isLive ? <><Wifi className="w-3 h-3" /> Live</> : <><WifiOff className="w-3 h-3" /> Demo</>}
-    {fetchedAt && <span className="opacity-60 ml-1">{new Date(fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
-  </div>
-);
 
 const FEED_TABS = [
   { id: "top", label: "Top Stories", icon: TrendingUp },
@@ -32,58 +23,74 @@ const FEED_TABS = [
 ];
 
 // ── Footer ─────────────────────────────────────────────────
-function SystemFooter({ isLive }: { isLive: boolean }) {
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const iv = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(iv);
-  }, []);
+const FOOTER_COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
+  {
+    title: "Product",
+    links: [
+      { label: "Top Stories", href: "/" },
+      { label: "Prime Time", href: "/prime-time" },
+      { label: "Shorts", href: "/shorts" },
+      { label: "Video Library", href: "/videos" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "Newsroom", href: "/newsroom" },
+      { label: "How we verify", href: "/newsroom" },
+      { label: "Coverage", href: "/trending" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Editorial standards", href: "/" },
+      { label: "Privacy", href: "/" },
+      { label: "Terms", href: "/" },
+    ],
+  },
+  {
+    title: "Connect",
+    links: [
+      { label: "Newsletter", href: "/settings" },
+      { label: "Account", href: "/settings" },
+      { label: "Contact", href: "/settings" },
+    ],
+  },
+];
 
+function SiteFooter() {
   return (
-    <footer className="border-t border-border mt-12">
-      <div className="border-b border-border bg-surface-1 px-4 md:px-6 py-2">
-        <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-gainn-green live-dot" />
-              <span className="text-gainn-green font-semibold">ALL SYSTEMS OPERATIONAL</span>
+    <footer className="border-t border-border mt-20">
+      <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-14">
+        <div className="grid grid-cols-1 md:grid-cols-[1.4fr_repeat(4,1fr)] gap-10">
+          <div className="max-w-sm">
+            <div className="text-base font-display font-semibold text-foreground mb-2">
+              GAINN — Global AI Intelligence &amp; News Network
             </div>
-            <span className="text-border hidden md:inline">|</span>
-            <span className="hidden md:inline">Ingestion: <span className="text-gainn-green">●</span></span>
-            <span className="hidden md:inline">Verification: <span className="text-gainn-green">●</span></span>
-            <span className="hidden md:inline">Generation: <span className="text-gainn-green">●</span></span>
-            <span className="hidden md:inline">Distribution: <span className="text-gainn-green">●</span></span>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Neutral, source-checked reporting. Every story is AI-verified against primary
+              sources and published without editorial spin.
+            </p>
           </div>
-          <div className="text-[10px] font-mono text-muted-foreground">
-            {time.toLocaleTimeString("en-US", { hour12: false })} UTC
-          </div>
+          {FOOTER_COLUMNS.map((col) => (
+            <div key={col.title}>
+              <div className="text-xs font-semibold uppercase tracking-wider text-foreground/80 mb-3">{col.title}</div>
+              <ul className="space-y-2">
+                {col.links.map((l) => (
+                  <li key={l.label}>
+                    <a href={l.href} className="text-sm text-muted-foreground hover:text-accent transition-colors">
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
-      </div>
-      <div className="py-8 px-4 md:px-6">
-        <div className="max-w-screen-2xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-            <div>
-              <div className="text-lg font-bold text-gradient-primary font-display mb-1">GAINN</div>
-              <div className="text-xs text-muted-foreground font-mono">Global AI News Network — Autonomous Intelligence</div>
-            </div>
-            <div className="flex items-center gap-6 text-xs text-muted-foreground font-mono">
-              <span>{isLive ? "Live news via NewsAPI" : "Demo mode"}</span>
-              <span className="text-border">|</span>
-              <span>108 agents</span>
-              <span className="text-border">|</span>
-              <span>34 countries</span>
-              <span className="text-border">|</span>
-              <span>24/7 operation</span>
-            </div>
-          </div>
-          <div className="border-t border-border pt-4 flex flex-col md:flex-row items-center justify-between gap-2">
-            <span className="text-[11px] text-muted-foreground font-mono">
-              © 2026 GAINN. Powered by multi-agent AI architecture. Zero human editorial intervention.
-            </span>
-            <span className="text-[10px] text-muted-foreground/50 font-mono">
-              Built for autonomous intelligence at scale.
-            </span>
-          </div>
+        <div className="border-t border-border mt-12 pt-6 flex flex-col md:flex-row items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">© 2026 GAINN. All rights reserved.</span>
+          <span className="text-[11px] font-mono text-muted-foreground/50">24/7 autonomous newsroom</span>
         </div>
       </div>
     </footer>
