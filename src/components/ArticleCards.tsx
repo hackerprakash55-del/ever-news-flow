@@ -205,8 +205,6 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
   const navigate = useNavigate();
   const { isSaved, saving, toggleSave, share } = useArticleActions(article);
   const author = getAuthor(article);
-  const comments = getCommentCount(article);
-  const reliability = getSourceReliability(article.credibilityScore);
   const alreadyRead = isArticleRead(article.id);
   const revealRef = useReveal<HTMLDivElement>();
 
