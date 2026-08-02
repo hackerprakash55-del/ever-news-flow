@@ -59,21 +59,12 @@ export const PrimeTimeHero = () => {
             </p>
           </div>
 
-          {/* Breaking ticker pinned to bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-9 bg-gainn-red/20 border-t border-gainn-red/40 backdrop-blur-sm flex items-center overflow-hidden">
-            <span className="flex-shrink-0 h-full px-3 flex items-center bg-gainn-red text-white text-[10px] font-mono font-bold tracking-widest">
-              BREAKING
-            </span>
-            <div className="ticker-wrap flex-1 h-full flex items-center">
-              <div className="ticker-content">
-                {[...ticker, ...ticker].map((t, i) => (
-                  <span key={i} className="inline-flex items-center px-6 text-[11px] font-mono text-white/85">
-                    {t}<span className="ml-6 text-primary/50">•</span>
-                  </span>
-                ))}
-              </div>
+          {/* Lead story line pinned to bottom (static — no competing motion) */}
+          {ticker[0] && (
+            <div className="absolute bottom-0 left-0 right-0 px-4 py-2.5 bg-background/70 backdrop-blur-sm border-t border-border/60">
+              <p className="text-[11px] text-foreground/80 truncate">Tonight: {ticker[0]}</p>
             </div>
-          </div>
+          )}
         </Link>
 
         {/* CTA row */}
