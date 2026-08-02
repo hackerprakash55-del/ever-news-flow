@@ -14,18 +14,61 @@ import { cn } from "@/lib/utils";
 
 const SearchOverlay    = lazy(() => import("@/components/SearchOverlay").then(m => ({ default: m.SearchOverlay })));
 
-const CATEGORIES = [
-  { label: "Home",        cat: null },
-  { label: "Politics",    cat: "Politics" },
+// Max 6 visible nav items: Home, Video, Politics, Technology, Business, More
+const PRIMARY_CATEGORIES = [
+  { label: "Home",       cat: null },
+  { label: "Politics",   cat: "Politics" },
+  { label: "Technology", cat: "Technology" },
+  { label: "Business",   cat: "Economy" },
+];
+
+const MORE_CATEGORIES = [
   { label: "Government",  cat: "Government" },
   { label: "Crime",       cat: "Crime" },
-  { label: "Technology",  cat: "Technology" },
   { label: "Science",     cat: "Science" },
-  { label: "Economy",     cat: "Economy" },
   { label: "Environment", cat: "Environment" },
   { label: "AI",          cat: "AI" },
   { label: "Global",      cat: "Global Affairs" },
 ];
+
+const CATEGORIES = [...PRIMARY_CATEGORIES, ...MORE_CATEGORIES];
+
+const VIDEO_LINKS = [
+  { label: "Prime Time",    href: "/prime-time" },
+  { label: "Shorts",        href: "/shorts" },
+  { label: "Video Reports", href: "/video" },
+  { label: "Video Library", href: "/videos" },
+];
+
+// Lightweight dropdown used by the Video and More nav groups
+function NavDropdown({ label, active, children }: { label: string; active?: boolean; children: (close: () => void) => React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "flex items-center gap-1 px-3 py-1.5 text-sm rounded-md transition-colors font-medium whitespace-nowrap",
+          active ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+        )}
+      >
+        {label}
+        <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-elevated overflow-hidden z-50 py-1">
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── User Menu Dropdown ─────────────────────────────────────
 function UserMenu() {
