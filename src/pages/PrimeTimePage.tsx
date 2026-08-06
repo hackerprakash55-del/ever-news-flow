@@ -228,12 +228,12 @@ export default function PrimeTimePage() {
 
             {/* CTAs */}
             <div className="mt-7 flex items-center gap-3 flex-wrap">
-              <Link
-                to={feature ? `/shorts/${feature.id}` : "/shorts"}
+              <button
+                onClick={() => setPlaying((p) => !p)}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gainn-red text-white text-sm font-bold hover:brightness-110 active:scale-95 transition"
               >
-                Watch Prime Time Now <ArrowRight className="w-4 h-4" />
-              </Link>
+                {playing ? <><Pause className="w-4 h-4" /> Pause Broadcast</> : <>Watch Prime Time Now <ArrowRight className="w-4 h-4" /></>}
+              </button>
               <a
                 href="#tonights-lineup"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-border text-sm font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 transition"
@@ -243,25 +243,46 @@ export default function PrimeTimePage() {
             </div>
           </div>
 
-          {/* ── Preview card ── */}
+          {/* ── Broadcast player ── */}
           <div>
-            <Link
-              to={feature ? `/shorts/${feature.id}` : "/shorts"}
-              className="group relative block overflow-hidden rounded-xl border border-white/10 aspect-video"
-            >
+            <div className="group relative block overflow-hidden rounded-xl border border-white/10 aspect-video">
               <img src={feature?.imageUrl || FALLBACK} alt={feature?.headline || "Prime Time preview"}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-105" />
+                className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-[9000ms]",
+                  playing ? "scale-110" : "scale-100 group-hover:scale-105")} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/45" />
 
               <span className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gainn-red text-white text-[10px] font-mono font-bold tracking-widest">
                 <span className="w-1.5 h-1.5 rounded-full bg-white live-dot" /> LIVE
               </span>
-
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="w-16 h-16 rounded-full bg-white/15 border border-white/40 backdrop-blur-md flex items-center justify-center transition-transform group-hover:scale-110">
-                  <Play className="w-7 h-7 text-white fill-white ml-1" />
-                </span>
+              <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/50 border border-white/20 text-[10px] font-mono text-white/80">
+                STORY {Math.min(activeStory + 1, tonight.length || 1)} / {tonight.length || 1}
               </span>
+
+              <div className="absolute inset-0 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => setPlaying((p) => !p)}
+                  aria-label={playing ? "Pause broadcast" : "Play broadcast"}
+                  className="w-16 h-16 rounded-full bg-white/15 border border-white/40 backdrop-blur-md flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+                >
+                  {playing
+                    ? <Pause className="w-7 h-7 text-white fill-white" />
+                    : <Play className="w-7 h-7 text-white fill-white ml-1" />}
+                </button>
+                <button
+                  onClick={nextStory}
+                  aria-label="Next story"
+                  className="w-11 h-11 rounded-full bg-black/40 border border-white/25 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition"
+                >
+                  <SkipForward className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setMuted((m) => !m)}
+                  aria-label={muted ? "Unmute" : "Mute"}
+                  className="w-11 h-11 rounded-full bg-black/40 border border-white/25 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 active:scale-95 transition"
+                >
+                  {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+              </div>
 
               <div className="absolute bottom-0 left-0 right-0 p-4">
                 <h2 className="font-display font-bold text-lg leading-snug text-white line-clamp-2">
@@ -269,7 +290,11 @@ export default function PrimeTimePage() {
                 </h2>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-[10px] font-mono text-primary">
-                    <AudioLines className="w-4 h-4 animate-pulse" /> AI narration playing
+                    <AudioLines className={cn("w-4 h-4", playing && "animate-pulse")} />
+                    {!playing ? "Press play to start the broadcast"
+                      : voiceState === "loading" ? "Cueing AI narration…"
+                      : voiceState === "premium" ? "AI anchor narrating · auto-advances"
+                      : "AI narration playing · auto-advances"}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="flex -space-x-2">
@@ -280,8 +305,15 @@ export default function PrimeTimePage() {
                     <span className="text-[10px] font-mono text-white/70">+2.4M watching</span>
                   </span>
                 </div>
+                <Link
+                  to={feature ? `/article/${feature.id}` : "#"}
+                  state={feature ? { article: feature } : undefined}
+                  className="mt-2 inline-block text-[10px] font-mono text-white/70 hover:text-primary transition"
+                >
+                  Read the full story →
+                </Link>
               </div>
-            </Link>
+            </div>
 
             {/* Ticker under preview */}
             <div className="mt-3 h-8 rounded-full bg-surface-1 border border-border flex items-center overflow-hidden">
