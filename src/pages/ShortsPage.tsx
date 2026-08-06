@@ -8,6 +8,7 @@ import { SeoHead } from "@/components/SeoHead";
 import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio, Heart, Download, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Article } from "@/data/mockData";
+import { toast } from "sonner";
 
 const GRADIENTS = [
   "from-cyan-500/40 via-blue-600/30 to-purple-700/40",
@@ -27,6 +28,64 @@ function captionFor(a: Article) {
   return `${a.headline} — Read the full story & more at gainn.com  #GAINN #AINews #India #Breaking ${a.category ? "#" + a.category.replace(/\s+/g, "") : ""}`;
 }
 
+/** Renders a 1080x1920 share card for the story and triggers a PNG download. */
+function downloadCard(a: Article) {
+  const W = 1080, H = 1920;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  if (!ctx) return;
+
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, "#06222e");
+  g.addColorStop(0.5, "#060910");
+  g.addColorStop(1, "#1a0a12");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "#00D4FF";
+  ctx.font = "bold 44px Inter, sans-serif";
+  ctx.fillText("GAINN", 80, 160);
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "28px monospace";
+  ctx.fillText((a.category || "NEWS").toUpperCase(), 80, 215);
+
+  // Headline wrapping
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 76px Georgia, serif";
+  const words = a.headline.split(" ");
+  let line = "", y = 900;
+  const lines: string[] = [];
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > W - 160 && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  y = 900 - Math.min(lines.length, 8) * 45;
+  lines.slice(0, 8).forEach((l) => { ctx.fillText(l, 80, y); y += 92; });
+
+  const summary = (a.summary || a.body || "").slice(0, 240);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "36px Inter, sans-serif";
+  let sline = "", sy = y + 40;
+  for (const w of summary.split(" ")) {
+    const test = sline ? `${sline} ${w}` : w;
+    if (ctx.measureText(test).width > W - 160 && sline) { ctx.fillText(sline, 80, sy); sy += 52; sline = w; }
+    else sline = test;
+  }
+  if (sline) ctx.fillText(sline, 80, sy);
+
+  ctx.fillStyle = "#00D4FF";
+  ctx.font = "30px monospace";
+  ctx.fillText(`${a.credibilityScore}% TRUST · AI VERIFIED · gainn.com`, 80, H - 120);
+
+  const link = document.createElement("a");
+  link.download = `gainn-${a.id}.png`;
+  link.href = c.toDataURL("image/png");
+  link.click();
+}
+
 export default function ShortsPage() {
   // Continuous India-first live news; 20 articles; auto-refresh every 5 min
   const { articles, isLoading, refresh } = useNews({ pageSize: 20, location: "India" });
@@ -34,6 +93,8 @@ export default function ShortsPage() {
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
   const [premium, setPremium] = useState<"idle" | "loading" | "playing" | "browser">("idle");
+  const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cardsRef = useRef<(HTMLElement | null)[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -148,7 +209,33 @@ export default function ShortsPage() {
     if (navigator.share) {
       try { await navigator.share({ title: a.headline, text, url }); return; } catch {}
     }
-    try { await navigator.clipboard.writeText(`${text}\n${url}`); } catch {}
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Couldn't copy the link");
+    }
+  };
+
+  const toggleLike = (a: Article) => {
+    setLiked(p => {
+      const next = { ...p, [a.id]: !p[a.id] };
+      toast.success(next[a.id] ? "Added to your likes" : "Like removed");
+      return next;
+    });
+  };
+
+  const toggleSave = (a: Article) => {
+    setSaved(p => {
+      const next = { ...p, [a.id]: !p[a.id] };
+      toast.success(next[a.id] ? "Saved to your reading list" : "Removed from saved");
+      return next;
+    });
+  };
+
+  const handleDownload = (a: Article) => {
+    try { downloadCard(a); toast.success("Story card downloaded"); }
+    catch { toast.error("Couldn't create the story card"); }
   };
 
   return (
@@ -256,24 +343,43 @@ export default function ShortsPage() {
                     <button onClick={() => share(a)} className="p-3 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 text-white" aria-label="Share">
                       <Share2 className="w-4 h-4" />
                     </button>
-                    <button className="p-3 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 text-white" aria-label="Save">
-                      <Bookmark className="w-4 h-4" />
+                    <button
+                      onClick={() => toggleSave(a)}
+                      aria-pressed={!!saved[a.id]}
+                      className={cn("p-3 rounded-full border border-white/20 hover:bg-white/20 text-white transition",
+                        saved[a.id] ? "bg-cyan-400/25 border-cyan-300/50 text-cyan-200" : "bg-white/10")}
+                      aria-label={saved[a.id] ? "Remove from saved" : "Save"}
+                    >
+                      <Bookmark className={cn("w-4 h-4", saved[a.id] && "fill-current")} />
                     </button>
                   </div>
                 </div>
 
                 {/* Action rail */}
                 <div className="absolute right-3 bottom-28 z-20 flex flex-col items-center gap-4">
-                  <button aria-label="Like" className="flex flex-col items-center text-white/85 hover:text-red-400 transition">
-                    <Heart className="w-6 h-6" />
-                    <span className="text-[10px] font-mono">{(a.headline.length * 7) % 900 + 42}</span>
+                  <button
+                    onClick={() => toggleLike(a)}
+                    aria-pressed={!!liked[a.id]}
+                    aria-label={liked[a.id] ? "Unlike" : "Like"}
+                    className={cn("flex flex-col items-center transition active:scale-90",
+                      liked[a.id] ? "text-red-500" : "text-white/85 hover:text-red-400")}
+                  >
+                    <Heart className={cn("w-6 h-6", liked[a.id] && "fill-current")} />
+                    <span className="text-[10px] font-mono">
+                      {(a.headline.length * 7) % 900 + 42 + (liked[a.id] ? 1 : 0)}
+                    </span>
                   </button>
                   <button aria-label="Share" onClick={() => share(a)} className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition">
                     <Share2 className="w-6 h-6" />
                     <span className="text-[10px] font-mono">{(a.headline.length * 3) % 300 + 11}</span>
                   </button>
-                  <button aria-label="Export" className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition">
+                  <button
+                    onClick={() => handleDownload(a)}
+                    aria-label="Download story card"
+                    className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition active:scale-90"
+                  >
                     <Download className="w-6 h-6" />
+                    <span className="text-[10px] font-mono">Save</span>
                   </button>
                 </div>
 
