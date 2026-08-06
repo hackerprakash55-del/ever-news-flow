@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Play, ArrowRight, ShieldCheck, MessageSquare, AudioLines, Star, Users, Radio,
+  Play, Pause, SkipForward, Volume2, VolumeX, ArrowRight, ShieldCheck,
+  MessageSquare, AudioLines, Star, Users, Radio,
 } from "lucide-react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
 import { NewsletterBanner } from "@/components/NewsletterBanner";
 import { useNews } from "@/hooks/useNews";
+import { fetchNarration, releaseNarration } from "@/lib/tts";
+import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { cn } from "@/lib/utils";
 import type { Article } from "@/data/mockData";
 
