@@ -106,7 +106,11 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
 
 export function useNews({ category = "all", pageSize = 20, location = "India" }: UseNewsOptions = {}): NewsResult {
   const queryClient = useQueryClient();
-  const queryKey = ["news", category, pageSize, location];
+  // Every caller shares one request per category+location. Different pageSize
+  // values used to create separate cache entries, firing several slow upstream
+  // calls per page load.
+  const fetchSize = 30;
+  const queryKey = ["news", category, location];
 
   const {
     data,
@@ -116,14 +120,14 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
     refetch,
   } = useQuery({
     queryKey,
-    queryFn: () => fetchLiveNews(category, pageSize, location),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    queryFn: () => fetchLiveNews(category, fetchSize, location),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
-    retry: 1,
-    retryDelay: 2000,
+    refetchOnMount: false,
+    retry: 0,
     // Keep previous results visible while a refetch is in flight so the
     // feed never blanks out and the page never appears "frozen".
     placeholderData: (prev) => prev,
@@ -137,7 +141,7 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
   // Graceful fallback to mock data on error
   if (isError || (!data && !isLoading)) {
     return {
-      articles: MOCK_ARTICLES,
+      articles: MOCK_ARTICLES.slice(0, pageSize),
       isLive: false,
       isLoading,
       isError: !isLoading,
@@ -162,7 +166,7 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
   }
 
   return {
-    articles: data.articles.length > 0 ? data.articles : MOCK_ARTICLES,
+    articles: (data.articles.length > 0 ? data.articles : MOCK_ARTICLES).slice(0, pageSize),
     isLive: data.isLive,
     isLoading: false,
     isError: false,
