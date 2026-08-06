@@ -133,6 +133,7 @@ export default function ShortsPage() {
     setPremium("browser");
     await waitForVoices();
     if (!("speechSynthesis" in window)) return;
+    try { window.speechSynthesis.cancel(); window.speechSynthesis.resume(); } catch {}
     const u = new SpeechSynthesisUtterance(scriptFor(a));
     tuneUtterance(u);
     u.onend = () => { if (activeRef.current === active) advance(); };
@@ -165,6 +166,31 @@ export default function ShortsPage() {
     return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, articles.length]);
+
+  // Browsers block speech until the user interacts with the page — retry the
+  // current story's narration on the first gesture.
+  useEffect(() => {
+    const unlock = () => {
+      try { window.speechSynthesis?.resume(); } catch {}
+      const a = articles[activeRef.current];
+      if (a && !paused && !muted && !window.speechSynthesis?.speaking && !audioRef.current) {
+        speakBrowser(a);
+      }
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, [articles, paused, muted, speakBrowser]);
+
+  // Chrome silently stops long utterances after ~15s without a resume tick.
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused && !muted && !paused) {
+        try { window.speechSynthesis.resume(); } catch {}
+      }
+    }, 8000);
+    return () => clearInterval(t);
+  }, [muted, paused]);
 
   // Mute/pause reactivity
   useEffect(() => {
