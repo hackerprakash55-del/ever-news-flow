@@ -60,6 +60,15 @@ export default function PrimeTimePage() {
   const [activeStory, setActiveStory] = useState(0);
   const [gridCount, setGridCount] = useState(6);
   const [clock, setClock] = useState(new Date());
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [voiceState, setVoiceState] = useState<"idle" | "loading" | "premium" | "browser">("idle");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const activeRef = useRef(0);
+  const playingRef = useRef(false);
+  useEffect(() => { activeRef.current = activeStory; }, [activeStory]);
+  useEffect(() => { playingRef.current = playing; }, [playing]);
 
   useEffect(() => {
     const iv = setInterval(() => setClock(new Date()), 1000);
@@ -69,6 +78,69 @@ export default function PrimeTimePage() {
   const tonight = useMemo(() => articles.slice(0, 6), [articles]);
   const feature = tonight[activeStory] ?? tonight[0];
   const tickerTopics = articles.slice(0, 8).map((a) => a.headline.split(" ").slice(0, 4).join(" "));
+
+  const stopAudio = useCallback(() => {
+    try { window.speechSynthesis?.cancel(); } catch { /* noop */ }
+    if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    releaseNarration(audioUrlRef.current);
+    audioUrlRef.current = null;
+  }, []);
+
+  const nextStory = useCallback(() => {
+    setActiveStory((i) => (tonight.length ? (i + 1) % tonight.length : 0));
+  }, [tonight.length]);
+
+  const scriptFor = (a: Article) =>
+    `${a.headline}. ${a.summary || a.body?.slice(0, 260) || ""}`.replace(/\s+/g, " ").trim().slice(0, 460);
+
+  const speakBrowser = useCallback(async (a: Article, idx: number) => {
+    if (!("speechSynthesis" in window)) { setTimeout(() => { if (playingRef.current) nextStory(); }, 12000); return; }
+    setVoiceState("browser");
+    await waitForVoices();
+    const u = new SpeechSynthesisUtterance(scriptFor(a));
+    tuneUtterance(u);
+    u.volume = muted ? 0 : 1;
+    u.onend = () => { if (playingRef.current && idx === activeRef.current) nextStory(); };
+    window.speechSynthesis.speak(u);
+  }, [muted, nextStory]);
+
+  // Broadcast engine: narrate the active story, then auto-shift to the next one.
+  useEffect(() => {
+    stopAudio();
+    if (!playing || !feature) return;
+    let cancelled = false;
+    const idx = activeStory;
+    setVoiceState("loading");
+    (async () => {
+      const { audioUrl } = await fetchNarration(scriptFor(feature), feature.headline);
+      if (cancelled || idx !== activeRef.current) return;
+      if (!audioUrl) { await speakBrowser(feature, idx); return; }
+      audioUrlRef.current = audioUrl;
+      const audio = new Audio(audioUrl);
+      audio.muted = muted;
+      audioRef.current = audio;
+      audio.onended = () => { if (playingRef.current && idx === activeRef.current) nextStory(); };
+      audio.onerror = () => { speakBrowser(feature, idx); };
+      setVoiceState("premium");
+      audio.play().catch(() => speakBrowser(feature, idx));
+    })();
+    return () => { cancelled = true; stopAudio(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, activeStory, feature?.id]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.muted = muted;
+    if (voiceState === "browser") {
+      try { muted ? window.speechSynthesis?.pause() : window.speechSynthesis?.resume(); } catch { /* noop */ }
+    }
+  }, [muted, voiceState]);
+
+  useEffect(() => () => stopAudio(), [stopAudio]);
 
   return (
     <div className="min-h-screen bg-background">
