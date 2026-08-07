@@ -173,7 +173,7 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
     refetchInterval: 10 * 60 * 1000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     retry: 0,
     // Keep previous results visible while a refetch is in flight so the
     // feed never blanks out and the page never appears "frozen".
