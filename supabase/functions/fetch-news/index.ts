@@ -360,7 +360,11 @@ serve(async (req) => {
     const svc = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
       : null;
-    if (svc) {
+    // Verification is intentionally opt-in. Reading rollout settings and
+    // starting the multi-agent newsroom on every normal feed request adds
+    // backend latency but does not change the article list.
+    const shouldVerify = url.searchParams.get("verify") === "true";
+    if (shouldVerify && svc) {
       try {
         const { data: flag } = await svc
           .from("app_settings")
@@ -403,7 +407,7 @@ serve(async (req) => {
 
     console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
     const newsController = new AbortController();
-    const newsTimeout = setTimeout(() => newsController.abort(), 7_000);
+    const newsTimeout = setTimeout(() => newsController.abort(), 4_500);
     let response: Response;
     let data: any;
     try {
@@ -430,14 +434,18 @@ serve(async (req) => {
       }
       // Return 200 with fallback signal so the client SDK does not throw
       // a runtime error on upstream rate-limit / server outages.
-      return new Response(
-        JSON.stringify({
+      const fallbackPayload = {
           error: data?.message || "NewsAPI request failed",
           code: data?.code,
           fallback: true,
           articles: [],
           totalResults: 0,
-        }),
+        };
+      // Cache upstream failures briefly as well. This prevents every visitor
+      // from repeatedly hitting an already rate-limited provider.
+      responseCache.set(ckey, { at: Date.now(), payload: fallbackPayload });
+      return new Response(
+        JSON.stringify(fallbackPayload),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

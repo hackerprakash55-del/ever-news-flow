@@ -40,7 +40,41 @@ interface NewsResult {
   refresh: () => void;
 }
 
-async function fetchLiveNews(category: string, pageSize: number, location: string) {
+interface FetchNewsData {
+  articles: Article[];
+  isLive: boolean;
+  fetchedAt: string | null;
+  totalResults: number;
+}
+
+const NEWS_CACHE_PREFIX = "gainn-news-v1";
+
+function browserCacheKey(category: string, location: string) {
+  return `${NEWS_CACHE_PREFIX}:${category}:${location}`;
+}
+
+function readBrowserCache(category: string, location: string): FetchNewsData | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem(browserCacheKey(category, location));
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as FetchNewsData;
+    return Array.isArray(parsed.articles) && parsed.articles.length > 0 ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeBrowserCache(category: string, location: string, data: FetchNewsData) {
+  if (typeof window === "undefined" || data.articles.length === 0) return;
+  try {
+    window.localStorage.setItem(browserCacheKey(category, location), JSON.stringify(data));
+  } catch {
+    // Storage can be unavailable in private browsing; the in-memory query cache still works.
+  }
+}
+
+async function fetchLiveNews(category: string, pageSize: number, location: string): Promise<FetchNewsData> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -96,21 +130,30 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
     throw new Error(json.error || "News source temporarily unavailable");
   }
 
-  return {
+  const result: FetchNewsData = {
     articles: (json.articles || []).map(mapToArticle) as Article[],
-    isLive: true as const,
+    isLive: true,
     fetchedAt: json.fetchedAt || new Date().toISOString(),
     totalResults: json.totalResults || 0,
   };
+  writeBrowserCache(category, location, result);
+  return result;
 }
 
 export function useNews({ category = "all", pageSize = 20, location = "India" }: UseNewsOptions = {}): NewsResult {
-  const queryClient = useQueryClient();
+  useQueryClient();
   // Every caller shares one request per category+location. Different pageSize
   // values used to create separate cache entries, firing several slow upstream
   // calls per page load.
   const fetchSize = 30;
   const queryKey = ["news", category, location];
+  const cachedFeed = readBrowserCache(category, location);
+  const immediateFeed: FetchNewsData = cachedFeed ?? {
+    articles: MOCK_ARTICLES,
+    isLive: false,
+    fetchedAt: null,
+    totalResults: MOCK_ARTICLES.length,
+  };
 
   const {
     data,
@@ -121,6 +164,11 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
   } = useQuery({
     queryKey,
     queryFn: () => fetchLiveNews(category, fetchSize, location),
+    // Paint cached or bundled stories on the first render. The timestamp of 0
+    // keeps this seed stale, so React Query refreshes live news in background
+    // without making the page wait on NewsAPI.
+    initialData: immediateFeed,
+    initialDataUpdatedAt: 0,
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchInterval: 10 * 60 * 1000,
@@ -134,9 +182,8 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
   });
 
   const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey });
-    refetch();
-  }, [queryClient, queryKey, refetch]);
+    void refetch();
+  }, [refetch]);
 
   // Graceful fallback to mock data on error
   if (isError || (!data && !isLoading)) {
