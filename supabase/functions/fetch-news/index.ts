@@ -464,7 +464,7 @@ serve(async (req) => {
       // Race each AI call against a 4-second timeout so one slow model call
       // never holds up the entire response.
       const withTimeout = (p: Promise<string>, fallback: string) =>
-        Promise.race([p, new Promise<string>((res) => setTimeout(() => res(fallback), 4000))]);
+        Promise.race([p, new Promise<string>((res) => setTimeout(() => res(fallback), 1500))]);
 
       expandedBodies = await Promise.all(
         toExpand.map((a: any) =>
@@ -496,7 +496,7 @@ serve(async (req) => {
       try {
         const orchRes = await Promise.race([
           orchestratorPromise,
-          new Promise<null>((res) => setTimeout(() => res(null), 12000)),
+          new Promise<null>((res) => setTimeout(() => res(null), 2000)),
         ]);
         if (orchRes && orchRes.ok) {
           const orchJson = await orchRes.json();

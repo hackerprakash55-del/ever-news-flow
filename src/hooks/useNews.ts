@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Article, MOCK_ARTICLES } from "@/data/mockData";
 import { useCallback } from "react";
 
@@ -141,7 +141,6 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
 }
 
 export function useNews({ category = "all", pageSize = 20, location = "India" }: UseNewsOptions = {}): NewsResult {
-  useQueryClient();
   // Every caller shares one request per category+location. Different pageSize
   // values used to create separate cache entries, firing several slow upstream
   // calls per page load.
