@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Article, MOCK_ARTICLES } from "@/data/mockData";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 // Map raw NewsAPI response shape to our Article type
 function mapToArticle(raw: any): Article {
@@ -48,6 +48,7 @@ interface FetchNewsData {
 }
 
 const NEWS_CACHE_PREFIX = "gainn-news-v1";
+const backgroundRefreshes = new Set<string>();
 
 function browserCacheKey(category: string, location: string) {
   return `${NEWS_CACHE_PREFIX}:${category}:${location}`;
@@ -89,7 +90,7 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   if (location) params.set("location", location);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const timeoutId = setTimeout(() => controller.abort(), 6_000);
 
   let response: Response;
   try {
@@ -106,7 +107,7 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
     );
   } catch (err) {
     if ((err as Error)?.name === "AbortError") {
-      throw new Error("News feed timed out after 15s");
+      throw new Error("News feed timed out");
     }
     throw err;
   } finally {
@@ -156,18 +157,24 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
     isError,
     error,
     refetch,
-    isFetching,
   } = useQuery({
     queryKey,
     queryFn: () => fetchLiveNews(category, fetchSize, location),
     initialData: immediateFeed,
-    initialDataUpdatedAt: cachedFeed ? Date.now() - 5 * 60 * 1000 : 0, // consider stale if older than 5m
-    staleTime: 5 * 60 * 1000,
+    initialDataUpdatedAt: Date.now(),
+    staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    retry: 1,
+    refetchOnMount: false,
+    retry: 0,
   });
+
+  useEffect(() => {
+    const refreshKey = `${category}:${location}`;
+    if (backgroundRefreshes.has(refreshKey)) return;
+    backgroundRefreshes.add(refreshKey);
+    void refetch();
+  }, [category, location, refetch]);
 
   const refresh = useCallback(() => {
     void refetch();
