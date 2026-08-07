@@ -1,6 +1,6 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Article, MOCK_ARTICLES } from "@/data/mockData";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 // Map raw NewsAPI response shape to our Article type
 function mapToArticle(raw: any): Article {
@@ -40,7 +40,42 @@ interface NewsResult {
   refresh: () => void;
 }
 
-async function fetchLiveNews(category: string, pageSize: number, location: string) {
+interface FetchNewsData {
+  articles: Article[];
+  isLive: boolean;
+  fetchedAt: string | null;
+  totalResults: number;
+}
+
+const NEWS_CACHE_PREFIX = "gainn-news-v1";
+const backgroundRefreshes = new Set<string>();
+
+function browserCacheKey(category: string, location: string) {
+  return `${NEWS_CACHE_PREFIX}:${category}:${location}`;
+}
+
+function readBrowserCache(category: string, location: string): FetchNewsData | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem(browserCacheKey(category, location));
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as FetchNewsData;
+    return Array.isArray(parsed.articles) && parsed.articles.length > 0 ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeBrowserCache(category: string, location: string, data: FetchNewsData) {
+  if (typeof window === "undefined" || data.articles.length === 0) return;
+  try {
+    window.localStorage.setItem(browserCacheKey(category, location), JSON.stringify(data));
+  } catch {
+    // Storage can be unavailable in private browsing
+  }
+}
+
+async function fetchLiveNews(category: string, pageSize: number, location: string): Promise<FetchNewsData> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -54,11 +89,8 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   });
   if (location) params.set("location", location);
 
-  // Hard 15s timeout — a stalled NewsAPI / Gemini call must never leave
-  // the UI spinning forever. AbortController cancels the request and
-  // react-query falls back to mock data via the hook below.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const timeoutId = setTimeout(() => controller.abort(), 6_000);
 
   let response: Response;
   try {
@@ -75,7 +107,7 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
     );
   } catch (err) {
     if ((err as Error)?.name === "AbortError") {
-      throw new Error("News feed timed out after 15s");
+      throw new Error("News feed timed out");
     }
     throw err;
   } finally {
@@ -89,28 +121,35 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
 
   const json = await response.json();
 
-  // Edge function signals graceful upstream failure (e.g. NewsAPI 429)
-  // with { fallback: true, articles: [] } and HTTP 200. Treat as error
-  // so react-query falls back to mock data via the hook below.
   if (json?.fallback && (!json.articles || json.articles.length === 0)) {
     throw new Error(json.error || "News source temporarily unavailable");
   }
 
-  return {
+  const result: FetchNewsData = {
     articles: (json.articles || []).map(mapToArticle) as Article[],
-    isLive: true as const,
+    isLive: true,
     fetchedAt: json.fetchedAt || new Date().toISOString(),
     totalResults: json.totalResults || 0,
   };
+  
+  if (result.articles.length > 0) {
+    writeBrowserCache(category, location, result);
+  }
+  
+  return result;
 }
 
 export function useNews({ category = "all", pageSize = 20, location = "India" }: UseNewsOptions = {}): NewsResult {
-  const queryClient = useQueryClient();
-  // Every caller shares one request per category+location. Different pageSize
-  // values used to create separate cache entries, firing several slow upstream
-  // calls per page load.
   const fetchSize = 30;
   const queryKey = ["news", category, location];
+  
+  const cachedFeed = readBrowserCache(category, location);
+  const immediateFeed: FetchNewsData = cachedFeed ?? {
+    articles: MOCK_ARTICLES,
+    isLive: false,
+    fetchedAt: null,
+    totalResults: MOCK_ARTICLES.length,
+  };
 
   const {
     data,
@@ -121,58 +160,37 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
   } = useQuery({
     queryKey,
     queryFn: () => fetchLiveNews(category, fetchSize, location),
+    initialData: immediateFeed,
+    initialDataUpdatedAt: Date.now(),
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
-    refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 0,
-    // Keep previous results visible while a refetch is in flight so the
-    // feed never blanks out and the page never appears "frozen".
-    placeholderData: (prev) => prev,
   });
 
+  useEffect(() => {
+    const refreshKey = `${category}:${location}`;
+    if (backgroundRefreshes.has(refreshKey)) return;
+    backgroundRefreshes.add(refreshKey);
+    void refetch();
+  }, [category, location, refetch]);
+
   const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey });
-    refetch();
-  }, [queryClient, queryKey, refetch]);
+    void refetch();
+  }, [refetch]);
 
-  // Graceful fallback to mock data on error
-  if (isError || (!data && !isLoading)) {
-    return {
-      articles: MOCK_ARTICLES.slice(0, pageSize),
-      isLive: false,
-      isLoading,
-      isError: !isLoading,
-      error: error instanceof Error ? error.message : "Failed to load live news",
-      fetchedAt: null,
-      totalResults: MOCK_ARTICLES.length,
-      refresh,
-    };
-  }
-
-  if (isLoading || !data) {
-    return {
-      articles: [],
-      isLive: false,
-      isLoading: true,
-      isError: false,
-      error: null,
-      fetchedAt: null,
-      totalResults: 0,
-      refresh,
-    };
-  }
+  // Use either the fresh data or the immediate (cached/mock) data
+  const currentData = data || immediateFeed;
 
   return {
-    articles: (data.articles.length > 0 ? data.articles : MOCK_ARTICLES).slice(0, pageSize),
-    isLive: data.isLive,
-    isLoading: false,
-    isError: false,
-    error: null,
-    fetchedAt: data.fetchedAt,
-    totalResults: data.totalResults,
+    articles: (currentData.articles.length > 0 ? currentData.articles : MOCK_ARTICLES).slice(0, pageSize),
+    isLive: currentData.isLive,
+    isLoading: isLoading && !data, // Only truly loading if we have no data at all
+    isError: isError && !data,
+    error: error instanceof Error ? error.message : null,
+    fetchedAt: currentData.fetchedAt,
+    totalResults: currentData.totalResults,
     refresh,
   };
 }

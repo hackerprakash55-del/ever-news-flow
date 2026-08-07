@@ -40,7 +40,15 @@ const CredibilityMeter = ({ score }: { score: number }) => {
 function useArticle(id: string): Article | null {
   const { data } = useQuery({
     queryKey: ["article-lookup", id],
-    queryFn: () => MOCK_ARTICLES.find((a) => a.id === id) ?? null,
+    queryFn: () => {
+      const fromMock = MOCK_ARTICLES.find((a) => a.id === id);
+      if (fromMock) return fromMock;
+      try {
+        const fromSession = sessionStorage.getItem(`article-${id}`);
+        if (fromSession) return JSON.parse(fromSession) as Article;
+      } catch {}
+      return null;
+    },
     staleTime: Infinity,
   });
   return data ?? null;
