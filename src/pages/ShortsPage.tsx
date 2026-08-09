@@ -5,7 +5,7 @@ import { fetchNarration, releaseNarration } from "@/lib/tts";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
-import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio, Heart, Download, Sparkles } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Article } from "@/data/mockData";
 import { toast } from "sonner";
@@ -243,6 +243,16 @@ export default function ShortsPage() {
     }
   };
 
+  const shareToX = (a: Article) => {
+    const url = `${window.location.origin}/article/${a.id}`;
+    const text = `${a.headline}\n\n✓ AI Verified — GAINN`;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=GAINN,AINews`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   const toggleLike = (a: Article) => {
     setLiked(p => {
       const next = { ...p, [a.id]: !p[a.id] };
@@ -398,6 +408,10 @@ export default function ShortsPage() {
                   <button aria-label="Share" onClick={() => share(a)} className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition">
                     <Share2 className="w-6 h-6" />
                     <span className="text-[10px] font-mono">{(a.headline.length * 3) % 300 + 11}</span>
+                  </button>
+                  <button aria-label="Post on X" onClick={() => shareToX(a)} className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition active:scale-90">
+                    <Twitter className="w-6 h-6" />
+                    <span className="text-[10px] font-mono">Post</span>
                   </button>
                   <button
                     onClick={() => handleDownload(a)}

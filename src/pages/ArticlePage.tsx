@@ -122,8 +122,9 @@ function ShareRail({ article }: { article: Article }) {
   const text = encodeURIComponent(article.headline);
   const enc = encodeURIComponent(url);
 
+  const xText = encodeURIComponent(`${article.headline}\n\n✓ AI Verified — GAINN`);
   const links = [
-    { Icon: Twitter, label: "X", href: `https://twitter.com/intent/tweet?text=${text}&url=${enc}` },
+    { Icon: Twitter, label: "X", href: `https://twitter.com/intent/tweet?text=${xText}&url=${enc}&hashtags=GAINN,AINews` },
     { Icon: Linkedin, label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc}` },
   ];
 

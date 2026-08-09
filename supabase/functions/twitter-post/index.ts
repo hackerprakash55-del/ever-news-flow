@@ -20,6 +20,27 @@ const CATEGORY_TAGS: Record<string, string> = {
   "Global Affairs": "WorldNews", Sports: "Sports",
 };
 
+const SITE = "https://ever-news-flow.lovable.app";
+const BRAND = "GAINN";
+
+type ContentKind = "article" | "video" | "short" | "broadcast" | "primetime";
+
+const KIND_BADGE: Record<ContentKind, string> = {
+  article: "📰",
+  video: "🎬 AI VIDEO REPORT:",
+  short: "⚡ 60-SEC SHORT:",
+  broadcast: "🔴 LIVE BROADCAST:",
+  primetime: "🌙 PRIME TIME:",
+};
+
+const KIND_CTA: Record<ContentKind, string> = {
+  article: "Read full story + AI analysis →",
+  video: "Watch the AI video report →",
+  short: "Watch the 60-second short →",
+  broadcast: "Tune into the live AI newsroom →",
+  primetime: "Watch tonight's AI news show →",
+};
+
 interface FormatInput {
   headline: string;
   sourceName: string;
@@ -27,11 +48,15 @@ interface FormatInput {
   category: string;
   articleUrl: string;
   isBreaking: boolean;
+  kind?: ContentKind;
 }
 
 function formatTweet(a: FormatInput): string {
+  const kind: ContentKind = a.kind ?? "article";
   const breaking = a.isBreaking && (a.category === "Politics" || a.category === "Global Affairs");
-  const badge = breaking ? "🔴 BREAKING:" : (CATEGORY_EMOJIS[a.category] || "📰");
+  const badge = breaking
+    ? "🔴 BREAKING:"
+    : (kind === "article" ? (CATEGORY_EMOJIS[a.category] || "📰") : KIND_BADGE[kind]);
   const catTag = CATEGORY_TAGS[a.category] || "News";
   const topicWord = a.headline
     .split(/\s+/)
@@ -39,12 +64,14 @@ function formatTweet(a: FormatInput): string {
   const topicTag = (topicWord?.replace(/[^a-zA-Z]/g, "") || "News");
   let headline = a.headline.slice(0, 200);
   const trustLine = `Trust: ${a.trustScore}% · ✓ AI Verified · ${a.sourceName}`;
-  const cta = `Read full story + AI analysis →\n${a.articleUrl}`;
-  const tags = `#GAINN #AINews #${catTag} #${topicTag}`;
-  let tweet = `${badge} ${headline}\n\n${trustLine}\n\n${cta}\n\n${tags}`;
+  const cta = `${KIND_CTA[kind]}\n${a.articleUrl}`;
+  const brand = `— ${BRAND} · ever-news-flow.lovable.app`;
+  const tags = `#${BRAND} #AINews #${catTag} #${topicTag}`;
+  const build = () => `${badge} ${headline}\n\n${trustLine}\n\n${cta}\n\n${brand}\n${tags}`;
+  let tweet = build();
   while (tweet.length > 280 && headline.length > 60) {
     headline = headline.slice(0, -5).trimEnd() + "…";
-    tweet = `${badge} ${headline}\n\n${trustLine}\n\n${cta}\n\n${tags}`;
+    tweet = build();
   }
   return tweet;
 }
@@ -100,6 +127,127 @@ async function postTweet(text: string) {
   return JSON.parse(body);
 }
 
+// ── Candidate collection ──────────────────────────────────────────────────
+type Candidate = FormatInput & { id: string; kind: ContentKind };
+
+async function collectCandidates(supa: any, hours: number): Promise<Candidate[]> {
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+  const out: Candidate[] = [];
+
+  // 1. AI video reports
+  const { data: videos } = await supa
+    .from("generated_videos")
+    .select("id,title,category,created_at")
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  for (const v of videos ?? []) {
+    out.push({
+      id: v.id,
+      kind: "video",
+      headline: v.title,
+      sourceName: BRAND,
+      trustScore: 90,
+      category: v.category || "Global Affairs",
+      articleUrl: `${SITE}/video-library`,
+      isBreaking: false,
+    });
+  }
+
+  // 2. Published verified stories → articles + shorts
+  const { data: runs } = await supa
+    .from("verification_runs")
+    .select("id,topic,story_headline,consensus_score,published,published_at")
+    .eq("published", true)
+    .gte("published_at", cutoff)
+    .order("published_at", { ascending: false })
+    .limit(10);
+  for (const r of runs ?? []) {
+    const headline = r.story_headline || r.topic;
+    if (!headline) continue;
+    out.push({
+      id: r.id,
+      kind: "article",
+      headline,
+      sourceName: BRAND,
+      trustScore: Math.round((Number(r.consensus_score) || 0.9) * 100),
+      category: "Global Affairs",
+      articleUrl: `${SITE}/`,
+      isBreaking: false,
+    });
+    out.push({
+      id: `${r.id}:short`,
+      kind: "short",
+      headline,
+      sourceName: BRAND,
+      trustScore: Math.round((Number(r.consensus_score) || 0.9) * 100),
+      category: "Global Affairs",
+      articleUrl: `${SITE}/shorts`,
+      isBreaking: false,
+    });
+  }
+
+  // 3. Live broadcast story segments
+  const { data: segs } = await supa
+    .from("broadcast_segments")
+    .select("id,kind,created_at,event_cluster_id,event_clusters(label)")
+    .eq("kind", "story")
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  for (const s of segs ?? []) {
+    const label = s.event_clusters?.label;
+    if (!label) continue;
+    out.push({
+      id: s.id,
+      kind: "broadcast",
+      headline: label,
+      sourceName: BRAND,
+      trustScore: 92,
+      category: "Global Affairs",
+      articleUrl: `${SITE}/newsroom`,
+      isBreaking: true,
+    });
+  }
+
+  return out;
+}
+
+async function publish(supa: any, c: Candidate) {
+  const tweetText = formatTweet(c);
+  const { data: pending, error: insErr } = await supa
+    .from("twitter_posts")
+    .insert({
+      article_id: c.id,
+      kind: c.kind,
+      tweet_text: tweetText,
+      headline: c.headline,
+      source_name: c.sourceName,
+      trust_score: c.trustScore,
+      category: c.category,
+      article_url: c.articleUrl,
+      status: "pending",
+    })
+    .select("id").single();
+  if (insErr) throw insErr;
+
+  try {
+    const result = await postTweet(tweetText);
+    await supa.from("twitter_posts").update({
+      status: "posted",
+      tweet_id: result?.data?.id ?? null,
+      posted_at: new Date().toISOString(),
+    }).eq("id", pending.id);
+    return { ok: true, kind: c.kind, id: c.id, tweet_id: result?.data?.id ?? null, text: tweetText };
+  } catch (err) {
+    await supa.from("twitter_posts").update({
+      status: "failed",
+      error_message: (err as Error).message.slice(0, 500),
+    }).eq("id", pending.id);
+    return { ok: false, kind: c.kind, id: c.id, error: (err as Error).message.slice(0, 300) };
+  }
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -109,73 +257,56 @@ Deno.serve(async (req) => {
   const supa = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
   try {
-    let article: FormatInput & { id: string; slug?: string } | null = null;
-    if (req.method === "POST") {
-      const body = await req.json().catch(() => ({}));
-      if (body?.article) article = body.article;
+    let body: any = {};
+    if (req.method === "POST") body = await req.json().catch(() => ({}));
+
+    // Explicit single post (e.g. "share this to X" from the app/admin).
+    if (body?.article) {
+      const a = body.article as Candidate;
+      const result = await publish(supa, { ...a, kind: (a.kind ?? "article") as ContentKind });
+      return new Response(JSON.stringify(result), {
+        status: result.ok ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Auto-pick highest trust generated_video in last 2h that hasn't been posted
-    if (!article) {
-      const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-      const { data: recent } = await supa
-        .from("generated_videos")
-        .select("id,title,category,created_at")
-        .gte("created_at", cutoff)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      const { data: posted } = await supa
-        .from("twitter_posts").select("article_id").eq("status", "posted");
-      const postedSet = new Set((posted ?? []).map((r: any) => r.article_id));
-      const pick = (recent ?? []).find((r: any) => !postedSet.has(r.id));
-      if (!pick) {
-        return new Response(JSON.stringify({ ok: true, message: "No new article to tweet" }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      article = {
-        id: pick.id,
-        headline: pick.title,
-        sourceName: "GAINN",
-        trustScore: 90,
-        category: pick.category || "Global Affairs",
-        articleUrl: `https://ever-news-flow.lovable.app/article/${pick.id}`,
-        isBreaking: false,
-      };
-    }
+    const hours = Math.min(24, Math.max(1, Number(body?.hours ?? 3)));
+    const limit = Math.min(6, Math.max(1, Number(body?.limit ?? 3)));
+    const kinds: ContentKind[] | null = Array.isArray(body?.kinds) && body.kinds.length
+      ? body.kinds
+      : null;
 
-    const tweetText = formatTweet(article);
+    const all = await collectCandidates(supa, hours);
+    const { data: posted } = await supa
+      .from("twitter_posts").select("article_id").eq("status", "posted");
+    const postedSet = new Set((posted ?? []).map((r: any) => r.article_id));
 
-    const { data: pending, error: insErr } = await supa
-      .from("twitter_posts")
-      .insert({
-        article_id: article.id,
-        tweet_text: tweetText,
-        headline: article.headline,
-        source_name: article.sourceName,
-        trust_score: article.trustScore,
-        category: article.category,
-        article_url: article.articleUrl,
-        status: "pending",
-      })
-      .select("id").single();
-    if (insErr) throw insErr;
+    // One per kind first (variety), then fill remaining slots.
+    const fresh = all.filter((c) => !postedSet.has(c.id) && (!kinds || kinds.includes(c.kind)));
+    const seenKinds = new Set<string>();
+    const primary = fresh.filter((c) => {
+      if (seenKinds.has(c.kind)) return false;
+      seenKinds.add(c.kind);
+      return true;
+    });
+    const queue = [...primary, ...fresh.filter((c) => !primary.includes(c))].slice(0, limit);
 
-    try {
-      const result = await postTweet(tweetText);
-      await supa.from("twitter_posts").update({
-        status: "posted",
-        tweet_id: result?.data?.id ?? null,
-        posted_at: new Date().toISOString(),
-      }).eq("id", pending.id);
-      return new Response(JSON.stringify({ ok: true, tweet: result, text: tweetText }),
+    if (!queue.length) {
+      return new Response(JSON.stringify({ ok: true, message: "No new content to post", posted: 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    } catch (err) {
-      await supa.from("twitter_posts").update({
-        status: "failed",
-        error_message: (err as Error).message.slice(0, 500),
-      }).eq("id", pending.id);
-      throw err;
     }
+
+    const results = [];
+    for (const c of queue) {
+      results.push(await publish(supa, c));
+      await new Promise((r) => setTimeout(r, 1200)); // gentle pacing for X rate limits
+    }
+
+    return new Response(JSON.stringify({
+      ok: results.some((r) => r.ok),
+      posted: results.filter((r) => r.ok).length,
+      results,
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("twitter-post error:", err);
     return new Response(JSON.stringify({ error: (err as Error).message }),
