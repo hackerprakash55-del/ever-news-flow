@@ -56,11 +56,11 @@ const App = () => (
                 <Route path="/trending"   element={<TrendingPage />} />
                 <Route path="/shorts"     element={<ShortsPage />} />
                 <Route path="/shorts/:id" element={<ShortsPage />} />
-                <Route path="/prime-time" element={<PrimeTimePage />} />
 
                 {/* Protected — must be signed in */}
                 <Route path="/newsroom"   element={<AuthGuard><NewsroomPage /></AuthGuard>} />
                 <Route path="/settings"   element={<AuthGuard><SettingsPage /></AuthGuard>} />
+                <Route path="/prime-time" element={<AuthGuard><PrimeTimePage /></AuthGuard>} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
