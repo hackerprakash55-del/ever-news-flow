@@ -409,6 +409,10 @@ export default function ShortsPage() {
                     <Share2 className="w-6 h-6" />
                     <span className="text-[10px] font-mono">{(a.headline.length * 3) % 300 + 11}</span>
                   </button>
+                  <button aria-label="Post on X" onClick={() => shareToX(a)} className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition active:scale-90">
+                    <Twitter className="w-6 h-6" />
+                    <span className="text-[10px] font-mono">Post</span>
+                  </button>
                   <button
                     onClick={() => handleDownload(a)}
                     aria-label="Download story card"
