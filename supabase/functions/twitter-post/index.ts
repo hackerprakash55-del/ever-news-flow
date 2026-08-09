@@ -20,6 +20,27 @@ const CATEGORY_TAGS: Record<string, string> = {
   "Global Affairs": "WorldNews", Sports: "Sports",
 };
 
+const SITE = "https://ever-news-flow.lovable.app";
+const BRAND = "GAINN";
+
+type ContentKind = "article" | "video" | "short" | "broadcast" | "primetime";
+
+const KIND_BADGE: Record<ContentKind, string> = {
+  article: "📰",
+  video: "🎬 AI VIDEO REPORT:",
+  short: "⚡ 60-SEC SHORT:",
+  broadcast: "🔴 LIVE BROADCAST:",
+  primetime: "🌙 PRIME TIME:",
+};
+
+const KIND_CTA: Record<ContentKind, string> = {
+  article: "Read full story + AI analysis →",
+  video: "Watch the AI video report →",
+  short: "Watch the 60-second short →",
+  broadcast: "Tune into the live AI newsroom →",
+  primetime: "Watch tonight's AI news show →",
+};
+
 interface FormatInput {
   headline: string;
   sourceName: string;
@@ -27,11 +48,15 @@ interface FormatInput {
   category: string;
   articleUrl: string;
   isBreaking: boolean;
+  kind?: ContentKind;
 }
 
 function formatTweet(a: FormatInput): string {
+  const kind: ContentKind = a.kind ?? "article";
   const breaking = a.isBreaking && (a.category === "Politics" || a.category === "Global Affairs");
-  const badge = breaking ? "🔴 BREAKING:" : (CATEGORY_EMOJIS[a.category] || "📰");
+  const badge = breaking
+    ? "🔴 BREAKING:"
+    : (kind === "article" ? (CATEGORY_EMOJIS[a.category] || "📰") : KIND_BADGE[kind]);
   const catTag = CATEGORY_TAGS[a.category] || "News";
   const topicWord = a.headline
     .split(/\s+/)
@@ -39,12 +64,14 @@ function formatTweet(a: FormatInput): string {
   const topicTag = (topicWord?.replace(/[^a-zA-Z]/g, "") || "News");
   let headline = a.headline.slice(0, 200);
   const trustLine = `Trust: ${a.trustScore}% · ✓ AI Verified · ${a.sourceName}`;
-  const cta = `Read full story + AI analysis →\n${a.articleUrl}`;
-  const tags = `#GAINN #AINews #${catTag} #${topicTag}`;
-  let tweet = `${badge} ${headline}\n\n${trustLine}\n\n${cta}\n\n${tags}`;
+  const cta = `${KIND_CTA[kind]}\n${a.articleUrl}`;
+  const brand = `— ${BRAND} · ever-news-flow.lovable.app`;
+  const tags = `#${BRAND} #AINews #${catTag} #${topicTag}`;
+  const build = () => `${badge} ${headline}\n\n${trustLine}\n\n${cta}\n\n${brand}\n${tags}`;
+  let tweet = build();
   while (tweet.length > 280 && headline.length > 60) {
     headline = headline.slice(0, -5).trimEnd() + "…";
-    tweet = `${badge} ${headline}\n\n${trustLine}\n\n${cta}\n\n${tags}`;
+    tweet = build();
   }
   return tweet;
 }
