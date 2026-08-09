@@ -243,6 +243,16 @@ export default function ShortsPage() {
     }
   };
 
+  const shareToX = (a: Article) => {
+    const url = `${window.location.origin}/article/${a.id}`;
+    const text = `${a.headline}\n\n✓ AI Verified — GAINN`;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=GAINN,AINews`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   const toggleLike = (a: Article) => {
     setLiked(p => {
       const next = { ...p, [a.id]: !p[a.id] };
