@@ -786,6 +786,7 @@ export type Database = {
           error_message: string | null
           headline: string
           id: string
+          kind: string
           posted_at: string | null
           source_name: string
           status: string
@@ -801,6 +802,7 @@ export type Database = {
           error_message?: string | null
           headline: string
           id?: string
+          kind?: string
           posted_at?: string | null
           source_name: string
           status?: string
@@ -816,6 +818,7 @@ export type Database = {
           error_message?: string | null
           headline?: string
           id?: string
+          kind?: string
           posted_at?: string | null
           source_name?: string
           status?: string
