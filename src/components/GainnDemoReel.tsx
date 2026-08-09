@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Radio, ShieldCheck, Sparkles, Play, Search } from "lucide-react";
+import { Radio, ShieldCheck, Sparkles, Play, Search, Maximize2, X } from "lucide-react";
 
 /**
  * Simulated screen-recording of the GAINN product.
@@ -28,6 +28,7 @@ const BODY = "Verified across 7 independent sources. GAINN's editorial agent bal
 export function GainnDemoReel() {
   const [scene, setScene] = useState(0);
   const [t, setT] = useState(0); // 0 → 1 progress inside the current scene
+  const [expanded, setExpanded] = useState(false);
   const raf = useRef<number | null>(null);
 
   useEffect(() => {
@@ -45,6 +46,99 @@ export function GainnDemoReel() {
   const current = SCENES[scene];
   const Icon = current.icon;
 
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [expanded]);
+
+  const window_ = (screenClass: string) => (
+    <div className="rounded-2xl border border-border overflow-hidden card-glass shadow-elevated w-full">
+      {/* Chrome */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-white/[0.03]">
+        <span className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+        <div className="ml-2 flex-1 rounded-md bg-black/30 border border-border px-2.5 py-1">
+          <span className="text-[10px] font-mono text-muted-foreground">{current.url}</span>
+        </div>
+        <Icon className="w-3.5 h-3.5 text-primary" />
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-label={expanded ? "Exit full screen demo" : "Watch demo full screen"}
+          className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {expanded ? <X className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {/* Screen */}
+      <div className={`relative overflow-hidden bg-[hsl(222_40%_5%)] ${screenClass}`}>
+        {scene === 0 && <SceneScan t={t} />}
+        {scene === 1 && <SceneVerify t={t} />}
+        {scene === 2 && <SceneWrite t={t} />}
+        {scene === 3 && <SceneVideo t={t} />}
+        {scene === 4 && <SceneFeed t={t} />}
+
+        {/* Simulated cursor */}
+        <div
+          className="pointer-events-none absolute w-3 h-3 rounded-full border border-primary bg-primary/40 transition-none"
+          style={{
+            left: `${20 + Math.sin(t * Math.PI * 2 + scene) * 30 + t * 40}%`,
+            top: `${35 + Math.cos(t * Math.PI * 2 + scene) * 22}%`,
+            boxShadow: "0 0 12px hsl(var(--primary) / 0.8)",
+          }}
+        />
+      </div>
+
+      {/* Playback bar */}
+      <div className="px-3 py-2 border-t border-border bg-white/[0.02]">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Play className="w-3 h-3 text-primary fill-primary" />
+          <span className="text-[11px] text-foreground/80 flex-1 truncate">{current.label}</span>
+          <span className="text-[10px] font-mono text-muted-foreground">
+            0{scene + 1}/0{SCENES.length}
+          </span>
+        </div>
+        <div className="h-0.5 w-full rounded-full bg-border overflow-hidden">
+          <div
+            className="h-full bg-primary"
+            style={{ width: `${((scene + t) / SCENES.length) * 100}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (expanded) {
+    return (
+      <div className="fixed inset-0 z-[120] bg-background/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 md:p-8 animate-fade-in">
+        <div className="w-full max-w-6xl space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+            <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">
+              GAINN live product demo
+            </span>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="ml-auto text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Close (Esc)
+            </button>
+          </div>
+          {window_("h-[62vh] min-h-[320px]")}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -52,57 +146,15 @@ export function GainnDemoReel() {
         <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground">
           Live product demo — no sign-up needed to watch
         </span>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="ml-auto inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-primary hover:opacity-80 transition-opacity"
+        >
+          <Maximize2 className="w-3 h-3" /> Full screen
+        </button>
       </div>
-
-      {/* Fake browser window */}
-      <div className="rounded-2xl border border-border overflow-hidden card-glass shadow-elevated">
-        {/* Chrome */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-white/[0.03]">
-          <span className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
-          <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
-          <div className="ml-2 flex-1 rounded-md bg-black/30 border border-border px-2.5 py-1">
-            <span className="text-[10px] font-mono text-muted-foreground">{current.url}</span>
-          </div>
-          <Icon className="w-3.5 h-3.5 text-primary" />
-        </div>
-
-        {/* Screen */}
-        <div className="relative h-[320px] overflow-hidden bg-[hsl(222_40%_5%)]">
-          {scene === 0 && <SceneScan t={t} />}
-          {scene === 1 && <SceneVerify t={t} />}
-          {scene === 2 && <SceneWrite t={t} />}
-          {scene === 3 && <SceneVideo t={t} />}
-          {scene === 4 && <SceneFeed t={t} />}
-
-          {/* Simulated cursor */}
-          <div
-            className="pointer-events-none absolute w-3 h-3 rounded-full border border-primary bg-primary/40 transition-none"
-            style={{
-              left: `${20 + Math.sin(t * Math.PI * 2 + scene) * 30 + t * 40}%`,
-              top: `${35 + Math.cos(t * Math.PI * 2 + scene) * 22}%`,
-              boxShadow: "0 0 12px hsl(var(--primary) / 0.8)",
-            }}
-          />
-        </div>
-
-        {/* Playback bar */}
-        <div className="px-3 py-2 border-t border-border bg-white/[0.02]">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Play className="w-3 h-3 text-primary fill-primary" />
-            <span className="text-[11px] text-foreground/80 flex-1 truncate">{current.label}</span>
-            <span className="text-[10px] font-mono text-muted-foreground">
-              0{scene + 1}/0{SCENES.length}
-            </span>
-          </div>
-          <div className="h-0.5 w-full rounded-full bg-border overflow-hidden">
-            <div
-              className="h-full bg-primary"
-              style={{ width: `${((scene + t) / SCENES.length) * 100}%` }}
-            />
-          </div>
-        </div>
-      </div>
+      {window_("h-[320px]")}
     </div>
   );
 }
