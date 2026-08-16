@@ -1,0 +1,244 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://lwdzzvrzsrssaocaprnl.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "global-ai-news",
+      "version": "0.1.0",
+      "title": "Global AI News"
+    },
+    "tools": [
+      {
+        "name": "search_verified_claims",
+        "title": "Search verified claims",
+        "description": "Search GAINN's verified news claims by keyword or topic. Returns claim text, status, confidence and topic.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Keyword or phrase to search claim text and topic for."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "description": "Maximum number of claims to return."
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_video_reports",
+        "title": "List AI video reports",
+        "description": "List GAINN's AI-generated video news reports, newest first, with title, category, duration and narration script.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional category filter, e.g. politics or crime."
+            },
+            "include_script": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include the full narration script for each report."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10,
+              "description": "Maximum number of reports to return."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_saved_articles",
+        "title": "List saved articles",
+        "description": "List the signed-in user's saved GAINN articles, most recently saved first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "description": "Maximum number of saved articles to return."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_article",
+        "title": "Save article",
+        "description": "Save a news article to the signed-in user's GAINN reading list.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "article_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Stable identifier of the article (URL or GAINN article id)."
+            },
+            "headline": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Article headline."
+            },
+            "summary": {
+              "type": "string",
+              "description": "Short summary of the article."
+            },
+            "category": {
+              "type": "string",
+              "description": "Article category, e.g. politics."
+            },
+            "region": {
+              "type": "string",
+              "description": "Region the story belongs to."
+            },
+            "source_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "Original source URL."
+            }
+          },
+          "required": [
+            "article_id",
+            "headline"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "remove_saved_article",
+        "title": "Remove saved article",
+        "description": "Remove an article from the signed-in user's GAINN reading list.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "article_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Identifier of the saved article to remove."
+            }
+          },
+          "required": [
+            "article_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_news_preferences",
+        "title": "Get news preferences",
+        "description": "Read the signed-in user's GAINN news preferences (categories and regions).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_news_preferences",
+        "title": "Update news preferences",
+        "description": "Update the signed-in user's GAINN news categories and regions.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 20,
+              "description": "Preferred news categories."
+            },
+            "regions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "maxItems": 20,
+              "description": "Preferred regions, e.g. India, Delhi."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
