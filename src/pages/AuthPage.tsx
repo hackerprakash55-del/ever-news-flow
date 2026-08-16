@@ -19,7 +19,9 @@ export default function AuthPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as any)?.from ?? "/";
+  const nextParam = new URLSearchParams(location.search).get("next");
+  const safeNext = nextParam && /^\/(?!\/)/.test(nextParam) ? nextParam : null;
+  const from = safeNext ?? (location.state as any)?.from ?? "/";
 
   // Already logged in → redirect
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function AuthPage() {
     setIsLoading(true);
     setErrorMsg("");
 
-    const redirectTo = `${window.location.origin}/`;
+    const redirectTo = `${window.location.origin}${safeNext ?? "/"}`;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
@@ -54,7 +56,7 @@ export default function AuthPage() {
     setGoogleLoading(true);
     setErrorMsg("");
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: safeNext ? `${window.location.origin}${safeNext}` : window.location.origin,
     });
     if (result.error) {
       setGoogleLoading(false);
