@@ -15,6 +15,8 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -23,10 +25,26 @@ export default function AuthPage() {
   const safeNext = nextParam && /^\/(?!\/)/.test(nextParam) ? nextParam : null;
   const from = safeNext ?? (location.state as any)?.from ?? "/";
 
+  // Surface errors handed back by Supabase / OAuth redirects
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const desc = params.get("error_description") ?? hash.get("error_description");
+    if (desc) {
+      setErrorMsg(desc);
+      setStep("error");
+    }
+  }, [location.search]);
+
   // Already logged in → redirect
   useEffect(() => {
     if (user) navigate(from, { replace: true });
   }, [user, navigate, from]);
+
+  // Every auth entry point lands here so tokens/codes are handled in one place
+  const callbackUrl = `${window.location.origin}/auth/callback${
+    safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""
+  }`;
 
   async function handleSendMagicLink(e: React.FormEvent) {
     e.preventDefault();
@@ -34,11 +52,10 @@ export default function AuthPage() {
     setIsLoading(true);
     setErrorMsg("");
 
-    const redirectTo = `${window.location.origin}${safeNext ?? "/"}`;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: redirectTo,
+        emailRedirectTo: callbackUrl,
         shouldCreateUser: true,
       },
     });
@@ -52,11 +69,30 @@ export default function AuthPage() {
     }
   }
 
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    const token = otp.replace(/\D/g, "");
+    if (token.length < 6) return;
+    setVerifying(true);
+    setErrorMsg("");
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token,
+      type: "email",
+    });
+    setVerifying(false);
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+    navigate(from, { replace: true });
+  }
+
   async function handleGoogle() {
     setGoogleLoading(true);
     setErrorMsg("");
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: safeNext ? `${window.location.origin}${safeNext}` : window.location.origin,
+      redirect_uri: callbackUrl,
     });
     if (result.error) {
       setGoogleLoading(false);
@@ -67,6 +103,7 @@ export default function AuthPage() {
     if (result.redirected) return;
     navigate(from, { replace: true });
   }
+
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -203,12 +240,35 @@ export default function AuthPage() {
                   Click it to sign in instantly.
                 </p>
               </div>
+
+              {/* Fallback: some mail clients pre-open (and burn) magic links —
+                  the 6-digit code in the same email always works. */}
+              <form onSubmit={handleVerifyOtp} className="space-y-2 text-left">
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                  Link not working? Enter the 6-digit code
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    inputMode="numeric"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="123456"
+                    className="flex-1 px-3 py-2.5 rounded-lg border border-border bg-surface-2 text-sm tracking-[0.3em] text-center text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gainn-blue/40"
+                  />
+                  <Button type="submit" disabled={verifying || otp.replace(/\D/g, "").length < 6}>
+                    {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify"}
+                  </Button>
+                </div>
+                {errorMsg && <p className="text-xs text-gainn-red">{errorMsg}</p>}
+              </form>
+
               <p className="text-xs text-muted-foreground font-mono">
                 Didn't receive it?{" "}
-                <button onClick={() => setStep("input")} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
+                <button onClick={() => { setErrorMsg(""); setStep("input"); }} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
                   Try again
                 </button>
               </p>
+
             </div>
           )}
 

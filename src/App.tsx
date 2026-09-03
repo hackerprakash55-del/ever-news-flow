@@ -12,6 +12,7 @@ import { ShortsFloatingButton } from "@/components/ShortsFloatingButton";
 
 // Eagerly load auth for fastest /auth startup; lazy-load everything else
 import AuthPage from "./pages/AuthPage";
+import AuthCallback from "./pages/AuthCallback";
 
 const Index            = lazy(() => import("./pages/Index"));
 const ArticlePage      = lazy(() => import("./pages/ArticlePage"));
@@ -50,6 +51,8 @@ const App = () => (
               <Routes>
                 {/* Public — no auth required */}
                 <Route path="/auth"       element={<AuthPage />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+
                 <Route path="/"           element={<Index />} />
                 <Route path="/article/:id" element={<ArticlePage />} />
                 <Route path="/video"      element={<AIVideoPage />} />
