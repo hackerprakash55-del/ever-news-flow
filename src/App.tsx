@@ -12,6 +12,7 @@ import { ShortsFloatingButton } from "@/components/ShortsFloatingButton";
 
 // Eagerly load auth for fastest /auth startup; lazy-load everything else
 import AuthPage from "./pages/AuthPage";
+import AuthCallback from "./pages/AuthCallback";
 
 const Index            = lazy(() => import("./pages/Index"));
 const ArticlePage      = lazy(() => import("./pages/ArticlePage"));
