@@ -240,12 +240,35 @@ export default function AuthPage() {
                   Click it to sign in instantly.
                 </p>
               </div>
+
+              {/* Fallback: some mail clients pre-open (and burn) magic links —
+                  the 6-digit code in the same email always works. */}
+              <form onSubmit={handleVerifyOtp} className="space-y-2 text-left">
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                  Link not working? Enter the 6-digit code
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    inputMode="numeric"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="123456"
+                    className="flex-1 px-3 py-2.5 rounded-lg border border-border bg-surface-2 text-sm tracking-[0.3em] text-center text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gainn-blue/40"
+                  />
+                  <Button type="submit" disabled={verifying || otp.replace(/\D/g, "").length < 6}>
+                    {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify"}
+                  </Button>
+                </div>
+                {errorMsg && <p className="text-xs text-gainn-red">{errorMsg}</p>}
+              </form>
+
               <p className="text-xs text-muted-foreground font-mono">
                 Didn't receive it?{" "}
-                <button onClick={() => setStep("input")} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
+                <button onClick={() => { setErrorMsg(""); setStep("input"); }} className="text-gainn-blue hover:text-gainn-cyan transition-colors">
                   Try again
                 </button>
               </p>
+
             </div>
           )}
 
