@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { createHmac } from "node:crypto";
+import { requireServiceOrAdmin } from "../_shared/supa.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -254,7 +256,19 @@ Deno.serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  // Only the cron job (service-role bearer) or an admin JWT may publish to
+  // the official X account. Everyone else is rejected before any posting.
+  const auth = await requireServiceOrAdmin(req);
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const supa = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+
 
   try {
     let body: any = {};

@@ -383,17 +383,19 @@ serve(async (req) => {
     // than 12s on it — NewsAPI results are returned either way.
     const orchestratorTopic = (searchQuery || (category !== "all" ? category : "")).trim();
     let orchestratorPromise: Promise<Response> | null = null;
-    if (rollDice && orchestratorTopic && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (rollDice && orchestratorTopic && SUPABASE_URL && SERVICE_ROLE_KEY) {
       orchestratorPromise = fetch(`${SUPABASE_URL}/functions/v1/newsroom-orchestrate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+          apikey: SERVICE_ROLE_KEY,
         },
         body: JSON.stringify({ topic: orchestratorTopic, threshold: 0.7 }),
       });
     }
+
 
     // If a free-text search query is provided, override category routing
     // and use NewsAPI /everything with the keyword
