@@ -40,3 +40,28 @@ export async function requireAdmin(authHeader: string | null) {
   if (!roles) return { ok: false as const, status: 403, error: "Forbidden" };
   return { ok: true as const, userId };
 }
+
+/**
+ * Allows only internal service-role callers (cron / other edge functions)
+ * or an authenticated admin user. Everyone else is rejected.
+ */
+export async function requireServiceOrAdmin(req: Request) {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const cronSecret = req.headers.get("x-cron-secret") ?? "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+
+  if (serviceKey && (bearer === serviceKey || cronSecret === serviceKey)) {
+    return { ok: true as const, service: true };
+  }
+  if (!bearer) return { ok: false as const, status: 401, error: "Unauthorized" };
+
+  try {
+    const auth = await requireAdmin(authHeader);
+    if (auth.ok) return { ok: true as const, service: false, userId: auth.userId };
+    return { ok: false as const, status: auth.status, error: auth.error };
+  } catch (_e) {
+    return { ok: false as const, status: 401, error: "Unauthorized" };
+  }
+}
+

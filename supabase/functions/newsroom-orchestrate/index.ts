@@ -15,11 +15,18 @@ import {
   upsertTopicMemory,
 } from "../_shared/memory.ts";
 import { aggregateConsensus } from "../_shared/trust.ts";
-import { serviceClient } from "../_shared/supa.ts";
+import { serviceClient, requireServiceOrAdmin } from "../_shared/supa.ts";
 import { graphAgent } from "../_shared/graph.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // Only the internal fetch-news caller (service-role bearer) or an admin JWT
+  // may run this expensive multi-agent pipeline and write to the public
+  // transparency tables.
+  const auth = await requireServiceOrAdmin(req);
+  if (!auth.ok) return jsonResponse({ error: auth.error }, auth.status);
+
   const t0 = Date.now();
   try {
     const { topic, threshold = 0.7, force = false } = await req.json();
