@@ -51,6 +51,8 @@ const App = () => (
               <Routes>
                 {/* Public — no auth required */}
                 <Route path="/auth"       element={<AuthPage />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+
                 <Route path="/"           element={<Index />} />
                 <Route path="/article/:id" element={<ArticlePage />} />
                 <Route path="/video"      element={<AIVideoPage />} />
