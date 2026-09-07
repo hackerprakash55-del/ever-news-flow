@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "next-themes";
 import gainnLogo from "@/assets/gainn-logo.png";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 
 const SearchOverlay    = lazy(() => import("@/components/SearchOverlay").then(m => ({ default: m.SearchOverlay })));
@@ -337,6 +338,7 @@ export const GlobalHeader = ({
           >
             <Search className="w-4 h-4" />
           </Button>
+          <LanguageSwitcher />
           {/* Dark / Light toggle */}
           <Button
             variant="ghost"
