@@ -1,42 +1,70 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getLanguage } from "@/lib/language";
 
 export interface TtsResult {
-  /** Blob URL for an <audio> element, or null if the server voice failed. */
+  /** Data/blob URL for an <audio> element, or null if the server voice failed. */
   audioUrl: string | null;
   /** Optional user-facing message about the fallback path. */
   message?: string;
+  /** Which voice produced the audio. */
+  provider?: "sarvam" | "elevenlabs";
 }
 
 /**
- * Once the server voice fails (quota, missing key, timeout) we stop calling it
+ * Once a server voice fails (quota, missing key, timeout) we stop calling it
  * for the rest of the session — otherwise every story pays a slow network
  * round-trip before falling back to the browser voice.
  */
-let premiumDisabled = false;
+let sarvamDisabled = false;
+let elevenDisabled = false;
+
 export function isPremiumVoiceDisabled() {
-  return premiumDisabled;
+  return sarvamDisabled && elevenDisabled;
 }
 
 /**
- * Request premium narration from the ElevenLabs edge function.
- * Returns a blob URL for a native <audio> element on success, or `{ audioUrl: null }`
- * when the server voice is unavailable — callers should then use Web Speech.
+ * Premium narration: Sarvam (Indian voices, multilingual) first, ElevenLabs as
+ * backup, then `{ audioUrl: null }` so callers use the browser voice.
  */
-export async function fetchNarration(script: string, title?: string): Promise<TtsResult> {
-  if (premiumDisabled) return { audioUrl: null };
+export async function fetchNarration(
+  script: string,
+  title?: string,
+  language?: string,
+): Promise<TtsResult> {
+  const lang = language || getLanguage();
+
+  if (!sarvamDisabled) {
+    try {
+      const { data, error } = await supabase.functions.invoke("sarvam-tts", {
+        body: { script, title, language: lang },
+      });
+      if (!error && data?.audioContent && !data?.useClientFallback) {
+        const contentType = data.contentType || "audio/wav";
+        return { audioUrl: `data:${contentType};base64,${data.audioContent}`, provider: "sarvam" };
+      }
+      sarvamDisabled = true;
+    } catch (err) {
+      console.warn("sarvam narration failed:", err);
+      sarvamDisabled = true;
+    }
+  }
+
+  // Non-English narration is Sarvam-only; ElevenLabs stays the English backup.
+  if (lang !== "en-IN" || elevenDisabled) return { audioUrl: null };
+
   try {
     const { data, error } = await supabase.functions.invoke("elevenlabs-tts", {
       body: { script, title },
     });
     if (error || !data?.audioContent || data?.useClientFallback) {
-      premiumDisabled = true;
+      elevenDisabled = true;
       return { audioUrl: null, message: data?.error ?? error?.message };
     }
     const contentType = data.contentType || "audio/mpeg";
-    return { audioUrl: `data:${contentType};base64,${data.audioContent}` };
+    return { audioUrl: `data:${contentType};base64,${data.audioContent}`, provider: "elevenlabs" };
   } catch (err) {
     console.warn("fetchNarration failed:", err);
-    premiumDisabled = true;
+    elevenDisabled = true;
     return { audioUrl: null, message: (err as Error)?.message };
   }
 }

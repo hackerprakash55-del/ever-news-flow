@@ -64,7 +64,7 @@ serve(async (req) => {
         speaker: SPEAKER,
         model: MODEL,
         pace: 1.0,
-challenge: undefined,
+
       }),
       signal: controller.signal,
     }).finally(() => clearTimeout(timeout));
