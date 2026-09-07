@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { saveProgress, getProgress } from "@/hooks/useReadingProgress";
 import { markArticleFinished, EmailCaptureToast } from "@/components/EmailCaptureToast";
+import { useLanguage, translateTexts, LANGUAGES } from "@/lib/language";
 
 // ── Credibility meter ──────────────────────────────────────
 const CredibilityMeter = ({ score }: { score: number }) => {
