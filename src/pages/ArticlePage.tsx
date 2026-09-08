@@ -693,51 +693,45 @@ export default function ArticlePage() {
                 ))}
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-display text-foreground leading-tight mb-4">
-                {article.headline}
-              </h1>
+              <TranslatedArticleBody
+                headline={article.headline}
+                summary={article.summary}
+                paragraphs={paragraphs}
+                between={
+                  <>
+                    <Link
+                      to="/shorts"
+                      className="group flex items-center gap-3 mb-4 px-4 py-3 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-red-500/10 hover:from-cyan-500/20 hover:to-red-500/20 transition-all"
+                    >
+                      <span className="flex-shrink-0 w-10 h-10 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold shadow-lg group-hover:scale-110 transition-transform">
+                        ▶
+                      </span>
+                      <span className="flex flex-col">
+                        <span className="text-[10px] font-black tracking-widest text-cyan-300">⚡ AI SHORTS</span>
+                        <span className="text-sm text-foreground font-medium">Watch this story as a 30-second AI news short →</span>
+                      </span>
+                    </Link>
 
-              <Link
-                to="/shorts"
-                className="group flex items-center gap-3 mb-4 px-4 py-3 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-red-500/10 hover:from-cyan-500/20 hover:to-red-500/20 transition-all"
-              >
-                <span className="flex-shrink-0 w-10 h-10 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold shadow-lg group-hover:scale-110 transition-transform">
-                  ▶
-                </span>
-                <span className="flex flex-col">
-                  <span className="text-[10px] font-black tracking-widest text-cyan-300">⚡ AI SHORTS</span>
-                  <span className="text-sm text-foreground font-medium">Watch this story as a 30-second AI news short →</span>
-                </span>
-              </Link>
+                    <AuthorCard article={article} />
 
-              <AuthorCard article={article} />
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
-                <span className={`flex items-center gap-1.5 font-mono text-xs ${isLiveArticle ? "text-gainn-green" : "text-accent"}`}>
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  {isLiveArticle ? "Live News" : "AI Generated & Verified"}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />{new Date(article.publishedAt).toLocaleString()}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> {article.readTime} min read
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5" /> {article.region}
-                </span>
-              </div>
-
-              <p className="text-base text-muted-foreground mb-6 italic border-l-2 border-primary pl-4">
-                {article.summary}
-              </p>
-
-              <div className="article-body">
-                {paragraphs.length > 0
-                  ? paragraphs.map((para, i) => <p key={i}>{para}</p>)
-                  : <p className="text-muted-foreground">{article.summary}</p>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
+                      <span className={`flex items-center gap-1.5 font-mono text-xs ${isLiveArticle ? "text-gainn-green" : "text-accent"}`}>
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        {isLiveArticle ? "Live News" : "AI Generated & Verified"}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />{new Date(article.publishedAt).toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" /> {article.readTime} min read
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5" /> {article.region}
+                      </span>
+                    </div>
+                  </>
                 }
-              </div>
+              />
 
               {isLiveArticle && (article as any).url && (
                 <div className="mt-6 p-4 rounded-lg border border-primary/30 bg-primary/5">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Languages, Loader2 } from "lucide-react";
 import { useLanguage, translateTexts, LANGUAGES } from "@/lib/language";
 
@@ -6,13 +6,15 @@ interface Props {
   headline: string;
   summary: string;
   paragraphs: string[];
+  /** Rendered between the headline and the standfirst (share links, author card, meta row). */
+  between?: ReactNode;
 }
 
 /**
  * Renders the article headline, standfirst and body, translated on the fly into
  * the reader's chosen Indian language (Sarvam). Falls back to English silently.
  */
-export const TranslatedArticleBody = ({ headline, summary, paragraphs }: Props) => {
+export const TranslatedArticleBody = ({ headline, summary, paragraphs, between }: Props) => {
   const [lang] = useLanguage();
   const [translated, setTranslated] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,19 +40,21 @@ export const TranslatedArticleBody = ({ headline, summary, paragraphs }: Props) 
 
   return (
     <>
-      <h1 className="text-3xl md:text-4xl font-display text-foreground leading-tight mb-4">
+      <h1 lang={lang.split("-")[0]} className="text-3xl md:text-4xl font-display text-foreground leading-tight mb-4">
         {text[0]}
       </h1>
 
       {lang !== "en-IN" && (
-        <div className="flex items-center gap-2 mb-4 text-xs font-mono text-muted-foreground">
+        <div data-testid="translation-status" className="flex items-center gap-2 mb-4 text-xs font-mono text-muted-foreground">
           {loading
             ? <><Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> Translating to {langLabel}…</>
             : <><Languages className="w-3.5 h-3.5 text-primary" /> AI translation · {langLabel}</>}
         </div>
       )}
 
-      <p className="text-base text-muted-foreground mb-6 italic border-l-2 border-primary pl-4">
+      {between}
+
+      <p lang={lang.split("-")[0]} className="text-base text-muted-foreground mb-6 italic border-l-2 border-primary pl-4">
         {text[1]}
       </p>
 
