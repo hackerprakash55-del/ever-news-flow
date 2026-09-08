@@ -23,6 +23,10 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const script = typeof body.script === "string" ? body.script : "";
     const title = typeof body.title === "string" ? body.title : "";
+    // Optional BCP-47 language (e.g. "hi-IN"); turbo v2.5 is multilingual.
+    const language = typeof body.language === "string" && /^[a-z]{2}-[A-Z]{2}$/.test(body.language)
+      ? body.language : "en-IN";
+    const languageCode = language.split("-")[0];
     if (!script.trim()) {
       return new Response(
         JSON.stringify({ error: "script is required" }),
@@ -40,10 +44,11 @@ serve(async (req) => {
 
     // Keep requests small so low-quota API keys still produce audible reports.
     // Full long-form scripts continue to work through the browser voice fallback.
-    const intro = title ? `GAINN report. ${title}. ` : "GAINN report. ";
+    const introWord = languageCode === "hi" ? "गेन रिपोर्ट।" : "GAINN report.";
+    const intro = title ? `${introWord} ${title}. ` : `${introWord} `;
     const merged = `${intro}${cleanScript}`.replace(/\s+/g, " ").trim();
     const textToSpeak = merged.length > MAX_TTS_CHARS
-      ? `${merged.slice(0, MAX_TTS_CHARS).replace(/\s+\S*$/, "")}. More details are available in the on-screen report.`
+      ? `${merged.slice(0, MAX_TTS_CHARS).replace(/\s+\S*$/, "")}.`
       : merged;
 
     const controller = new AbortController();
@@ -59,6 +64,7 @@ serve(async (req) => {
         body: JSON.stringify({
           text: textToSpeak,
           model_id: "eleven_turbo_v2_5",
+          language_code: languageCode,
           voice_settings: {
             stability: 0.65,
             similarity_boost: 0.78,
