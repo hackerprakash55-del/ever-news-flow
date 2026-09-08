@@ -16,8 +16,53 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min fresh window matches client refetch
 const STALE_MAX_MS = 6 * 60 * 60 * 1000; // serve stale up to 6h on upstream failure
 interface CacheEntry { at: number; payload: unknown; }
 const responseCache = new Map<string, CacheEntry>();
-function cacheKey(category: string, location: string, pageSize: number, q: string, expand: boolean) {
-  return `${category}|${location}|${pageSize}|${q}|${expand ? 1 : 0}`;
+function cacheKey(category: string, location: string, pageSize: number, q: string, expand: boolean, lang = "en") {
+  return `${category}|${location}|${pageSize}|${q}|${expand ? 1 : 0}|${lang}`;
+}
+
+// ── Hindi-language source pack ─────────────────────────────────────────────
+// Leading Hindi dailies and broadcasters. NewsAPI has no `language=hi`
+// filter, so we scope by domain and query in Devanagari instead.
+export const HINDI_DOMAINS = [
+  "navbharattimes.indiatimes.com",
+  "aajtak.in",
+  "amarujala.com",
+  "jagran.com",
+  "bhaskar.com",
+  "livehindustan.com",
+  "abplive.com",
+  "ndtv.in",
+  "hindi.news18.com",
+  "zeenews.india.com",
+  "jansatta.com",
+  "tv9hindi.com",
+  "hindi.moneycontrol.com",
+  "patrika.com",
+];
+
+const HINDI_QUERIES: Record<string, string> = {
+  all: "भारत OR दिल्ली OR मुंबई OR सरकार OR मोदी OR पुलिस OR चुनाव OR बाजार",
+  Politics: "भाजपा OR कांग्रेस OR मोदी OR राहुल OR संसद OR चुनाव OR मुख्यमंत्री OR विपक्ष",
+  Crime: "पुलिस OR हत्या OR गिरफ्तार OR FIR OR ठगी OR घोटाला OR CBI OR ED OR छापा",
+  Government: "सरकार OR मंत्रालय OR योजना OR नीति OR कैबिनेट OR बजट OR RBI OR अधिसूचना",
+  Economy: "अर्थव्यवस्था OR महंगाई OR सेंसेक्स OR निफ्टी OR रुपया OR बजट OR IPO OR कारोबार",
+  Technology: "टेक्नोलॉजी OR स्टार्टअप OR स्मार्टफोन OR रिलायंस OR जियो OR AI",
+  AI: "AI OR कृत्रिम बुद्धिमत्ता OR ChatGPT OR स्टार्टअप",
+  Science: "इसरो OR चंद्रयान OR विज्ञान OR अनुसंधान OR IIT",
+  Health: "स्वास्थ्य OR एम्स OR अस्पताल OR बीमारी OR डेंगू OR टीका",
+  Sports: "क्रिकेट OR IPL OR कोहली OR रोहित OR हॉकी OR ओलंपिक",
+  Entertainment: "बॉलीवुड OR फिल्म OR शाहरुख OR सलमान OR बॉक्स ऑफिस OR OTT",
+  Environment: "पर्यावरण OR प्रदूषण OR मानसून OR बाढ़ OR लू OR जलवायु",
+  "Global Affairs": "विदेश OR चीन OR पाकिस्तान OR अमेरिका OR G20 OR सीमा",
+};
+
+function buildHindiNewsApiUrl(category: string, location: string, pageSize: number, apiKey: string): string {
+  const loc = location.trim();
+  const isIndia = !loc || /^india$/i.test(loc);
+  const q = isIndia
+    ? (HINDI_QUERIES[category] || HINDI_QUERIES.all)
+    : `"${loc}" AND (${HINDI_QUERIES[category] || HINDI_QUERIES.all})`;
+  return `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&domains=${HINDI_DOMAINS.join(",")}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}`;
 }
 
 const SOURCE_CATEGORY_MAP: Record<string, string> = {
@@ -331,11 +376,12 @@ serve(async (req) => {
     const pageSize = Math.min(Number(url.searchParams.get("pageSize") || "20"), 30);
     const searchQuery = url.searchParams.get("q") || ""; // free-text keyword search
     const shouldExpand = url.searchParams.get("expand") === "true";
+    const lang = url.searchParams.get("lang") === "hi" ? "hi" : "en";
 
     const t0 = Date.now();
 
     // ── Serve fresh cache immediately if within TTL ──
-    const ckey = cacheKey(category, location, pageSize, searchQuery, shouldExpand);
+    const ckey = cacheKey(category, location, pageSize, searchQuery, shouldExpand, lang);
     const cached = responseCache.get(ckey);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
       return new Response(JSON.stringify({ ...(cached.payload as object), cached: true }), {
@@ -402,7 +448,11 @@ serve(async (req) => {
     let newsApiUrl: string;
     if (searchQuery) {
       const encoded = encodeURIComponent(location ? `${searchQuery} ${location}` : searchQuery);
-      newsApiUrl = `https://newsapi.org/v2/everything?q=${encoded}&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
+      newsApiUrl = lang === "hi"
+        ? `https://newsapi.org/v2/everything?q=${encoded}&domains=${HINDI_DOMAINS.join(",")}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`
+        : `https://newsapi.org/v2/everything?q=${encoded}&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
+    } else if (lang === "hi") {
+      newsApiUrl = buildHindiNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
     } else {
       newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
     }
