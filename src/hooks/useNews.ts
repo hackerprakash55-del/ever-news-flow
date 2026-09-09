@@ -27,6 +27,7 @@ interface UseNewsOptions {
   category?: string;
   pageSize?: number;
   location?: string; // city / state / country string
+  lang?: "en" | "hi"; // feed language (Hindi pulls Hindi-language Indian sources)
 }
 
 interface NewsResult {
@@ -50,14 +51,14 @@ interface FetchNewsData {
 const NEWS_CACHE_PREFIX = "gainn-news-v1";
 const backgroundRefreshes = new Set<string>();
 
-function browserCacheKey(category: string, location: string) {
-  return `${NEWS_CACHE_PREFIX}:${category}:${location}`;
+function browserCacheKey(category: string, location: string, lang = "en") {
+  return `${NEWS_CACHE_PREFIX}:${category}:${location}:${lang}`;
 }
 
-function readBrowserCache(category: string, location: string): FetchNewsData | undefined {
+function readBrowserCache(category: string, location: string, lang = "en"): FetchNewsData | undefined {
   if (typeof window === "undefined") return undefined;
   try {
-    const raw = window.localStorage.getItem(browserCacheKey(category, location));
+    const raw = window.localStorage.getItem(browserCacheKey(category, location, lang));
     if (!raw) return undefined;
     const parsed = JSON.parse(raw) as FetchNewsData;
     return Array.isArray(parsed.articles) && parsed.articles.length > 0 ? parsed : undefined;
@@ -66,16 +67,16 @@ function readBrowserCache(category: string, location: string): FetchNewsData | u
   }
 }
 
-function writeBrowserCache(category: string, location: string, data: FetchNewsData) {
+function writeBrowserCache(category: string, location: string, data: FetchNewsData, lang = "en") {
   if (typeof window === "undefined" || data.articles.length === 0) return;
   try {
-    window.localStorage.setItem(browserCacheKey(category, location), JSON.stringify(data));
+    window.localStorage.setItem(browserCacheKey(category, location, lang), JSON.stringify(data));
   } catch {
     // Storage can be unavailable in private browsing
   }
 }
 
-async function fetchLiveNews(category: string, pageSize: number, location: string): Promise<FetchNewsData> {
+async function fetchLiveNews(category: string, pageSize: number, location: string, lang = "en"): Promise<FetchNewsData> {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -88,6 +89,7 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
     pageSize: String(pageSize),
   });
   if (location) params.set("location", location);
+  if (lang === "hi") params.set("lang", "hi");
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 6_000);
@@ -133,17 +135,17 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   };
   
   if (result.articles.length > 0) {
-    writeBrowserCache(category, location, result);
+    writeBrowserCache(category, location, result, lang);
   }
   
   return result;
 }
 
-export function useNews({ category = "all", pageSize = 20, location = "India" }: UseNewsOptions = {}): NewsResult {
+export function useNews({ category = "all", pageSize = 20, location = "India", lang = "en" }: UseNewsOptions = {}): NewsResult {
   const fetchSize = 30;
-  const queryKey = ["news", category, location];
+  const queryKey = ["news", category, location, lang];
   
-  const cachedFeed = readBrowserCache(category, location);
+  const cachedFeed = readBrowserCache(category, location, lang);
   const immediateFeed: FetchNewsData = cachedFeed ?? {
     articles: MOCK_ARTICLES,
     isLive: false,
@@ -159,7 +161,7 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
     refetch,
   } = useQuery({
     queryKey,
-    queryFn: () => fetchLiveNews(category, fetchSize, location),
+    queryFn: () => fetchLiveNews(category, fetchSize, location, lang),
     initialData: immediateFeed,
     initialDataUpdatedAt: Date.now(),
     staleTime: 10 * 60 * 1000,
@@ -170,11 +172,11 @@ export function useNews({ category = "all", pageSize = 20, location = "India" }:
   });
 
   useEffect(() => {
-    const refreshKey = `${category}:${location}`;
+    const refreshKey = `${category}:${location}:${lang}`;
     if (backgroundRefreshes.has(refreshKey)) return;
     backgroundRefreshes.add(refreshKey);
     void refetch();
-  }, [category, location, refetch]);
+  }, [category, location, lang, refetch]);
 
   const refresh = useCallback(() => {
     void refetch();

@@ -56,7 +56,14 @@ function StoryCard({ a }: { a: Article }) {
 }
 
 export default function PrimeTimePage() {
-  const { articles, isLive } = useNews({ pageSize: 20, location: "India" });
+  const [feedLang, setFeedLang] = useState<"en" | "hi">(() => {
+    if (typeof localStorage === "undefined") return "en";
+    return localStorage.getItem("gainn:primetime-lang") === "hi" ? "hi" : "en";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("gainn:primetime-lang", feedLang); } catch { /* noop */ }
+  }, [feedLang]);
+  const { articles, isLive } = useNews({ pageSize: 20, location: "India", lang: feedLang });
   const [activeStory, setActiveStory] = useState(0);
   const [gridCount, setGridCount] = useState(6);
   const [clock, setClock] = useState(new Date());
@@ -74,6 +81,8 @@ export default function PrimeTimePage() {
     const iv = setInterval(() => setClock(new Date()), 1000);
     return () => clearInterval(iv);
   }, []);
+
+  useEffect(() => { setActiveStory(0); }, [feedLang]);
 
   const tonight = useMemo(() => articles.slice(0, 6), [articles]);
   const feature = tonight[activeStory] ?? tonight[0];
@@ -103,11 +112,11 @@ export default function PrimeTimePage() {
     setVoiceState("browser");
     await waitForVoices();
     const u = new SpeechSynthesisUtterance(scriptFor(a));
-    tuneUtterance(u);
+    tuneUtterance(u, feedLang === "hi" ? "hi-IN" : "en-IN");
     u.volume = muted ? 0 : 1;
     u.onend = () => { if (playingRef.current && idx === activeRef.current) nextStory(); };
     window.speechSynthesis.speak(u);
-  }, [muted, nextStory]);
+  }, [muted, nextStory, feedLang]);
 
   // Broadcast engine: narrate the active story, then auto-shift to the next one.
   useEffect(() => {
@@ -117,7 +126,7 @@ export default function PrimeTimePage() {
     const idx = activeStory;
     setVoiceState("loading");
     (async () => {
-      const { audioUrl } = await fetchNarration(scriptFor(feature), feature.headline);
+      const { audioUrl } = await fetchNarration(scriptFor(feature), feature.headline, feedLang === "hi" ? "hi-IN" : "en-IN");
       if (cancelled || idx !== activeRef.current) return;
       if (!audioUrl) { await speakBrowser(feature, idx); return; }
       audioUrlRef.current = audioUrl;
@@ -131,7 +140,7 @@ export default function PrimeTimePage() {
     })();
     return () => { cancelled = true; stopAudio(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, activeStory, feature?.id]);
+  }, [playing, activeStory, feature?.id, feedLang]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.muted = muted;
@@ -163,6 +172,21 @@ export default function PrimeTimePage() {
               <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase">
                 GAINN Flagship Show
               </span>
+              <div className="flex items-center gap-1 p-0.5 rounded-full border border-border">
+                {(["en", "hi"] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setFeedLang(l)}
+                    aria-pressed={feedLang === l}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-[11px] font-mono transition",
+                      feedLang === l ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {l === "en" ? "English" : "हिन्दी"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <h1 className="mt-5 font-display font-bold leading-none text-[52px] md:text-[76px] text-white [text-shadow:0_0_36px_hsl(var(--primary)/0.45)]">
