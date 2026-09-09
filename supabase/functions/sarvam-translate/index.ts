@@ -60,7 +60,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             input: piece,
-            source_language_code: "auto",
+            source_language_code: "en-IN",
             target_language_code: target,
             model: "sarvam-translate:v1",
             mode: "formal",
