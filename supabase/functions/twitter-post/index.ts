@@ -53,11 +53,20 @@ interface FormatInput {
   kind?: ContentKind;
 }
 
+const HI_CTA: Record<ContentKind, string> = {
+  article: "पूरी खबर पढ़ें →",
+  video: "एआई वीडियो रिपोर्ट देखें →",
+  short: "60 सेकंड की शॉर्ट देखें →",
+  broadcast: "लाइव एआई न्यूज़रूम देखें →",
+  primetime: "आज रात का एआई न्यूज़ शो देखें →",
+};
+
 function formatTweet(a: FormatInput): string {
   const kind: ContentKind = a.kind ?? "article";
+  const isHindi = /[\u0900-\u097F]/.test(a.headline);
   const breaking = a.isBreaking && (a.category === "Politics" || a.category === "Global Affairs");
   const badge = breaking
-    ? "🔴 BREAKING:"
+    ? (isHindi ? "🔴 ब्रेकिंग:" : "🔴 BREAKING:")
     : (kind === "article" ? (CATEGORY_EMOJIS[a.category] || "📰") : KIND_BADGE[kind]);
   const catTag = CATEGORY_TAGS[a.category] || "News";
   const topicWord = a.headline
@@ -65,10 +74,14 @@ function formatTweet(a: FormatInput): string {
     .find((w) => w.length > 5 && /^[A-Z]/.test(w));
   const topicTag = (topicWord?.replace(/[^a-zA-Z]/g, "") || "News");
   let headline = a.headline.slice(0, 200);
-  const trustLine = `Trust: ${a.trustScore}% · ✓ AI Verified · ${a.sourceName}`;
-  const cta = `${KIND_CTA[kind]}\n${a.articleUrl}`;
+  const trustLine = isHindi
+    ? `विश्वसनीयता: ${a.trustScore}% · ✓ एआई सत्यापित · ${a.sourceName}`
+    : `Trust: ${a.trustScore}% · ✓ AI Verified · ${a.sourceName}`;
+  const cta = `${(isHindi ? HI_CTA : KIND_CTA)[kind]}\n${a.articleUrl}`;
   const brand = `— ${BRAND} · ever-news-flow.lovable.app`;
-  const tags = `#${BRAND} #AINews #${catTag} #${topicTag}`;
+  const tags = isHindi
+    ? `#${BRAND} #हिंदीसमाचार #AINews #${catTag}`
+    : `#${BRAND} #AINews #${catTag} #${topicTag}`;
   const build = () => `${badge} ${headline}\n\n${trustLine}\n\n${cta}\n\n${brand}\n${tags}`;
   let tweet = build();
   while (tweet.length > 280 && headline.length > 60) {
@@ -77,6 +90,7 @@ function formatTweet(a: FormatInput): string {
   }
   return tweet;
 }
+
 
 // ── OAuth 1.0a signing for POST /2/tweets ─────────────────────────────────
 function percentEncode(s: string) {
