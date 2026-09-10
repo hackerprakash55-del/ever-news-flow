@@ -11,6 +11,7 @@ import { useNews } from "@/hooks/useNews";
 import { fetchNarration, releaseNarration } from "@/lib/tts";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/language";
 import type { Article } from "@/data/mockData";
 
 const FALLBACK =
@@ -56,13 +57,10 @@ function StoryCard({ a }: { a: Article }) {
 }
 
 export default function PrimeTimePage() {
-  const [feedLang, setFeedLang] = useState<"en" | "hi">(() => {
-    if (typeof localStorage === "undefined") return "en";
-    return localStorage.getItem("gainn:primetime-lang") === "hi" ? "hi" : "en";
-  });
-  useEffect(() => {
-    try { localStorage.setItem("gainn:primetime-lang", feedLang); } catch { /* noop */ }
-  }, [feedLang]);
+  // Prime Time follows the site-wide language chosen in the header.
+  const [lang, setLang] = useLanguage();
+  const feedLang: "en" | "hi" = lang.startsWith("hi") ? "hi" : "en";
+  const setFeedLang = (l: "en" | "hi") => setLang(l === "hi" ? "hi-IN" : "en-IN");
   const { articles, isLive } = useNews({ pageSize: 20, location: "India", lang: feedLang });
   const [activeStory, setActiveStory] = useState(0);
   const [gridCount, setGridCount] = useState(6);
@@ -112,11 +110,11 @@ export default function PrimeTimePage() {
     setVoiceState("browser");
     await waitForVoices();
     const u = new SpeechSynthesisUtterance(scriptFor(a));
-    tuneUtterance(u, feedLang === "hi" ? "hi-IN" : "en-IN");
+    tuneUtterance(u, lang);
     u.volume = muted ? 0 : 1;
     u.onend = () => { if (playingRef.current && idx === activeRef.current) nextStory(); };
     window.speechSynthesis.speak(u);
-  }, [muted, nextStory, feedLang]);
+  }, [muted, nextStory, lang]);
 
   // Broadcast engine: narrate the active story, then auto-shift to the next one.
   useEffect(() => {
@@ -126,7 +124,7 @@ export default function PrimeTimePage() {
     const idx = activeStory;
     setVoiceState("loading");
     (async () => {
-      const { audioUrl } = await fetchNarration(scriptFor(feature), feature.headline, feedLang === "hi" ? "hi-IN" : "en-IN");
+      const { audioUrl } = await fetchNarration(scriptFor(feature), feature.headline, lang);
       if (cancelled || idx !== activeRef.current) return;
       if (!audioUrl) { await speakBrowser(feature, idx); return; }
       audioUrlRef.current = audioUrl;
@@ -140,7 +138,7 @@ export default function PrimeTimePage() {
     })();
     return () => { cancelled = true; stopAudio(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, activeStory, feature?.id, feedLang]);
+  }, [playing, activeStory, feature?.id, lang]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.muted = muted;
@@ -264,6 +262,12 @@ export default function PrimeTimePage() {
               >
                 See tonight's lineup
               </a>
+              <Link
+                to="/prime-time/schedule"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-primary/40 text-sm font-semibold text-primary hover:bg-primary/10 transition"
+              >
+                {feedLang === "hi" ? "हिन्दी बुलेटिन शेड्यूल" : "Schedule Hindi bulletin"}
+              </Link>
             </div>
           </div>
 

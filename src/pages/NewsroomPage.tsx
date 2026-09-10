@@ -15,6 +15,7 @@ import { SeoHead } from "@/components/SeoHead";
 import { useNews } from "@/hooks/useNews";
 import { cleanNarrationText } from "@/lib/videoVisuals";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
+import { getLanguage } from "@/lib/language";
 import { releaseNarration } from "@/lib/tts";
 
 const MetricCard = ({
@@ -147,7 +148,7 @@ function LiveBroadcastDesk() {
   const speakStory = useCallback((story: BroadcastStory, onDone: () => void) => {
     void waitForVoices();
     const utter = new SpeechSynthesisUtterance(story.script);
-    tuneUtterance(utter);
+    tuneUtterance(utter, getLanguage());
     utter.onend = onDone;
     utter.onerror = (event) => {
       console.warn("Live broadcast voice failed:", event.error);

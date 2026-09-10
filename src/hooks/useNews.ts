@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Article, MOCK_ARTICLES } from "@/data/mockData";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useLocalizedArticles } from "@/hooks/useLocalizedArticles";
 
 // Map raw NewsAPI response shape to our Article type
 function mapToArticle(raw: any): Article {
@@ -185,8 +186,15 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
   // Use either the fresh data or the immediate (cached/mock) data
   const currentData = data || immediateFeed;
 
+  const baseArticles = useMemo(
+    () => (currentData.articles.length > 0 ? currentData.articles : MOCK_ARTICLES).slice(0, pageSize),
+    [currentData, pageSize],
+  );
+  // Headlines + summaries follow the reader's chosen language (Sarvam translation).
+  const localized = useLocalizedArticles(baseArticles, pageSize);
+
   return {
-    articles: (currentData.articles.length > 0 ? currentData.articles : MOCK_ARTICLES).slice(0, pageSize),
+    articles: localized,
     isLive: currentData.isLive,
     isLoading: isLoading && !data, // Only truly loading if we have no data at all
     isError: isError && !data,
