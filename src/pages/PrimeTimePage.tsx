@@ -56,13 +56,10 @@ function StoryCard({ a }: { a: Article }) {
 }
 
 export default function PrimeTimePage() {
-  const [feedLang, setFeedLang] = useState<"en" | "hi">(() => {
-    if (typeof localStorage === "undefined") return "en";
-    return localStorage.getItem("gainn:primetime-lang") === "hi" ? "hi" : "en";
-  });
-  useEffect(() => {
-    try { localStorage.setItem("gainn:primetime-lang", feedLang); } catch { /* noop */ }
-  }, [feedLang]);
+  // Prime Time follows the site-wide language chosen in the header.
+  const [lang, setLang] = useLanguage();
+  const feedLang: "en" | "hi" = lang.startsWith("hi") ? "hi" : "en";
+  const setFeedLang = (l: "en" | "hi") => setLang(l === "hi" ? "hi-IN" : "en-IN");
   const { articles, isLive } = useNews({ pageSize: 20, location: "India", lang: feedLang });
   const [activeStory, setActiveStory] = useState(0);
   const [gridCount, setGridCount] = useState(6);
