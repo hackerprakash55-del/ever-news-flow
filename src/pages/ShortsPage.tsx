@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useNews } from "@/hooks/useNews";
 import { fetchNarration, releaseNarration } from "@/lib/tts";
 import { tuneUtterance, waitForVoices } from "@/lib/voice";
+import { getLanguage } from "@/lib/language";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
 import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter } from "lucide-react";
@@ -135,7 +136,7 @@ export default function ShortsPage() {
     if (!("speechSynthesis" in window)) return;
     try { window.speechSynthesis.cancel(); window.speechSynthesis.resume(); } catch {}
     const u = new SpeechSynthesisUtterance(scriptFor(a));
-    tuneUtterance(u);
+    tuneUtterance(u, getLanguage());
     u.onend = () => { if (activeRef.current === active) advance(); };
     uttRef.current = u;
     if (!muted && !paused) window.speechSynthesis.speak(u);
@@ -144,7 +145,7 @@ export default function ShortsPage() {
   const speakPremium = useCallback(async (a: Article) => {
     setPremium("loading");
     const idx = activeRef.current;
-    const { audioUrl } = await fetchNarration(scriptFor(a), a.headline);
+    const { audioUrl } = await fetchNarration(scriptFor(a), a.headline, getLanguage());
     if (idx !== activeRef.current) return;
     if (!audioUrl) { await speakBrowser(a); return; }
     audioUrlRef.current = audioUrl;
