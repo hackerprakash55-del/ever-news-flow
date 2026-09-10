@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Article, MOCK_ARTICLES } from "@/data/mockData";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useLocalizedArticles } from "@/hooks/useLocalizedArticles";
 
 // Map raw NewsAPI response shape to our Article type
 function mapToArticle(raw: any): Article {

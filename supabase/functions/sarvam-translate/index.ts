@@ -77,8 +77,14 @@ serve(async (req) => {
       return out.join(" ");
     };
 
-    const translations: string[] = [];
-    for (const t of texts) translations.push(await translateOne(t));
+    // Translate in parallel batches so a 20-story feed does not take 20 round-trips.
+    const translations: string[] = new Array(texts.length);
+    const CONCURRENCY = 8;
+    for (let i = 0; i < texts.length; i += CONCURRENCY) {
+      const slice = texts.slice(i, i + CONCURRENCY);
+      const done = await Promise.all(slice.map((t) => translateOne(t)));
+      done.forEach((d, j) => { translations[i + j] = d; });
+    }
     clearTimeout(timeout);
 
     return json({ translations, target, provider: "sarvam" });
