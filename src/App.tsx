@@ -23,6 +23,7 @@ const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
 const TrendingPage     = lazy(() => import("./pages/TrendingPage"));
 const ShortsPage       = lazy(() => import("./pages/ShortsPage"));
 const PrimeTimePage    = lazy(() => import("./pages/PrimeTimePage"));
+const PrimeTimeSchedulePage = lazy(() => import("./pages/PrimeTimeSchedulePage"));
 const OAuthConsent     = lazy(() => import("./pages/OAuthConsent"));
 const NotFound         = lazy(() => import("./pages/NotFound"));
 
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="/newsroom"   element={<AuthGuard><NewsroomPage /></AuthGuard>} />
                 <Route path="/settings"   element={<AuthGuard><SettingsPage /></AuthGuard>} />
                 <Route path="/prime-time" element={<AuthGuard><PrimeTimePage /></AuthGuard>} />
+                <Route path="/prime-time/schedule" element={<AuthGuard><PrimeTimeSchedulePage /></AuthGuard>} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

@@ -262,6 +262,12 @@ export default function PrimeTimePage() {
               >
                 See tonight's lineup
               </a>
+              <Link
+                to="/prime-time/schedule"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-primary/40 text-sm font-semibold text-primary hover:bg-primary/10 transition"
+              >
+                {feedLang === "hi" ? "हिन्दी बुलेटिन शेड्यूल" : "Schedule Hindi bulletin"}
+              </Link>
             </div>
           </div>
 
