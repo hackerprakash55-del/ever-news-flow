@@ -18,24 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { saveProgress, getProgress } from "@/hooks/useReadingProgress";
 import { markArticleFinished, EmailCaptureToast } from "@/components/EmailCaptureToast";
 import { TranslatedArticleBody } from "@/components/TranslatedArticleBody";
-
-// ── Credibility meter ──────────────────────────────────────
-const CredibilityMeter = ({ score }: { score: number }) => {
-  const segments = 10;
-  const filled = Math.round((score / 100) * segments);
-  const color = score >= 90 ? "#10b981" : score >= 70 ? "#f59e0b" : "#ef4444";
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex gap-0.5">
-        {Array.from({ length: segments }).map((_, i) => (
-          <div key={i} className="w-3 h-3 rounded-sm transition-all"
-            style={{ background: i < filled ? color : "hsl(var(--surface-3))" }} />
-        ))}
-      </div>
-      <span className="text-sm font-bold font-mono" style={{ color }}>{score}%</span>
-    </div>
-  );
-};
+import { ArticleVerificationBlock, verificationLabel } from "@/components/ArticleVerificationBlock";
 
 // ── Article lookup ─────────────────────────────────────────
 function useArticle(id: string): Article | null {
@@ -123,7 +106,8 @@ function ShareRail({ article }: { article: Article }) {
   const text = encodeURIComponent(article.headline);
   const enc = encodeURIComponent(url);
 
-  const xText = encodeURIComponent(`${article.headline}\n\n✓ AI Verified — GAINN`);
+  const status = verificationLabel(article).label;
+  const xText = encodeURIComponent(`${article.headline}\n\n${status} — GAINN`);
   const links = [
     { Icon: Twitter, label: "X", href: `https://twitter.com/intent/tweet?text=${xText}&url=${enc}&hashtags=GAINN,AINews` },
     { Icon: Linkedin, label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc}` },
@@ -221,9 +205,6 @@ function AIAnalysis({ article }: { article: Article }) {
     `${article.summary} The story directly shapes how ${cat.toLowerCase()} stakeholders allocate attention and capital this week.`,
     `Beyond the headline, this signals a structural shift that ripples across adjacent markets, policy debates, and public sentiment.`,
   ].join(" ");
-  const left = `Progressive analysts frame this as evidence that stronger oversight and equity-focused policy in ${cat.toLowerCase()} are overdue.`;
-  const right = `Conservative commentators argue the development validates market-led approaches and warns against premature regulatory response.`;
-  const intl = `International observers see ${article.region || "global"} dynamics at play, with implications for cross-border coordination and trade.`;
   const next1 = `Expect follow-on coverage within 48 hours as institutional actors respond and additional verified sources weigh in.`;
   const next2 = `Watch for a measurable shift in related indicators — sentiment, pricing, or policy proposals — over the next 1–2 weeks.`;
 
@@ -254,26 +235,6 @@ function AIAnalysis({ article }: { article: Article }) {
             Why This Matters
           </h3>
           <p className="text-foreground/90 leading-relaxed">{why}</p>
-        </section>
-
-        <section>
-          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[#00D4FF] mb-2">
-            Perspectives
-          </h3>
-          <div className="grid sm:grid-cols-3 gap-3">
-            {[
-              { label: "Left view", color: "#5b8def", text: left },
-              { label: "Right view", color: "#ff7a59", text: right },
-              { label: "International", color: "#10b981", text: intl },
-            ].map((p) => (
-              <div key={p.label} className="rounded-lg p-3 bg-white/[0.03] border border-white/[0.06]">
-                <div className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1" style={{ color: p.color }}>
-                  {p.label}
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{p.text}</p>
-              </div>
-            ))}
-          </div>
         </section>
 
         <section>
@@ -589,7 +550,7 @@ export default function ArticlePage() {
   const nextArticle = allArticles[(currentIndex + 1) % Math.max(allArticles.length, 1)] ?? allArticles[0];
   const showNext = nextArticle && nextArticle.id !== article.id;
 
-  const biasLabel = Math.abs(article.biasScore) < 0.1 ? "Neutral" : article.biasScore > 0 ? "Slight Right" : "Slight Left";
+  const verificationStatus = verificationLabel(article);
   const isLiveArticle = article.id.startsWith("live-");
   const paragraphs = article.body ? article.body.split("\n\n").filter(Boolean) : [];
 
@@ -716,8 +677,8 @@ export default function ArticlePage() {
 
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
                       <span className={`flex items-center gap-1.5 font-mono text-xs ${isLiveArticle ? "text-gainn-green" : "text-accent"}`}>
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        {isLiveArticle ? "Live News" : "AI Generated & Verified"}
+                        <Shield className="w-3.5 h-3.5" />
+                        {verificationStatus.label}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />{new Date(article.publishedAt).toLocaleString()}
@@ -767,6 +728,8 @@ export default function ArticlePage() {
                 </Link>
               </div>
 
+              <ArticleVerificationBlock article={article} />
+
               {/* ── More Stories ── */}
               <AIAnalysis article={article} />
               <MoreStories articles={allArticles} current={article} />
@@ -778,36 +741,24 @@ export default function ArticlePage() {
 
             {/* ── Sidebar ── */}
             <div className="space-y-5">
-              {/* AI Fact Check */}
+              {/* Source check */}
               <div className="card-glass rounded-lg p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" />
-                  <h3 className="text-sm font-semibold">AI Fact Check Report</h3>
+                  <h3 className="text-sm font-semibold">Source Check</h3>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-2">Credibility Score</div>
-                  <CredibilityMeter score={article.credibilityScore} />
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1.5">Bias Analysis</div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 rounded-full bg-surface-3 relative overflow-hidden">
-                      <div className="absolute inset-y-0 left-1/2 w-0.5 bg-border" />
-                      <div className="absolute inset-y-0 w-3 h-2 rounded-full bg-accent transform -translate-x-1/2"
-                        style={{ left: `${50 + article.biasScore * 50}%` }} />
-                    </div>
-                    <span className="text-xs font-mono text-accent">{biasLabel}</span>
+                {verificationStatus.canShowScore && article.verification?.credibility_score && (
+                  <div>
+                    <div className="text-lg font-bold font-mono text-primary">{article.verification.credibility_score.value}%</div>
+                    <p className="text-xs text-muted-foreground mt-1">{article.verification.credibility_score.basis}</p>
                   </div>
-                  <div className="flex justify-between text-[9px] text-muted-foreground mt-1 font-mono">
-                    <span>Left</span><span>Neutral</span><span>Right</span>
-                  </div>
-                </div>
+                )}
                 <div>
                   <div className="text-xs text-muted-foreground mb-2">Sources</div>
                   <div className="space-y-1.5">
                     {article.sources.map((src) => (
                       <div key={src} className="flex items-center gap-2 text-xs">
-                        <CheckCircle className="w-3 h-3 text-gainn-green flex-shrink-0" />
+                        <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                         <span className="text-foreground">{src}</span>
                       </div>
                     ))}
@@ -816,8 +767,8 @@ export default function ArticlePage() {
                 <div className="pt-2 border-t border-border">
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="bg-surface-2 rounded p-2">
-                      <div className="text-sm font-bold font-mono text-gainn-green">✓</div>
-                      <div className="text-[10px] text-muted-foreground">Verified</div>
+                      <div className="text-sm font-bold font-mono text-muted-foreground">{article.verification?.sources_checked.length ?? article.sources.length}</div>
+                      <div className="text-[10px] text-muted-foreground">Source{(article.verification?.sources_checked.length ?? article.sources.length) === 1 ? "" : "s"}</div>
                     </div>
                     <div className="bg-surface-2 rounded p-2">
                       <div className="text-sm font-bold font-mono text-accent">{isLiveArticle ? "🌐" : "AI"}</div>
@@ -838,7 +789,7 @@ export default function ArticlePage() {
                   <div className="p-3 space-y-3">
                     {sameCategory.map((a) => (
                       <Link to={`/article/${a.id}`} state={{ article: a }} key={a.id} className="flex gap-3 group">
-                        {a.imageUrl && <img src={a.imageUrl} alt="" className="w-14 h-12 object-cover rounded opacity-70 group-hover:opacity-100 flex-shrink-0 transition-opacity" />}
+                        {a.imageUrl && <img src={a.imageUrl} alt="" loading="lazy" decoding="async" width={56} height={48} className="w-14 h-12 object-cover rounded opacity-70 group-hover:opacity-100 flex-shrink-0 transition-opacity" />}
                         <div>
                           <p className="text-xs font-medium text-foreground group-hover:text-accent transition-colors line-clamp-2 leading-snug">{a.headline}</p>
                           <span className="text-[10px] font-mono text-muted-foreground">{a.readTime}m read</span>

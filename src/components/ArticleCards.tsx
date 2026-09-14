@@ -36,20 +36,27 @@ function ReadProgressBar({ articleId }: { articleId: string }) {
 
 // ── Sub-components ────────────────────────────────────────
 // Single trust indicator: shield + score. Cyan is the only accent used for trust.
-const TrustBadge = ({ score }: { score: number }) => (
+const TrustBadge = ({ article }: { article: Article }) => {
+  const verification = article.verification;
+  const sourceCount = new Set(verification?.sources_checked.map((source) => source.outlet)).size;
+  const score = verification?.credibility_score;
+  const verified = verification?.verification_status === "verified" && sourceCount >= 3 && score;
+  const label = verification?.verification_status === "developing" ? "Developing" : sourceCount <= 1 ? "Single source" : "Unverified";
+  return (
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-accent/90 cursor-help">
-          <Shield className="w-3 h-3" />{score}%
+        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground cursor-help">
+          <Shield className="w-3 h-3" />{verified ? `${score.value}%` : label}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[220px] text-xs">
-        AI-verified trust score, cross-checked against primary sources.
+        {verified ? score.basis : "A score appears only after at least three independent sources are checked."}
       </TooltipContent>
     </Tooltip>
   </TooltipProvider>
-);
+  );
+};
 
 // One neutral status tag — BREAKING in red only when actually breaking.
 const StatusTag = ({ category, isBreaking }: { category: string; isBreaking?: boolean }) =>
@@ -161,7 +168,7 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
         <div className="relative h-full flex flex-col justify-end p-6 min-h-[480px]">
           <div className="flex items-center justify-between gap-2 mb-3">
             <StatusTag category={article.category} isBreaking={article.isBreaking} />
-            <TrustBadge score={article.credibilityScore} />
+            <TrustBadge article={article} />
           </div>
 
           <h2 className="hero-headline text-foreground mb-3 group-hover:text-primary transition-colors">
@@ -230,6 +237,11 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
             <img
               src={article.imageUrl}
               alt={article.headline}
+              loading="lazy"
+              decoding="async"
+              width={640}
+              height={360}
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               className="w-full h-full object-cover opacity-75 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
             />
           ) : (
@@ -247,7 +259,7 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
         <div className="p-5 flex flex-col flex-1">
           <div className="flex items-center justify-between gap-2 mb-3">
             <StatusTag category={article.category} isBreaking={article.isBreaking} />
-            <TrustBadge score={article.credibilityScore} />
+            <TrustBadge article={article} />
           </div>
 
           <h3 className={`text-[15px] font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
@@ -300,7 +312,9 @@ export const ArticleListItem = ({ article, index }: { article: Article; index: n
           {article.headline}
         </h4>
         <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
-          {article.credibilityScore}%
+          {article.verification?.verification_status === "verified" && article.verification.credibility_score
+            ? `${article.verification.credibility_score.value}%`
+            : article.verification?.verification_status === "developing" ? "Developing" : "Single source"}
         </span>
       </div>
     </div>

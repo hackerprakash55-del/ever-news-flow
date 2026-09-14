@@ -1,30 +1,22 @@
 import { useState } from "react";
 import { Article } from "@/data/mockData";
-import { Eye, ThumbsUp, AlertTriangle } from "lucide-react";
+import { Eye, AlertTriangle } from "lucide-react";
 
-type Perspective = "neutral" | "optimistic" | "critical";
+type Perspective = "agreement" | "differences";
 
 const TABS: { id: Perspective; label: string; icon: React.ElementType; color: string }[] = [
-  { id: "neutral", label: "Neutral", icon: Eye, color: "text-gainn-cyan border-gainn-cyan" },
-  { id: "optimistic", label: "Optimistic", icon: ThumbsUp, color: "text-gainn-green border-gainn-green" },
-  { id: "critical", label: "Critical", icon: AlertTriangle, color: "text-gainn-amber border-gainn-amber" },
+  { id: "agreement", label: "Agreed", icon: Eye, color: "text-gainn-cyan border-gainn-cyan" },
+  { id: "differences", label: "Differences", icon: AlertTriangle, color: "text-gainn-amber border-gainn-amber" },
 ];
 
 // Generate perspective summaries from article data
 function getPerspective(article: Article, perspective: Perspective): string {
-  const base = article.summary;
-  switch (perspective) {
-    case "neutral":
-      return base;
-    case "optimistic":
-      return `This development signals significant positive momentum. ${base} Experts suggest this could lead to substantial improvements in the field, with long-term benefits for global stakeholders and potential breakthroughs in related areas.`;
-    case "critical":
-      return `While noteworthy, critical analysis reveals potential concerns. ${base} Skeptics point to unresolved challenges, implementation risks, and the possibility that outcomes may not meet expectations without significant additional effort and oversight.`;
-  }
+  if (perspective === "agreement") return article.verification?.agreement.core_claim || "No independently corroborated claim is recorded yet.";
+  return article.verification?.disagreements.map((item) => item.point).join(" ") || "No sourced disagreements are recorded.";
 }
 
 export const MultiPerspectiveTabs = ({ article }: { article: Article }) => {
-  const [active, setActive] = useState<Perspective>("neutral");
+  const [active, setActive] = useState<Perspective>("agreement");
 
   return (
     <div className="mt-3">

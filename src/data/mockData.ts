@@ -2,13 +2,33 @@
 // GAINN Mock Data — Realistic news articles, agents, events
 // ============================================================
 
+export type VerificationSource = {
+  outlet: string;
+  url: string;
+  published_at: string;
+  stance_on_core_claim: string;
+};
+
+export type ArticleVerification = {
+  sources_checked: VerificationSource[];
+  agreement: { core_claim: string; corroborating_sources: string[] };
+  disagreements: Array<{
+    point: string;
+    source_a: { outlet: string; position: string };
+    source_b: { outlet: string; position: string };
+  }>;
+  omissions: Array<{ fact: string; reported_by: string[]; missing_from: string[] }>;
+  credibility_score?: { value: number; basis: string };
+  verification_status: "verified" | "developing" | "single-source" | "unverified";
+};
+
 export type Article = {
   id: string;
   headline: string;
   summary: string;
   body: string;
   category: string;
-  credibilityScore: number;
+  credibilityScore?: number;
   sources: string[];
   publishedAt: string;
   readTime: number;
@@ -17,7 +37,9 @@ export type Article = {
   region: string;
   imageUrl?: string;
   aiGenerated: boolean;
-  biasScore: number; // 0 = neutral, -1 = left, +1 = right
+  biasScore?: number; // legacy field; only present when backed by analysis
+  url?: string;
+  verification?: ArticleVerification;
 };
 
 export type Agent = {
