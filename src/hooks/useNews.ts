@@ -5,13 +5,16 @@ import { useLocalizedArticles } from "@/hooks/useLocalizedArticles";
 
 // Map raw NewsAPI response shape to our Article type
 function mapToArticle(raw: any): Article {
+  const verification = raw.verification && typeof raw.verification === "object"
+    ? raw.verification
+    : undefined;
   return {
     id: raw.id || `live-${Date.now()}-${Math.random()}`,
     headline: raw.headline || raw.title || "Untitled",
     summary: raw.summary || raw.description || "",
     body: raw.body || raw.content || raw.description || "",
     category: raw.category || "Global Affairs",
-    credibilityScore: raw.credibilityScore ?? 85,
+    credibilityScore: verification?.credibility_score?.value,
     sources: Array.isArray(raw.sources) ? raw.sources : [raw.sources || "NewsAPI"],
     publishedAt: raw.publishedAt || new Date().toISOString(),
     readTime: raw.readTime ?? 3,
@@ -20,7 +23,9 @@ function mapToArticle(raw: any): Article {
     region: raw.region || "Global",
     imageUrl: raw.imageUrl || undefined,
     aiGenerated: Boolean(raw.aiGenerated),
-    biasScore: typeof raw.biasScore === "number" ? raw.biasScore : 0,
+    biasScore: typeof raw.biasScore === "number" ? raw.biasScore : undefined,
+    url: typeof raw.url === "string" ? raw.url : undefined,
+    verification,
   };
 }
 
@@ -39,6 +44,9 @@ interface NewsResult {
   error: string | null;
   fetchedAt: string | null;
   totalResults: number;
+  isCached: boolean;
+  isFallback: boolean;
+  notice: string | null;
   refresh: () => void;
 }
 
@@ -47,6 +55,9 @@ interface FetchNewsData {
   isLive: boolean;
   fetchedAt: string | null;
   totalResults: number;
+  isCached?: boolean;
+  isFallback?: boolean;
+  notice?: string | null;
 }
 
 const NEWS_CACHE_PREFIX = "gainn-news-v1";
@@ -124,15 +135,14 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
 
   const json = await response.json();
 
-  if (json?.fallback && (!json.articles || json.articles.length === 0)) {
-    throw new Error(json.error || "News source temporarily unavailable");
-  }
-
   const result: FetchNewsData = {
     articles: (json.articles || []).map(mapToArticle) as Article[],
-    isLive: true,
+    isLive: !json.fallback && !json.stale,
     fetchedAt: json.fetchedAt || new Date().toISOString(),
     totalResults: json.totalResults || 0,
+    isCached: Boolean(json.cached || json.stale),
+    isFallback: Boolean(json.fallback),
+    notice: json.notice || (json.stale ? "Live feed unavailable, showing latest cached stories." : null),
   };
   
   if (result.articles.length > 0) {
@@ -152,6 +162,11 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
     isLive: false,
     fetchedAt: null,
     totalResults: MOCK_ARTICLES.length,
+    isCached: Boolean(cachedFeed),
+    isFallback: !cachedFeed,
+    notice: cachedFeed
+      ? "Loading the latest feed; showing stories saved on this device."
+      : "Live feed unavailable, showing sample stories while we reconnect.",
   };
 
   const {
@@ -201,6 +216,9 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
     error: error instanceof Error ? error.message : null,
     fetchedAt: currentData.fetchedAt,
     totalResults: currentData.totalResults,
+    isCached: Boolean(currentData.isCached),
+    isFallback: Boolean(currentData.isFallback),
+    notice: currentData.notice ?? null,
     refresh,
   };
 }
