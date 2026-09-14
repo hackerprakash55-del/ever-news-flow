@@ -534,6 +534,48 @@ export type Database = {
         }
         Relationships: []
       }
+      news_feed_cache: {
+        Row: {
+          articles: Json
+          cache_key: string
+          category: string
+          fetched_at: string
+          language: string
+          location: string
+          page_size: number
+          provider: string
+          query_text: string
+          total_results: number
+          updated_at: string
+        }
+        Insert: {
+          articles?: Json
+          cache_key: string
+          category: string
+          fetched_at?: string
+          language?: string
+          location: string
+          page_size?: number
+          provider?: string
+          query_text?: string
+          total_results?: number
+          updated_at?: string
+        }
+        Update: {
+          articles?: Json
+          cache_key?: string
+          category?: string
+          fetched_at?: string
+          language?: string
+          location?: string
+          page_size?: number
+          provider?: string
+          query_text?: string
+          total_results?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       news_preferences: {
         Row: {
           categories: string[]
