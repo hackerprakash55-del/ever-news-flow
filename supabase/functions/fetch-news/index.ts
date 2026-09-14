@@ -20,6 +20,52 @@ function cacheKey(category: string, location: string, pageSize: number, q: strin
   return `${category}|${location}|${pageSize}|${q}|${expand ? 1 : 0}|${lang}`;
 }
 
+async function readPersistentCache(svc: any, key: string) {
+  if (!svc) return null;
+  const { data, error } = await svc
+    .from("news_feed_cache")
+    .select("articles,total_results,fetched_at,provider")
+    .eq("cache_key", key)
+    .maybeSingle();
+  if (error || !data || !Array.isArray(data.articles) || data.articles.length === 0) return null;
+  return {
+    articles: data.articles,
+    totalResults: data.total_results,
+    source: data.provider,
+    fetchedAt: data.fetched_at,
+    cached: true,
+    stale: true,
+    fallback: true,
+    notice: "Live feed unavailable, showing latest cached stories.",
+  };
+}
+
+async function writePersistentCache(
+  svc: any,
+  key: string,
+  category: string,
+  location: string,
+  language: string,
+  queryText: string,
+  pageSize: number,
+  payload: any,
+) {
+  if (!svc || !Array.isArray(payload.articles) || payload.articles.length === 0) return;
+  const { error } = await svc.from("news_feed_cache").upsert({
+    cache_key: key,
+    category,
+    location,
+    language,
+    query_text: queryText,
+    page_size: pageSize,
+    articles: payload.articles,
+    total_results: payload.totalResults ?? payload.articles.length,
+    provider: payload.source ?? "Public news feed",
+    fetched_at: payload.fetchedAt ?? new Date().toISOString(),
+  });
+  if (error) console.warn("news_feed_cache upsert:", error.message);
+}
+
 // ── Hindi-language source pack ─────────────────────────────────────────────
 // Leading Hindi dailies and broadcasters. NewsAPI has no `language=hi`
 // filter, so we scope by domain and query in Devanagari instead.
@@ -217,8 +263,8 @@ function mapNewsApiArticle(raw: any, index: number, location: string, expandedBo
     ? raw.content.replace(/\[\+\d+ chars\]$/, "").trim()
     : description;
   const body = expandedBody || rawBody || description;
-  const credibilityScore = 75 + Math.floor(Math.random() * 22);
-  const biasScore = parseFloat((Math.random() * 0.2 - 0.1).toFixed(3));
+  const sourceUrl = typeof raw.url === "string" ? raw.url : "";
+  const publishedAt = raw.publishedAt || new Date().toISOString();
 
   return {
     id: `live-${Date.now()}-${index}`,
@@ -226,18 +272,83 @@ function mapNewsApiArticle(raw: any, index: number, location: string, expandedBo
     summary: description || title,
     body,
     category,
-    credibilityScore,
     sources: [sourceName],
-    publishedAt: raw.publishedAt || new Date().toISOString(),
+    publishedAt,
     readTime: estimateReadTime(body),
     tags: extractTags(title, description),
     isBreaking: index < 2,
     region: location || "Global",
     imageUrl: raw.urlToImage || undefined,
     aiGenerated: false,
-    biasScore,
-    url: raw.url,
+    url: sourceUrl,
+    verification: {
+      sources_checked: [{
+        outlet: sourceName,
+        url: sourceUrl,
+        published_at: publishedAt,
+        stance_on_core_claim: "Original report",
+      }],
+      agreement: { core_claim: "", corroborating_sources: [] },
+      disagreements: [],
+      omissions: [],
+      verification_status: "single-source",
+    },
   };
+}
+
+function textOf(item: Element, selector: string): string {
+  return item.querySelector(selector)?.textContent?.trim() ?? "";
+}
+
+async function fetchPublicRss(category: string, location: string, pageSize: number, lang: string) {
+  const terms = lang === "hi"
+    ? (HINDI_QUERIES[category] || HINDI_QUERIES.all)
+    : `${location || "India"} ${category === "all" ? "local news" : category}`;
+  const locale = lang === "hi" ? "hi" : "en-IN";
+  const country = "IN";
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(terms)}&hl=${locale}&gl=${country}&ceid=${country}:${lang === "hi" ? "hi" : "en"}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4_500);
+  try {
+    const response = await fetch(rssUrl, { signal: controller.signal });
+    if (!response.ok) return [];
+    const xml = await response.text();
+    const document = new DOMParser().parseFromString(xml, "application/xml");
+    if (!document) return [];
+    return Array.from(document.querySelectorAll("item")).slice(0, pageSize).map((item, index) => {
+      const headline = textOf(item, "title").replace(/\s+-\s+[^-]+$/, "");
+      const outlet = textOf(item, "source") || "Google News";
+      const sourceUrl = textOf(item, "link");
+      const publishedAt = new Date(textOf(item, "pubDate") || Date.now()).toISOString();
+      return {
+        id: `rss-${btoa(unescape(encodeURIComponent(sourceUrl || headline))).replace(/[^a-zA-Z0-9]/g, "").slice(-28)}-${index}`,
+        headline,
+        summary: headline,
+        body: headline,
+        category: category === "all" ? guessCategory(headline, "", "unknown") : category,
+        sources: [outlet],
+        publishedAt,
+        readTime: 2,
+        tags: extractTags(headline, ""),
+        isBreaking: index < 2,
+        region: location || "India",
+        aiGenerated: false,
+        url: sourceUrl,
+        verification: {
+          sources_checked: [{ outlet, url: sourceUrl, published_at: publishedAt, stance_on_core_claim: "Original report" }],
+          agreement: { core_claim: "", corroborating_sources: [] },
+          disagreements: [],
+          omissions: [],
+          verification_status: "single-source",
+        },
+      };
+    }).filter((article) => article.headline);
+  } catch (error) {
+    console.warn("Public RSS fallback failed:", error instanceof Error ? error.message : error);
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ── Build NewsAPI URL ──────────────────────────────────────────────────────
@@ -380,6 +491,12 @@ serve(async (req) => {
 
     const t0 = Date.now();
 
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const svc = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+      ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+      : null;
+
     // ── Serve fresh cache immediately if within TTL ──
     const ckey = cacheKey(category, location, pageSize, searchQuery, shouldExpand, lang);
     const cached = responseCache.get(ckey);
@@ -390,8 +507,6 @@ serve(async (req) => {
     }
 
     // ── Phase 2: feature-flagged routing through the multi-agent newsroom ──
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     let flagEnabled = false;
     let rolloutPct = 0;
@@ -403,9 +518,6 @@ serve(async (req) => {
       claimIds?: string[];
       topic?: string;
     } | null = null;
-    const svc = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-      ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
-      : null;
     // Verification is intentionally opt-in. Reading rollout settings and
     // starting the multi-agent newsroom on every normal feed request adds
     // backend latency but does not change the article list.
@@ -472,6 +584,15 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      const persisted = await readPersistentCache(svc, ckey);
+      if (persisted) return new Response(JSON.stringify(persisted), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const rssArticles = await fetchPublicRss(category, location, pageSize, lang);
+      if (rssArticles.length > 0) {
+        const rssPayload = { articles: rssArticles, totalResults: rssArticles.length, source: "Google News RSS", fetchedAt: new Date().toISOString(), fallback: true, notice: "Primary live feed unavailable; showing current public news results." };
+        responseCache.set(ckey, { at: Date.now(), payload: rssPayload });
+        await writePersistentCache(svc, ckey, category, location, lang, searchQuery, pageSize, rssPayload);
+        return new Response(JSON.stringify(rssPayload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       throw netErr;
     }
     clearTimeout(newsTimeout);
@@ -483,6 +604,15 @@ serve(async (req) => {
         return new Response(JSON.stringify({ ...(cached.payload as object), cached: true, stale: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+      const persisted = await readPersistentCache(svc, ckey);
+      if (persisted) return new Response(JSON.stringify(persisted), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const rssArticles = await fetchPublicRss(category, location, pageSize, lang);
+      if (rssArticles.length > 0) {
+        const rssPayload = { articles: rssArticles, totalResults: rssArticles.length, source: "Google News RSS", fetchedAt: new Date().toISOString(), fallback: true, notice: "Primary live feed unavailable; showing current public news results." };
+        responseCache.set(ckey, { at: Date.now(), payload: rssPayload });
+        await writePersistentCache(svc, ckey, category, location, lang, searchQuery, pageSize, rssPayload);
+        return new Response(JSON.stringify(rssPayload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       // Return 200 with fallback signal so the client SDK does not throw
       // a runtime error on upstream rate-limit / server outages.
@@ -609,6 +739,7 @@ serve(async (req) => {
       route,
     };
     responseCache.set(ckey, { at: Date.now(), payload });
+    await writePersistentCache(svc, ckey, category, location, lang, searchQuery, pageSize, payload);
     return new Response(JSON.stringify(payload), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
