@@ -3,17 +3,77 @@ import type { Article } from "@/data/mockData";
 
 export function verificationLabel(article: Article) {
   const verification = article.verification;
-  const sourceCount = new Set(verification?.sources_checked.map((source) => source.outlet)).size;
+  
+  // Only show "Verified" with score if ALL of these are true:
+  // 1. verification object exists (article went through pipeline)
+  // 2. verification_status is explicitly "verified"
+  // 3. At least 3 sources were actually checked
+  // 4. A credibility_score with basis exists (completed run)
+  const sourceCount = verification?.sources_checked ? verification.sources_checked.length : 0;
   const canShowScore = verification?.verification_status === "verified"
     && sourceCount >= 3
-    && Boolean(verification.credibility_score?.basis);
-
-  if (canShowScore) return { label: "Verified", tone: "text-gainn-green", canShowScore };
-  if (verification?.verification_status === "developing" || sourceCount > 1) {
-    return { label: "Developing", tone: "text-muted-foreground", canShowScore: false };
+    && Boolean(verification.credibility_score?.value && verification.credibility_score.basis);
+  
+  if (canShowScore) {
+    return { 
+      label: "Verified", 
+      tone: "text-gainn-green", 
+      canShowScore,
+      basis: verification.credibility_score?.basis || `${sourceCount} sources checked`,
+      status: "verified" as const
+    };
   }
-  if (sourceCount === 1) return { label: "Single source", tone: "text-muted-foreground", canShowScore: false };
-  return { label: "Unverified", tone: "text-muted-foreground", canShowScore: false };
+  
+  // If no verification object exists at all, article never went through multi-agent pipeline
+  if (!verification) {
+    return { 
+      label: "Not independently verified", 
+      tone: "text-muted-foreground", 
+      canShowScore: false,
+      basis: undefined,
+      status: "not_verified" as const
+    };
+  }
+  
+  // Verification exists but didn't complete as "verified" — show actual status
+  if (verification.verification_status === "developing") {
+    return { 
+      label: "Developing", 
+      tone: "text-muted-foreground", 
+      canShowScore: false,
+      basis: `${sourceCount} sources checked`,
+      status: "developing" as const
+    };
+  }
+  
+  if (verification.verification_status === "single-source" || sourceCount <= 1) {
+    return { 
+      label: "Single-source", 
+      tone: "text-muted-foreground", 
+      canShowScore: false,
+      basis: sourceCount === 1 ? "Only one source found" : "No sources checked",
+      status: "single_source" as const
+    };
+  }
+  
+  if (verification.verification_status === "unverified") {
+    return { 
+      label: "Unverified", 
+      tone: "text-muted-foreground", 
+      canShowScore: false,
+      basis: "Verification incomplete",
+      status: "unverified" as const
+    };
+  }
+  
+  // Fallback for any other case
+  return { 
+    label: "Not independently verified", 
+    tone: "text-muted-foreground", 
+    canShowScore: false,
+    basis: undefined,
+    status: "not_verified" as const
+  };
 }
 
 export function ArticleVerificationBlock({ article }: { article: Article }) {
@@ -27,9 +87,9 @@ export function ArticleVerificationBlock({ article }: { article: Article }) {
         <div className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
           <h2 id="verification-heading" className="text-sm font-semibold">Verification status</h2>
-          <span className="ml-auto text-xs font-mono text-muted-foreground">Unverified</span>
+          <span className="ml-auto text-xs font-mono text-muted-foreground">{status.label}</span>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">No source-checking record is available for this story.</p>
+        <p className="mt-2 text-xs text-muted-foreground">This story was not independently verified by our multi-agent pipeline. It may be from a single source or cached feed.</p>
       </section>
     );
   }

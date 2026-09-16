@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getProgress, isArticleRead } from "@/hooks/useReadingProgress";
 import { useReveal } from "@/hooks/useReveal";
+import { verificationLabel } from "@/components/ArticleVerificationBlock";
 
 // Store live article in sessionStorage so the article page can retrieve it
 function storeAndNavigate(article: Article, navigate: (path: string) => void) {
@@ -37,21 +38,17 @@ function ReadProgressBar({ articleId }: { articleId: string }) {
 // ── Sub-components ────────────────────────────────────────
 // Single trust indicator: shield + score. Cyan is the only accent used for trust.
 const TrustBadge = ({ article }: { article: Article }) => {
-  const verification = article.verification;
-  const sourceCount = new Set(verification?.sources_checked.map((source) => source.outlet)).size;
-  const score = verification?.credibility_score;
-  const verified = verification?.verification_status === "verified" && sourceCount >= 3 && score;
-  const label = verification?.verification_status === "developing" ? "Developing" : sourceCount <= 1 ? "Single source" : "Unverified";
+  const status = verificationLabel(article);
   return (
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground cursor-help">
-          <Shield className="w-3 h-3" />{verified ? `${score.value}%` : label}
+          <Shield className="w-3 h-3" />{status.label}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[220px] text-xs">
-        {verified ? score.basis : "A score appears only after at least three independent sources are checked."}
+        {status.canShowScore ? status.basis : "A score appears only after at least three independent sources are checked."}
       </TooltipContent>
     </Tooltip>
   </TooltipProvider>
@@ -301,6 +298,7 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
 // ── Compact List Card ──────────────────────────────────────
 export const ArticleListItem = ({ article, index }: { article: Article; index: number }) => {
   const navigate = useNavigate();
+  const status = verificationLabel(article);
 
   return (
     <div className="block group cursor-pointer" onClick={() => storeAndNavigate(article, navigate)}>
@@ -312,9 +310,9 @@ export const ArticleListItem = ({ article, index }: { article: Article; index: n
           {article.headline}
         </h4>
         <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
-          {article.verification?.verification_status === "verified" && article.verification.credibility_score
+          {status.canShowScore && article.verification?.credibility_score
             ? `${article.verification.credibility_score.value}%`
-            : article.verification?.verification_status === "developing" ? "Developing" : "Single source"}
+            : status.label}
         </span>
       </div>
     </div>
