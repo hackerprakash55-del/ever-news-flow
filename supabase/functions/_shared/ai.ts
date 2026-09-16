@@ -1,5 +1,7 @@
-// Lovable AI Gateway client with retry/backoff
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
+// OpenRouter-first chat client with Lovable AI fallback and existing retry/backoff.
+const LOVABLE_GATEWAY = "https://ai.gateway.lovable.dev/v1";
+const OPENROUTER_GATEWAY = "https://openrouter.ai/api/v1";
+const OPENROUTER_CHAT_MODEL = "deepseek/deepseek-chat:free";
 
 export const MODELS = {
   fast: "google/gemini-3-flash-preview",
@@ -32,9 +34,12 @@ export async function chat(
   messages: ChatMessage[],
   opts: ChatOptions = {},
 ): Promise<ChatResult> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const model = opts.model ?? MODELS.fast;
+  const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  const key = openRouterKey ?? lovableKey;
+  if (!key) throw new Error("OPENROUTER_API_KEY and LOVABLE_API_KEY are missing");
+  const gateway = openRouterKey ? OPENROUTER_GATEWAY : LOVABLE_GATEWAY;
+  const model = openRouterKey ? OPENROUTER_CHAT_MODEL : (opts.model ?? MODELS.fast);
   const body: Record<string, unknown> = { model, messages, stream: false };
   if (opts.temperature !== undefined) body.temperature = opts.temperature;
   if (opts.responseFormat === "json") {
@@ -45,7 +50,7 @@ export async function chat(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const start = Date.now();
     try {
-      const res = await fetch(`${GATEWAY}/chat/completions`, {
+      const res = await fetch(`${gateway}/chat/completions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${key}`,
@@ -91,7 +96,9 @@ export function tryParseJson<T = unknown>(s: string): T | null {
 export async function embed(text: string): Promise<number[]> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const res = await fetch(`${GATEWAY}/embeddings`, {
+  // The requested OpenRouter chat model cannot create embeddings, so this
+  // specialized modality intentionally remains on Lovable AI.
+  const res = await fetch(`${LOVABLE_GATEWAY}/embeddings`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
