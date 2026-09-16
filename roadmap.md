@@ -10,3 +10,4 @@
 - [ ] Persist the public live-news cache so fresh signed-out browsers receive the same latest stories
 - [ ] Remove fabricated verification scores and perspective claims; add source-backed article verification data/UI
 - [ ] Defer below-fold homepage work and improve ticker/image rendering without changing the layout
+- [x] Route compatible backend text-generation calls through OpenRouter first, with Lovable AI fallback

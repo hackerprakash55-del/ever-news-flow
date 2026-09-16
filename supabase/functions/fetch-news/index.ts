@@ -188,7 +188,7 @@ function extractTags(title: string, description: string): string[] {
   return [...new Set(tags)].slice(0, 5);
 }
 
-// ── Article body expansion via Lovable AI Gateway ─────────────────────────
+// ── Article body expansion via OpenRouter, with Lovable AI fallback ────────
 
 async function expandArticleBody(
   title: string,
@@ -196,24 +196,23 @@ async function expandArticleBody(
   partialContent: string,
   sourceName: string,
   publishedAt: string,
-  lovableApiKey: string
+  openRouterApiKey: string | undefined,
+  lovableApiKey: string | undefined,
 ): Promise<string> {
   const knownFacts = [title, description, partialContent].filter(Boolean).join("\n");
+  const apiKey = openRouterApiKey ?? lovableApiKey;
+  if (!apiKey) return partialContent || description;
+  const endpoint = openRouterApiKey
+    ? "https://openrouter.ai/api/v1/chat/completions"
+    : "https://ai.gateway.lovable.dev/v1/chat/completions";
+  const model = openRouterApiKey
+    ? "deepseek/deepseek-chat:free"
+    : "google/gemini-3-flash-preview";
 
-  const response = await fetch(
-    "https://ai.gateway.lovable.dev/v1/chat/completions",
+  const messages = [
     {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${lovableApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are a professional news journalist writing for GAINN, a global AI-powered news network.
+      role: "system",
+      content: `You are a professional news journalist writing for GAINN, a global AI-powered news network.
 Write detailed, informative news article bodies using ONLY verified facts provided.
 STRICT RULES:
 - Only use facts directly derived from the provided information
@@ -223,26 +222,43 @@ STRICT RULES:
 - Write in professional third-person journalistic style
 - 4-6 paragraphs, 2-4 sentences each
 - Separate paragraphs with a blank line`,
-          },
-          {
-            role: "user",
-            content: `Source: "${sourceName}" (published ${publishedAt})
+    },
+    {
+      role: "user",
+      content: `Source: "${sourceName}" (published ${publishedAt})
 
 VERIFIED SOURCE MATERIAL:
 ${knownFacts}
 
 Write the article body now:`,
-          },
-        ],
+    },
+  ];
+  const requestExpansion = (target: string, key: string, selectedModel: string) => fetch(target, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: selectedModel,
+        messages,
         temperature: 0.2,
         max_tokens: 800,
       }),
-    }
-  );
+    });
+  let response = await requestExpansion(endpoint, apiKey, model);
+  if (!response.ok && openRouterApiKey && lovableApiKey) {
+    console.warn(`OpenRouter article expansion returned ${response.status}; using Lovable AI fallback`);
+    response = await requestExpansion(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      lovableApiKey,
+      "google/gemini-3-flash-preview",
+    );
+  }
 
   if (!response.ok) {
     const errText = await response.text().catch(() => "");
-    console.error("AI Gateway expand error:", response.status, errText);
+    console.error("AI article expansion error:", response.status, errText);
     return partialContent || description;
   }
 
@@ -479,6 +495,7 @@ serve(async (req) => {
       );
     }
 
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     const url = new URL(req.url);
@@ -641,8 +658,8 @@ serve(async (req) => {
     const rest = rawArticles.slice(toExpand.length);
     let expandedBodies: string[] = [];
 
-    if (LOVABLE_API_KEY) {
-      console.log(`Expanding ${toExpand.length} article bodies with Gemini...`);
+    if (OPENROUTER_API_KEY || LOVABLE_API_KEY) {
+      console.log(`Expanding ${toExpand.length} article bodies with ${OPENROUTER_API_KEY ? "OpenRouter" : "Lovable AI"}...`);
       // Race each AI call against a 4-second timeout so one slow model call
       // never holds up the entire response.
       const withTimeout = (p: Promise<string>, fallback: string) =>
@@ -657,7 +674,8 @@ serve(async (req) => {
               a.content ? a.content.replace(/\[\+\d+ chars\]$/, "").trim() : "",
               a.source?.name || "Unknown Source",
               a.publishedAt || new Date().toISOString(),
-              LOVABLE_API_KEY
+              OPENROUTER_API_KEY,
+              LOVABLE_API_KEY,
             ),
             a.content || a.description || ""
           ).catch(() => a.content || a.description || "")
@@ -732,7 +750,7 @@ serve(async (req) => {
     const payload = {
       articles,
       totalResults: data.totalResults,
-      source: "NewsAPI + Gemini",
+      source: OPENROUTER_API_KEY ? "NewsAPI + OpenRouter" : "NewsAPI + Lovable AI",
       fetchedAt: new Date().toISOString(),
       location: location || null,
       verification: orchestratorVerification,

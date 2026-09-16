@@ -13,13 +13,21 @@ serve(async (req) => {
   }
 
   try {
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const aiApiKey = OPENROUTER_API_KEY ?? LOVABLE_API_KEY;
+    if (!aiApiKey) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
+        JSON.stringify({ error: "OPENROUTER_API_KEY and LOVABLE_API_KEY are not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    const aiEndpoint = OPENROUTER_API_KEY
+      ? "https://openrouter.ai/api/v1/chat/completions"
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const aiModel = OPENROUTER_API_KEY
+      ? "deepseek/deepseek-chat:free"
+      : "google/gemini-3-flash-preview";
 
     const NEWSAPI_KEY = Deno.env.get("NEWSAPI_KEY");
     const { topic, category, event_cluster_id } = await req.json();
@@ -148,21 +156,27 @@ Each section should be substantial (150-300 words). Total script should be 800-1
 
 Make it a 6-10 minute deep-dive video that covers all sides of the story with global context. The tone should be authoritative but accessible, like a premium documentary news channel.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ];
+    const requestAi = (endpoint: string, key: string, model: string) => fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: false,
-      }),
+      body: JSON.stringify({ model, messages, stream: false }),
     });
+    let aiRes = await requestAi(aiEndpoint, aiApiKey, aiModel);
+    if (!aiRes.ok && OPENROUTER_API_KEY && LOVABLE_API_KEY) {
+      console.warn(`OpenRouter returned ${aiRes.status}; using Lovable AI fallback`);
+      aiRes = await requestAi(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        LOVABLE_API_KEY,
+        "google/gemini-3-flash-preview",
+      );
+    }
 
     if (!aiRes.ok) {
       if (aiRes.status === 429) {

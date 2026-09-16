@@ -35,7 +35,8 @@ serve(async (req) => {
       );
     }
 
-    // Use AI gateway chat completions with image modality
+    // The requested OpenRouter DeepSeek chat model cannot generate images,
+    // so this specialized image modality intentionally remains on Lovable AI.
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {

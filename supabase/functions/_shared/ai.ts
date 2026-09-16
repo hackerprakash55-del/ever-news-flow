@@ -1,5 +1,7 @@
-// Lovable AI Gateway client with retry/backoff
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
+// OpenRouter-first chat client with Lovable AI fallback and existing retry/backoff.
+const LOVABLE_GATEWAY = "https://ai.gateway.lovable.dev/v1";
+const OPENROUTER_GATEWAY = "https://openrouter.ai/api/v1";
+const OPENROUTER_CHAT_MODEL = "deepseek/deepseek-chat:free";
 
 export const MODELS = {
   fast: "google/gemini-3-flash-preview",
@@ -32,48 +34,52 @@ export async function chat(
   messages: ChatMessage[],
   opts: ChatOptions = {},
 ): Promise<ChatResult> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const model = opts.model ?? MODELS.fast;
-  const body: Record<string, unknown> = { model, messages, stream: false };
-  if (opts.temperature !== undefined) body.temperature = opts.temperature;
-  if (opts.responseFormat === "json") {
-    body.response_format = { type: "json_object" };
-  }
+  const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!openRouterKey && !lovableKey) throw new Error("OPENROUTER_API_KEY and LOVABLE_API_KEY are missing");
+  const providers = [
+    ...(openRouterKey ? [{ key: openRouterKey, gateway: OPENROUTER_GATEWAY, model: OPENROUTER_CHAT_MODEL }] : []),
+    ...(lovableKey ? [{ key: lovableKey, gateway: LOVABLE_GATEWAY, model: opts.model ?? MODELS.fast }] : []),
+  ];
   const maxRetries = opts.maxRetries ?? 2;
   let lastErr: Error | null = null;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const start = Date.now();
-    try {
-      const res = await fetch(`${GATEWAY}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      if (res.status === 429 || res.status === 503) {
-        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
-        lastErr = new Error(`AI gateway ${res.status}`);
-        continue;
+  for (const provider of providers) {
+    const body: Record<string, unknown> = { model: provider.model, messages, stream: false };
+    if (opts.temperature !== undefined) body.temperature = opts.temperature;
+    if (opts.responseFormat === "json") body.response_format = { type: "json_object" };
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const start = Date.now();
+      try {
+        const res = await fetch(`${provider.gateway}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${provider.key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 429 || res.status === 503) {
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          lastErr = new Error(`AI gateway ${res.status}`);
+          continue;
+        }
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`AI ${res.status}: ${txt.slice(0, 200)}`);
+        }
+        const j = await res.json();
+        return {
+          content: j.choices?.[0]?.message?.content ?? "",
+          tokensIn: j.usage?.prompt_tokens ?? 0,
+          tokensOut: j.usage?.completion_tokens ?? 0,
+          latencyMs: Date.now() - start,
+          model: provider.model,
+        };
+      } catch (e) {
+        lastErr = e as Error;
+        if (attempt === maxRetries) break;
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
       }
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`AI ${res.status}: ${txt.slice(0, 200)}`);
-      }
-      const j = await res.json();
-      return {
-        content: j.choices?.[0]?.message?.content ?? "",
-        tokensIn: j.usage?.prompt_tokens ?? 0,
-        tokensOut: j.usage?.completion_tokens ?? 0,
-        latencyMs: Date.now() - start,
-        model,
-      };
-    } catch (e) {
-      lastErr = e as Error;
-      if (attempt === maxRetries) break;
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
     }
   }
   throw lastErr ?? new Error("AI request failed");
@@ -91,7 +97,9 @@ export function tryParseJson<T = unknown>(s: string): T | null {
 export async function embed(text: string): Promise<number[]> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const res = await fetch(`${GATEWAY}/embeddings`, {
+  // The requested OpenRouter chat model cannot create embeddings, so this
+  // specialized modality intentionally remains on Lovable AI.
+  const res = await fetch(`${LOVABLE_GATEWAY}/embeddings`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${key}`,
