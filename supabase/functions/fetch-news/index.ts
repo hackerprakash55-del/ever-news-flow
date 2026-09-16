@@ -316,6 +316,82 @@ function textOf(item: Element, selector: string): string {
   return item.querySelector(selector)?.textContent?.trim() ?? "";
 }
 
+// ── Direct RSS feed sources (parallel fetchers) ─────────────────────────────
+// These are public RSS feeds from major Indian news outlets, meant for syndication.
+// We fetch them in parallel with NewsAPI to provide multiple independent sources
+// for every story, strengthening verification signals.
+const DIRECT_RSS_FEEDS: { name: string; url: string; category?: string }[] = [
+  {
+    name: "Times of India",
+    url: "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
+  },
+  {
+    name: "The Hindu",
+    url: "https://www.thehindu.com/news/national/feeder/default.rss",
+  },
+  {
+    name: "NDTV",
+    url: "https://feeds.feedburner.com/ndtvnews-latest",
+  },
+];
+
+async function fetchDirectRssFeed(feedUrl: string, feedName: string, pageSize: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4_500);
+  try {
+    const response = await fetch(feedUrl, { signal: controller.signal });
+    if (!response.ok) return [];
+    const xml = await response.text();
+    const document = new DOMParser().parseFromString(xml, "application/xml");
+    if (!document || document.querySelector("parsererror")) return [];
+    
+    const items = Array.from(document.querySelectorAll("item, entry")).slice(0, pageSize * 2);
+    return items.map((item, index) => {
+      let headline = textOf(item, "title") || textOf(item, "title > text");
+      // Clean up common RSS title patterns like "Headline - Outlet Name"
+      headline = headline.replace(/\s+-\s+[^-]+$/, "").trim();
+      
+      const outlet = textOf(item, "source") || feedName;
+      const sourceUrl = textOf(item, "link") || textOf(item, "id") || "";
+      const pubDateStr = textOf(item, "pubDate") || textOf(item, "published") || textOf(item, "updated");
+      const publishedAt = pubDateStr ? new Date(pubDateStr).toISOString() : new Date().toISOString();
+      const description = textOf(item, "description") || textOf(item, "summary") || headline;
+      const imageUrl = textOf(item, "media\\:content") || 
+                       item.querySelector("media\\:content")?.getAttribute("url") ||
+                       textOf(item, "enclosure") || undefined;
+      
+      return {
+        id: `rss-${btoa(unescape(encodeURIComponent(sourceUrl || headline))).replace(/[^a-zA-Z0-9]/g, "").slice(-28)}-${index}`,
+        headline,
+        summary: description,
+        body: description,
+        category: guessCategory(headline, description, "unknown"),
+        sources: [outlet],
+        publishedAt,
+        readTime: estimateReadTime(description),
+        tags: extractTags(headline, description),
+        isBreaking: index < 2,
+        region: "India",
+        imageUrl: imageUrl || undefined,
+        aiGenerated: false,
+        url: sourceUrl,
+        verification: {
+          sources_checked: [{ outlet, url: sourceUrl, published_at: publishedAt, stance_on_core_claim: "Original report" }],
+          agreement: { core_claim: "", corroborating_sources: [] },
+          disagreements: [],
+          omissions: [],
+          verification_status: "single-source",
+        },
+      };
+    }).filter((article) => article.headline && article.headline.length > 10);
+  } catch (error) {
+    console.warn(`Direct RSS feed ${feedName} failed:`, error instanceof Error ? error.message : error);
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchPublicRss(category: string, location: string, pageSize: number, lang: string) {
   const terms = lang === "hi"
     ? (HINDI_QUERIES[category] || HINDI_QUERIES.all)
@@ -565,15 +641,17 @@ serve(async (req) => {
     }
 
 
-    // ── Phase 1: Try NewsAPI only if key exists ─────────────────────────────
-    // If NEWSAPI_KEY is missing, skip directly to RSS fallback instead of
-    // returning a hard 500 error. This lets the app work with just public RSS.
+    // ── Phase 2: Fetch from all sources in parallel (NewsAPI + direct RSS feeds) ─
+    // We fetch from NewsAPI (if key exists) AND multiple direct RSS feeds simultaneously.
+    // This gives us multiple independent sources for each story, strengthening verification.
+    // Only if ALL sources fail do we fall back to cache or return empty.
     let newsApiArticles: any[] | null = null;
     let newsApiError: { message?: string; code?: string } | null = null;
+    let directRssArticles: any[] = [];
 
+    // Build NewsAPI URL only if key exists
+    let newsApiUrl: string | null = null;
     if (NEWSAPI_KEY) {
-      // Build NewsAPI URL
-      let newsApiUrl: string;
       if (searchQuery) {
         const encoded = encodeURIComponent(location ? `${searchQuery} ${location}` : searchQuery);
         newsApiUrl = lang === "hi"
@@ -584,51 +662,88 @@ serve(async (req) => {
       } else {
         newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
       }
-
-      console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
-      const newsController = new AbortController();
-      const newsTimeout = setTimeout(() => newsController.abort(), 4_500);
-      let response: Response;
-      let data: any;
-      try {
-        response = await fetch(newsApiUrl, { signal: newsController.signal });
-        data = await response.json();
-      } catch (netErr) {
-        clearTimeout(newsTimeout);
-        // Network error — fall through to cache/RSS logic below
-        newsApiError = { message: "NewsAPI network error", code: "network_error" };
-      }
-      clearTimeout(newsTimeout);
-
-      if (!newsApiError && (!response.ok || data?.status !== "ok")) {
-        console.error("NewsAPI error:", data);
-        newsApiError = { message: data?.message || "NewsAPI request failed", code: data?.code };
-      }
-
-      if (!newsApiError) {
-        newsApiArticles = (data.articles || []).filter(
-          (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
-        );
-      }
     } else {
-      // NEWSAPI_KEY not configured — treat as upstream failure, proceed to RSS
-      console.warn("NEWSAPI_KEY not configured, using RSS fallback");
+      console.warn("NEWSAPI_KEY not configured, skipping NewsAPI and using RSS-only mode");
       newsApiError = { message: "NewsAPI key not configured", code: "missing_key" };
     }
 
-    // ── Fallback chain: NewsAPI → stale cache → RSS → empty with fallback flag ──
-    let rawArticles: any[] = [];
+    // Fire all fetches in parallel: NewsAPI + all direct RSS feeds
+    const fetchPromises: Promise<void>[] = [];
+
+    // NewsAPI fetch promise
+    if (newsApiUrl) {
+      console.log(`Fetching NewsAPI: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
+      const newsController = new AbortController();
+      const newsTimeout = setTimeout(() => newsController.abort(), 4_500);
+      fetchPromises.push(
+        fetch(newsApiUrl, { signal: newsController.signal })
+          .then(async (response) => {
+            clearTimeout(newsTimeout);
+            const data = await response.json().catch(() => ({ status: "error" }));
+            if (!response.ok || data?.status !== "ok") {
+              newsApiError = { message: data?.message || "NewsAPI request failed", code: data?.code || "http_error" };
+              return;
+            }
+            newsApiArticles = (data.articles || []).filter(
+              (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
+            );
+          })
+          .catch(() => {
+            clearTimeout(newsTimeout);
+            newsApiError = { message: "NewsAPI network error", code: "network_error" };
+          })
+      );
+    }
+
+    // Direct RSS feed fetch promises (parallel)
+    for (const feed of DIRECT_RSS_FEEDS) {
+      fetchPromises.push(
+        fetchDirectRssFeed(feed.url, feed.name, Math.ceil(pageSize / DIRECT_RSS_FEEDS.length))
+          .then((articles) => {
+            if (articles.length > 0) {
+              console.log(`${feed.name} RSS returned ${articles.length} articles`);
+              directRssArticles = [...directRssArticles, ...articles];
+            }
+          })
+      );
+    }
+
+    // Wait for all fetches to complete (with overall timeout)
+    await Promise.allSettled(fetchPromises);
+
+    // Merge NewsAPI articles with direct RSS articles
+    const allRawArticles = [];
+    if (newsApiArticles && newsApiArticles.length > 0) {
+      allRawArticles.push(...newsApiArticles);
+      console.log(`NewsAPI returned ${newsApiArticles.length} articles`);
+    }
+    if (directRssArticles.length > 0) {
+      // Convert RSS articles to NewsAPI-compatible format for unified processing
+      allRawArticles.push(...directRssArticles.map((a: any) => ({
+        title: a.headline,
+        description: a.summary,
+        content: a.body,
+        url: a.url,
+        urlToImage: a.imageUrl,
+        publishedAt: a.publishedAt,
+        source: { id: "rss-feed", name: a.sources?.[0] || "RSS Feed" },
+      })));
+      console.log(`Direct RSS feeds returned ${directRssArticles.length} articles`);
+    }
+
+    // ── Fallback chain: (NewsAPI + RSS) → stale cache → Google News RSS → empty ──
+    let rawArticles: any[] = allRawArticles;
     let totalResults = 0;
-    let sourceName = "NewsAPI";
+    let sourceName = newsApiArticles?.length ? "NewsAPI" : (directRssArticles.length ? "Direct RSS Feeds" : "NewsAPI");
     let fetchedAt = new Date().toISOString();
     let isFallback = false;
     let notice: string | null = null;
 
-    if (newsApiArticles && newsApiArticles.length > 0) {
-      // NewsAPI succeeded — use results directly
-      rawArticles = newsApiArticles;
-      totalResults = newsApiArticles.length;
-      console.log(`NewsAPI returned ${rawArticles.length} articles`);
+    if (rawArticles.length > 0) {
+      // At least one source succeeded — use merged results directly
+      rawArticles = allRawArticles;
+      totalResults = allRawArticles.length;
+      console.log(`Merged sources returned ${totalResults} articles`);
     } else {
       // NewsAPI failed or returned nothing — try stale in-memory cache
       if (cached && Date.now() - cached.at < STALE_MAX_MS) {
