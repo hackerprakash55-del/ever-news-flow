@@ -1,98 +1,78 @@
-```gitignore
+```
 # Dependencies
 node_modules/
-.pnpm-store/
-.npm/
-.yarn/
 
-# Build outputs
+# Build artifacts
 dist/
 build/
-.next/
-.nuxt/
-public/build/
-*.min.js
-*.min.css
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+target/
 
 # Environment variables
 .env
 .env.local
-.env.*
-!.env.example
+*.env.*
 
-# IDE specific
-.vscode/
-.idea/
+# Cache directories
+.cache/
+.nyc_output/
+coverage/
+htmlcov/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
 *.swp
 *.swo
+
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Python specific (if applicable)
+# IDE files
+.vscode/
+.idea/
+
+# Python specific
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
+env/
 venv/
 .venv/
 pip-log.txt
 pip-delete-this-directory.txt
-.pytest_cache/
+.tox/
 .coverage
-htmlcov/
-.pytype/
-
-# Coverage reports
-coverage/
-*.lcov
-
-# Local configuration
-local.properties
-.settings/
-*.tmproj
-nbproject/
-
-# Compiled and binary files
-*.exe
-*.dll
-*.so
-*.dylib
-*.class
-*.o
-*.a
-*.obj
-*.out
-
-# Compressed files
-*.zip
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.7z
-*.rar
-*.gz
-*.bz2
-*.xz
-*.zst
-
-# Testing
+.coverage.*
+nosetests.xml
 coverage.xml
-*.gcda
-*.gcno
+*.cover
+*.log
+.git/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Node.js specific
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+.next/
+.nuxt/
+public/dist/
+!.gitkeep
+*.min.js
+*.min.css
+
+# Supabase specific
+.supabase/
 ```

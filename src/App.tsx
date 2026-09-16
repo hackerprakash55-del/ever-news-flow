@@ -22,6 +22,8 @@ const VideoLibraryPage = lazy(() => import("./pages/VideoLibraryPage"));
 const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
 const TrendingPage     = lazy(() => import("./pages/TrendingPage"));
 const ShortsPage       = lazy(() => import("./pages/ShortsPage"));
+const ShortsReviewQueue = lazy(() => import("./pages/ShortsReviewQueue"));
+const YoutubeCallback  = lazy(() => import("./pages/YoutubeCallback"));
 const PrimeTimePage    = lazy(() => import("./pages/PrimeTimePage"));
 const PrimeTimeSchedulePage = lazy(() => import("./pages/PrimeTimeSchedulePage"));
 const OAuthConsent     = lazy(() => import("./pages/OAuthConsent"));
@@ -53,6 +55,7 @@ const App = () => (
                 {/* Public — no auth required */}
                 <Route path="/auth"       element={<AuthPage />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/auth/youtube/callback" element={<YoutubeCallback />} />
 
                 <Route path="/"           element={<Index />} />
                 <Route path="/article/:id" element={<ArticlePage />} />
@@ -61,6 +64,7 @@ const App = () => (
                 <Route path="/trending"   element={<TrendingPage />} />
                 <Route path="/shorts"     element={<ShortsPage />} />
                 <Route path="/shorts/:id" element={<ShortsPage />} />
+                <Route path="/shorts-review-queue" element={<AuthGuard><ShortsReviewQueue /></AuthGuard>} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
                 {/* Protected — must be signed in */}
