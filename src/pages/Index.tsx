@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoFilter, GeoSelection, geoToQuery } from "@/components/GeoFilter";
+import { FeedStatusBanner } from "@/components/FeedStatusBanner";
 
 const FEED_TABS = [
   { id: "top", label: "Top Stories", icon: TrendingUp },
@@ -112,7 +113,7 @@ const Index = () => {
 
   const newsCategory = activeCategory === "All" ? "all" : activeCategory;
   const location = geoToQuery(geo) || "India";
-  const { articles, isLive, isLoading, refresh } = useNews({ category: newsCategory, pageSize: 30, location });
+  const { articles, isLive, isLoading, isCached, isFallback, notice, refresh } = useNews({ category: newsCategory, pageSize: 30, location });
 
   const displayArticles = articles;
   const hasBreaking = displayArticles.some((a) => a.isBreaking);
@@ -169,6 +170,9 @@ const Index = () => {
           <NewsTickerBar />
         </div>
       )}
+
+      {/* Feed status banner - visible when showing cached/fallback content */}
+      <FeedStatusBanner isFallback={isFallback} isCached={isCached} notice={notice} />
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-10 space-y-14">
         <h1 className="sr-only">GAINN — Global AI News Network: autonomous, verified, real-time</h1>

@@ -12,6 +12,7 @@ import {
 import { Twitter, Linkedin, Link2, Sparkles, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNews } from "@/hooks/useNews";
+import { FeedStatusBanner } from "@/components/FeedStatusBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -491,7 +492,7 @@ export default function ArticlePage() {
     } catch {}
   }
 
-  const { articles: liveArticles } = useNews({ category: "all", pageSize: 20 });
+  const { articles: liveArticles, isCached, isFallback, notice } = useNews({ category: "all", pageSize: 20 });
 
   useEffect(() => {
     if (!user || !article) return;
@@ -610,6 +611,7 @@ export default function ArticlePage() {
         <ScrollProgressBar articleId={article.id} />
         <GlobalHeader />
         <NewsTickerBar />
+        <FeedStatusBanner isFallback={isFallback} isCached={isCached} notice={notice} />
         <ShareRail article={article} />
 
         <div className="max-w-screen-xl mx-auto px-4 md:px-6 py-8 pb-24 md:pb-8">
