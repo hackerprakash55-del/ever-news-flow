@@ -488,13 +488,6 @@ serve(async (req) => {
 
   try {
     const NEWSAPI_KEY = Deno.env.get("NEWSAPI_KEY");
-    if (!NEWSAPI_KEY) {
-      return new Response(
-        JSON.stringify({ error: "NEWSAPI_KEY secret is not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
@@ -572,86 +565,124 @@ serve(async (req) => {
     }
 
 
-    // If a free-text search query is provided, override category routing
-    // and use NewsAPI /everything with the keyword
-    let newsApiUrl: string;
-    if (searchQuery) {
-      const encoded = encodeURIComponent(location ? `${searchQuery} ${location}` : searchQuery);
-      newsApiUrl = lang === "hi"
-        ? `https://newsapi.org/v2/everything?q=${encoded}&domains=${HINDI_DOMAINS.join(",")}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`
-        : `https://newsapi.org/v2/everything?q=${encoded}&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
-    } else if (lang === "hi") {
-      newsApiUrl = buildHindiNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
-    } else {
-      newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
-    }
+    // ── Phase 1: Try NewsAPI only if key exists ─────────────────────────────
+    // If NEWSAPI_KEY is missing, skip directly to RSS fallback instead of
+    // returning a hard 500 error. This lets the app work with just public RSS.
+    let newsApiArticles: any[] | null = null;
+    let newsApiError: { message?: string; code?: string } | null = null;
 
-    console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
-    const newsController = new AbortController();
-    const newsTimeout = setTimeout(() => newsController.abort(), 4_500);
-    let response: Response;
-    let data: any;
-    try {
-      response = await fetch(newsApiUrl, { signal: newsController.signal });
-      data = await response.json();
-    } catch (netErr) {
+    if (NEWSAPI_KEY) {
+      // Build NewsAPI URL
+      let newsApiUrl: string;
+      if (searchQuery) {
+        const encoded = encodeURIComponent(location ? `${searchQuery} ${location}` : searchQuery);
+        newsApiUrl = lang === "hi"
+          ? `https://newsapi.org/v2/everything?q=${encoded}&domains=${HINDI_DOMAINS.join(",")}&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`
+          : `https://newsapi.org/v2/everything?q=${encoded}&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${NEWSAPI_KEY}`;
+      } else if (lang === "hi") {
+        newsApiUrl = buildHindiNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
+      } else {
+        newsApiUrl = buildNewsApiUrl(category, location, pageSize, NEWSAPI_KEY);
+      }
+
+      console.log(`Fetching: category=${category}, location=${location}, pageSize=${pageSize}${searchQuery ? `, q="${searchQuery}"` : ""}`);
+      const newsController = new AbortController();
+      const newsTimeout = setTimeout(() => newsController.abort(), 4_500);
+      let response: Response;
+      let data: any;
+      try {
+        response = await fetch(newsApiUrl, { signal: newsController.signal });
+        data = await response.json();
+      } catch (netErr) {
+        clearTimeout(newsTimeout);
+        // Network error — fall through to cache/RSS logic below
+        newsApiError = { message: "NewsAPI network error", code: "network_error" };
+      }
       clearTimeout(newsTimeout);
-      if (cached && Date.now() - cached.at < STALE_MAX_MS) {
-        return new Response(JSON.stringify({ ...(cached.payload as object), cached: true, stale: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const persisted = await readPersistentCache(svc, ckey);
-      if (persisted) return new Response(JSON.stringify(persisted), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const rssArticles = await fetchPublicRss(category, location, pageSize, lang);
-      if (rssArticles.length > 0) {
-        const rssPayload = { articles: rssArticles, totalResults: rssArticles.length, source: "Google News RSS", fetchedAt: new Date().toISOString(), fallback: true, notice: "Primary live feed unavailable; showing current public news results." };
-        responseCache.set(ckey, { at: Date.now(), payload: rssPayload });
-        await writePersistentCache(svc, ckey, category, location, lang, searchQuery, pageSize, rssPayload);
-        return new Response(JSON.stringify(rssPayload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      throw netErr;
-    }
-    clearTimeout(newsTimeout);
 
-    if (!response.ok || data?.status !== "ok") {
-      console.error("NewsAPI error:", data);
-      // Fall back to stale cache so the app keeps working through rate limits.
+      if (!newsApiError && (!response.ok || data?.status !== "ok")) {
+        console.error("NewsAPI error:", data);
+        newsApiError = { message: data?.message || "NewsAPI request failed", code: data?.code };
+      }
+
+      if (!newsApiError) {
+        newsApiArticles = (data.articles || []).filter(
+          (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
+        );
+      }
+    } else {
+      // NEWSAPI_KEY not configured — treat as upstream failure, proceed to RSS
+      console.warn("NEWSAPI_KEY not configured, using RSS fallback");
+      newsApiError = { message: "NewsAPI key not configured", code: "missing_key" };
+    }
+
+    // ── Fallback chain: NewsAPI → stale cache → RSS → empty with fallback flag ──
+    let rawArticles: any[] = [];
+    let totalResults = 0;
+    let sourceName = "NewsAPI";
+    let fetchedAt = new Date().toISOString();
+    let isFallback = false;
+    let notice: string | null = null;
+
+    if (newsApiArticles && newsApiArticles.length > 0) {
+      // NewsAPI succeeded — use results directly
+      rawArticles = newsApiArticles;
+      totalResults = newsApiArticles.length;
+      console.log(`NewsAPI returned ${rawArticles.length} articles`);
+    } else {
+      // NewsAPI failed or returned nothing — try stale in-memory cache
       if (cached && Date.now() - cached.at < STALE_MAX_MS) {
-        return new Response(JSON.stringify({ ...(cached.payload as object), cached: true, stale: true }), {
+        console.log("Serving stale in-memory cache");
+        const cachedPayload = cached.payload as any;
+        return new Response(JSON.stringify({ ...cachedPayload, cached: true, stale: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // Try persistent DB cache
       const persisted = await readPersistentCache(svc, ckey);
-      if (persisted) return new Response(JSON.stringify(persisted), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (persisted) {
+        console.log("Serving persistent DB cache");
+        return new Response(JSON.stringify(persisted), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Fall back to Google News RSS
       const rssArticles = await fetchPublicRss(category, location, pageSize, lang);
       if (rssArticles.length > 0) {
-        const rssPayload = { articles: rssArticles, totalResults: rssArticles.length, source: "Google News RSS", fetchedAt: new Date().toISOString(), fallback: true, notice: "Primary live feed unavailable; showing current public news results." };
-        responseCache.set(ckey, { at: Date.now(), payload: rssPayload });
-        await writePersistentCache(svc, ckey, category, location, lang, searchQuery, pageSize, rssPayload);
-        return new Response(JSON.stringify(rssPayload), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      // Return 200 with fallback signal so the client SDK does not throw
-      // a runtime error on upstream rate-limit / server outages.
-      const fallbackPayload = {
-          error: data?.message || "NewsAPI request failed",
-          code: data?.code,
+        console.log(`RSS fallback returned ${rssArticles.length} articles`);
+        rawArticles = rssArticles.map((a: any) => ({
+          title: a.headline,
+          description: a.summary,
+          content: a.body,
+          url: a.url,
+          urlToImage: a.imageUrl,
+          publishedAt: a.publishedAt,
+          source: { id: "google-news", name: a.sources?.[0] || "Google News" },
+        }));
+        totalResults = rssArticles.length;
+        sourceName = "Google News RSS";
+        isFallback = true;
+        notice = "Primary live feed unavailable; showing current public news results.";
+      } else {
+        // All sources exhausted — return empty with fallback flag
+        console.warn("All news sources exhausted");
+        const fallbackPayload = {
+          error: newsApiError?.message || "No news sources available",
+          code: newsApiError?.code || "all_sources_failed",
           fallback: true,
           articles: [],
           totalResults: 0,
+          source: "None",
+          fetchedAt: new Date().toISOString(),
+          notice: "Live feed temporarily unavailable. Please try again shortly.",
         };
-      // Cache upstream failures briefly as well. This prevents every visitor
-      // from repeatedly hitting an already rate-limited provider.
-      responseCache.set(ckey, { at: Date.now(), payload: fallbackPayload });
-      return new Response(
-        JSON.stringify(fallbackPayload),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+        responseCache.set(ckey, { at: Date.now(), payload: fallbackPayload });
+        return new Response(
+          JSON.stringify(fallbackPayload),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
-
-    const rawArticles = (data.articles || []).filter(
-      (a: any) => a.title && a.title !== "[Removed]" && a.description && a.description !== "[Removed]"
-    );
 
     // Expansion is opt-in. The live feed must return fast for India/local news.
     const toExpand = shouldExpand ? rawArticles.slice(0, Math.min(rawArticles.length, 1)) : [];
@@ -749,12 +780,14 @@ serve(async (req) => {
 
     const payload = {
       articles,
-      totalResults: data.totalResults,
-      source: OPENROUTER_API_KEY ? "NewsAPI + OpenRouter" : "NewsAPI + Lovable AI",
-      fetchedAt: new Date().toISOString(),
+      totalResults,
+      source: isFallback ? sourceName : (OPENROUTER_API_KEY ? "NewsAPI + OpenRouter" : "NewsAPI + Lovable AI"),
+      fetchedAt,
       location: location || null,
       verification: orchestratorVerification,
       route,
+      fallback: isFallback,
+      notice,
     };
     responseCache.set(ckey, { at: Date.now(), payload });
     await writePersistentCache(svc, ckey, category, location, lang, searchQuery, pageSize, payload);

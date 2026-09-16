@@ -157,16 +157,21 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
   const queryKey = ["news", category, location, lang];
   
   const cachedFeed = readBrowserCache(category, location, lang);
+  // Only use mock data as last resort when no cache exists AND live fetch fails.
+  // Mock data should never appear in production — it's a dev-only fallback.
+  const isDevMode = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
   const immediateFeed: FetchNewsData = cachedFeed ?? {
-    articles: MOCK_ARTICLES,
+    articles: isDevMode ? MOCK_ARTICLES : [],
     isLive: false,
     fetchedAt: null,
-    totalResults: MOCK_ARTICLES.length,
+    totalResults: isDevMode ? MOCK_ARTICLES.length : 0,
     isCached: Boolean(cachedFeed),
     isFallback: !cachedFeed,
     notice: cachedFeed
       ? "Loading the latest feed; showing stories saved on this device."
-      : "Live feed unavailable, showing sample stories while we reconnect.",
+      : isDevMode
+        ? "Live feed unavailable, showing sample stories while we reconnect."
+        : null, // No notice yet — wait for live fetch result
   };
 
   const {
@@ -201,9 +206,17 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
   // Use either the fresh data or the immediate (cached/mock) data
   const currentData = data || immediateFeed;
 
+  // If live fetch returned empty and we have no cache, show mock only in dev mode
   const baseArticles = useMemo(
-    () => (currentData.articles.length > 0 ? currentData.articles : MOCK_ARTICLES).slice(0, pageSize),
-    [currentData, pageSize],
+    () => {
+      if (currentData.articles.length > 0) {
+        return currentData.articles.slice(0, pageSize);
+      }
+      // Production: no articles available, show empty
+      // Dev: fall back to mock for testing UI
+      return isDevMode ? MOCK_ARTICLES.slice(0, pageSize) : [];
+    },
+    [currentData, pageSize, isDevMode],
   );
   // Headlines + summaries follow the reader's chosen language (Sarvam translation).
   const localized = useLocalizedArticles(baseArticles, pageSize);
