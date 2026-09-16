@@ -57,7 +57,11 @@ export async function translateTexts(texts: string[], target: string): Promise<s
     const { data, error } = await supabase.functions.invoke("sarvam-translate", {
       body: { texts, target },
     });
-    if (error || !Array.isArray(data?.translations)) return texts;
+    // sarvam-translate returns HTTP 200 even when key is missing; check for explicit error field
+    if (error || !Array.isArray(data?.translations) || data?.error) {
+      console.warn("Translation unavailable, using original text");
+      return texts;
+    }
     return data.translations.map((t: unknown, i: number) => (typeof t === "string" && t ? t : texts[i]));
   } catch (err) {
     console.warn("translateTexts failed:", err);
