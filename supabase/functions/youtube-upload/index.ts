@@ -8,12 +8,35 @@ serve(async (req: Request) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Test-Secrets",
       },
     });
   }
 
   try {
+    // Special test mode for secrets check
+    const isTestMode = req.headers.get("X-Test-Secrets") === "true";
+    if (isTestMode) {
+      const clientId = Deno.env.get("YOUTUBE_CLIENT_ID") || Deno.env.get("VITE_YOUTUBE_CLIENT_ID");
+      const clientSecret = Deno.env.get("YOUTUBE_CLIENT_SECRET");
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          secretsStatus: {
+            clientId: clientId ? "present" : "missing",
+            clientSecret: clientSecret ? "present" : "missing",
+          },
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       throw new Error("Missing or invalid authorization header");
