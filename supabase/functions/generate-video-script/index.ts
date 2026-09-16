@@ -156,21 +156,27 @@ Each section should be substantial (150-300 words). Total script should be 800-1
 
 Make it a 6-10 minute deep-dive video that covers all sides of the story with global context. The tone should be authoritative but accessible, like a premium documentary news channel.`;
 
-    const aiRes = await fetch(aiEndpoint, {
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ];
+    const requestAi = (endpoint: string, key: string, model: string) => fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${aiApiKey}`,
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: aiModel,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: false,
-      }),
+      body: JSON.stringify({ model, messages, stream: false }),
     });
+    let aiRes = await requestAi(aiEndpoint, aiApiKey, aiModel);
+    if (!aiRes.ok && OPENROUTER_API_KEY && LOVABLE_API_KEY) {
+      console.warn(`OpenRouter returned ${aiRes.status}; using Lovable AI fallback`);
+      aiRes = await requestAi(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        LOVABLE_API_KEY,
+        "google/gemini-3-flash-preview",
+      );
+    }
 
     if (!aiRes.ok) {
       if (aiRes.status === 429) {
