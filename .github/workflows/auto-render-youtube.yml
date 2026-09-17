@@ -1,0 +1,74 @@
+name: Auto Render & Upload to YouTube
+
+on:
+  repository_dispatch:
+    types: [render_video]
+
+jobs:
+  render-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install FFmpeg
+      run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+    - name: Install Python Dependencies
+      run: pip3 install google-api-python-client google-auth-oauthlib google-auth-httplib2
+
+    - name: Create Render Directory
+      run: mkdir -p ./temp_render
+
+    - name: Generate Video with FFmpeg
+      env:
+        STORY_TITLE: ${{ github.event.client_payload.story.title }}
+      run: |
+        ffmpeg -f lavfi -i color=black:s=640x360:d=10 \
+          -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:fontsize=24:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:text='$STORY_TITLE'" \
+          -c:v libx264 -pix_fmt yuv420p ./temp_render/output.mp4
+
+    - name: Upload to YouTube
+      env:
+        YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        STORY_TITLE: ${{ github.event.client_payload.story.title }}
+        STORY_CONTENT: ${{ github.event.client_payload.story.content }}
+      run: |
+        python3 - <<EOF
+        import os
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+
+        youtube = build('youtube', 'v3', developerKey=os.environ['YOUTUBE_API_KEY'])
+        
+        body = {
+            'snippet': {
+                'title': f"[AUTO] {os.environ['STORY_TITLE']}",
+                'description': os.environ['STORY_CONTENT'],
+                'tags': ['news', 'automation'],
+                'categoryId': '25'
+            },
+            'status': {
+                'privacyStatus': 'public',
+                'madeForKids': False
+            }
+        }
+        
+        media = MediaFileUpload('./temp_render/output.mp4', chunksize=1024*1024, resumable=True)
+        request = youtube.videos().insert(part='snippet,status', body=body, media_body=media)
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+        print(f"Uploaded! ID: {response['id']}")
+        EOF
+
+    - name: Cleanup
+      if: always()
+      run: rm -rf ./temp_render
