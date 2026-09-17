@@ -7,6 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, CheckCircle, AlertCircle, Loader2, ExternalLink } from "lucide-react";
 
+// These review-queue tables are managed by the newsroom pipeline and are not
+// present in the generated public database types yet.
+const newsroomClient = supabase as any;
+const functionsUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
 interface QueueItem {
   id: string;
   created_at: string;
@@ -44,7 +49,7 @@ export default function ShortsReviewQueue() {
   const { data: queueItems, isLoading } = useQuery({
     queryKey: ["reviewQueueShorts"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await newsroomClient
         .from("review_queue")
         .select(`
           *,
@@ -82,7 +87,7 @@ export default function ShortsReviewQueue() {
 
       // Step 1: Prepare assets (generates TTS audio)
       const prepareResponse = await fetch(
-        `${supabase.functionsUrl}/v1/prepare-short-assets`,
+        `${functionsUrl}/prepare-short-assets`,
         {
           method: "POST",
           headers: {
@@ -111,7 +116,7 @@ export default function ShortsReviewQueue() {
 
       // Step 3: Upload to YouTube via edge function
       const uploadResponse = await fetch(
-        `${supabase.functionsUrl}/v1/youtube-upload`,
+        `${functionsUrl}/youtube-upload`,
         {
           method: "POST",
           headers: {
