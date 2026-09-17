@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, CheckCircle, AlertCircle, Loader2, ExternalLink } from "lucide-react";
-
-const supabase = createClient();
 
 interface QueueItem {
   id: string;
@@ -347,13 +345,20 @@ export default function ShortsReviewQueue() {
 async function renderShortVideo(assets: any): Promise<Blob> {
   // Dynamically import FFmpeg.wasm to avoid bundling it in the main bundle
   const { FFmpeg } = await import("@ffmpeg/ffmpeg");
-  const { fetchFile } = await import("@ffmpeg/util");
+  const { toBlobURL } = await import("@ffmpeg/util");
 
   const ffmpeg = new FFmpeg();
   
   // Load FFmpeg.wasm core
   await ffmpeg.load({
-    coreURL: await fetchFile("https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js"),
+    coreURL: await toBlobURL(
+      "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
+      "text/javascript",
+    ),
+    wasmURL: await toBlobURL(
+      "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
+      "application/wasm",
+    ),
   });
 
   // Write audio file (from base64)
@@ -389,7 +394,12 @@ async function renderShortVideo(assets: any): Promise<Blob> {
 
   // Read the output file
   const outputData = await ffmpeg.readFile("output.mp4");
-  const outputBlob = new Blob([outputData], { type: "video/mp4" });
+  if (typeof outputData === "string") {
+    throw new Error("FFmpeg returned an invalid video output");
+  }
+  const outputBuffer = new ArrayBuffer(outputData.byteLength);
+  new Uint8Array(outputBuffer).set(outputData);
+  const outputBlob = new Blob([outputBuffer], { type: "video/mp4" });
 
   return outputBlob;
 }
