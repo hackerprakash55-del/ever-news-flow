@@ -10,17 +10,25 @@ import { chat, MODELS, tryParseJson } from "../_shared/ai.ts";
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  // Auth: this function is intended to be invoked only by pg_cron (which
-  // includes the service-role key) or by an admin. Reject anything else so
-  // anonymous internet callers can't create broadcasts or burn AI credits.
+  // --- AUTHENTICATION BLOCK START ---
+  // Retrieve secrets from environment
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const cronSecret = Deno.env.get("CRON_SECRET") ?? ""; // Your custom secret from Lovable Secrets
+  
   const authHeader = req.headers.get("Authorization") ?? "";
-  const cronSecret = req.headers.get("x-cron-secret") ?? "";
+  const xCronSecret = req.headers.get("x-cron-secret") ?? "";
+  
+  // Extract Bearer token if present
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-  const isServiceCall = serviceKey && (bearer === serviceKey || cronSecret === serviceKey);
+
+  // Check if request is authorized:
+  // 1. Service Role Key matches Bearer token OR x-cron-secret
+  // 2. Custom CRON_SECRET matches x-cron-secret
+  const isServiceCall = serviceKey && (bearer === serviceKey || xCronSecret === serviceKey);
+  const isCronCall = cronSecret && xCronSecret === cronSecret;
 
   let isAdmin = false;
-  if (!isServiceCall && bearer) {
+  if (!isServiceCall && !isCronCall && bearer) {
     try {
       const { requireAdmin } = await import("../_shared/supa.ts");
       const auth = await requireAdmin(authHeader);
@@ -30,9 +38,18 @@ serve(async (req) => {
     }
   }
 
-  if (!isServiceCall && !isAdmin) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
+  // Reject if not service, not cron, and not admin
+  if (!isServiceCall && !isCronCall && !isAdmin) {
+    console.warn("Unauthorized attempt:", { 
+      hasBearer: !!bearer, 
+      hasXCron: !!xCronSecret, 
+      isServiceCall, 
+      isCronCall, 
+      isAdmin 
+    });
+    return jsonResponse({ error: "Unauthorized: Missing valid credentials" }, 401);
   }
+  // --- AUTHENTICATION BLOCK END ---
 
   try {
     const supa = serviceClient();
