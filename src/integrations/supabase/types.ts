@@ -68,18 +68,48 @@ export type Database = {
       app_settings: {
         Row: {
           key: string
-          updated_at: string
-          value: Json
+          updated_at: string | null
+          value: Json | null
         }
         Insert: {
           key: string
-          updated_at?: string
-          value?: Json
+          updated_at?: string | null
+          value?: Json | null
         }
         Update: {
           key?: string
-          updated_at?: string
-          value?: Json
+          updated_at?: string | null
+          value?: Json | null
+        }
+        Relationships: []
+      }
+      auto_publish_logs: {
+        Row: {
+          dry_run: boolean | null
+          error_message: string | null
+          id: string
+          run_timestamp: string | null
+          stories_checked: number | null
+          stories_failed: number | null
+          stories_published: number | null
+        }
+        Insert: {
+          dry_run?: boolean | null
+          error_message?: string | null
+          id?: string
+          run_timestamp?: string | null
+          stories_checked?: number | null
+          stories_failed?: number | null
+          stories_published?: number | null
+        }
+        Update: {
+          dry_run?: boolean | null
+          error_message?: string | null
+          id?: string
+          run_timestamp?: string | null
+          stories_checked?: number | null
+          stories_failed?: number | null
+          stories_published?: number | null
         }
         Relationships: []
       }
@@ -689,6 +719,50 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      published_shorts: {
+        Row: {
+          article_id: string
+          article_url: string | null
+          error_message: string | null
+          id: string
+          published_at: string | null
+          status: string | null
+          verification_run_id: string | null
+          youtube_video_id: string | null
+          youtube_video_url: string | null
+        }
+        Insert: {
+          article_id: string
+          article_url?: string | null
+          error_message?: string | null
+          id?: string
+          published_at?: string | null
+          status?: string | null
+          verification_run_id?: string | null
+          youtube_video_id?: string | null
+          youtube_video_url?: string | null
+        }
+        Update: {
+          article_id?: string
+          article_url?: string | null
+          error_message?: string | null
+          id?: string
+          published_at?: string | null
+          status?: string | null
+          verification_run_id?: string | null
+          youtube_video_id?: string | null
+          youtube_video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "published_shorts_verification_run_id_fkey"
+            columns: ["verification_run_id"]
+            isOneToOne: false
+            referencedRelation: "verification_runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_articles: {
         Row: {
