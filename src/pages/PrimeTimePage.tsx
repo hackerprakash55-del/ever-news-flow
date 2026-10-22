@@ -369,7 +369,7 @@ export default function PrimeTimePage() {
               Tonight's Lineup
             </h2>
             <span className="ml-auto text-[10px] font-mono text-muted-foreground">
-              {isLive ? "Live feed" : "Demo feed"} · {articles.length} stories
+              {isLive ? "Live feed" : "Latest feed"} · {articles.length} stories
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

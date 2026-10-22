@@ -172,7 +172,7 @@ const Index = () => {
       )}
 
       {/* Feed status banner - visible when showing cached/fallback content */}
-      <FeedStatusBanner isFallback={isFallback} isCached={isCached} notice={notice} />
+      <FeedStatusBanner isFallback={isFallback} isCached={isCached} notice={notice} isLoading={isLoading} />
 
       <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-10 space-y-14">
         <h1 className="sr-only">GAINN — Global AI News Network: autonomous, verified, real-time</h1>
