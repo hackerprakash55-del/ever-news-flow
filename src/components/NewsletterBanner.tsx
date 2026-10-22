@@ -34,7 +34,7 @@ export const NewsletterBanner = () => {
                 AI-curated headlines, fact-checked and bias-scored. Delivered at 6 AM, 12 PM & 6 PM.
               </p>
               <div className="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-muted-foreground/60">
-                <span>✦ 127,000+ subscribers</span>
+                <span>✦ Free daily headlines</span>
                 <span>·</span>
                 <span>✦ No spam</span>
                 <span>·</span>

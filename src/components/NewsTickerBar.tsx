@@ -1,13 +1,12 @@
-import { TICKER_ITEMS } from "@/data/mockData";
 import { useNews } from "@/hooks/useNews";
 
 export const NewsTickerBar = () => {
   const { articles, isLive } = useNews({ pageSize: 30 });
 
-  const items: string[] =
-    articles.length > 0
-      ? articles.map((a) => a.headline)
-      : TICKER_ITEMS;
+  // Only ever show real headlines — no fake placeholder text when the feed is empty.
+  if (articles.length === 0) return null;
+
+  const items: string[] = articles.map((a) => a.headline);
 
   const doubled = [...items, ...items];
 
