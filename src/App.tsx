@@ -67,11 +67,11 @@ const App = () => (
                 <Route path="/shorts-review-queue" element={<AuthGuard><ShortsReviewQueue /></AuthGuard>} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
-                {/* Protected — must be signed in */}
+                {/* Public — anyone can watch Prime Time, no sign-in required */}
+                <Route path="/prime-time" element={<PrimeTimePage />} />
+                <Route path="/prime-time/schedule" element={<AuthGuard><PrimeTimeSchedulePage /></AuthGuard>}/>
                 <Route path="/newsroom"   element={<AuthGuard><NewsroomPage /></AuthGuard>} />
                 <Route path="/settings"   element={<AuthGuard><SettingsPage /></AuthGuard>} />
-                <Route path="/prime-time" element={<AuthGuard><PrimeTimePage /></AuthGuard>} />
-                <Route path="/prime-time/schedule" element={<AuthGuard><PrimeTimeSchedulePage /></AuthGuard>} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
