@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Play, Pause, SkipForward, Volume2, VolumeX, ArrowRight, ShieldCheck,
-  MessageSquare, AudioLines, Star, Users, Radio,
+  Play, Pause, SkipForward, Volume2, VolumeX, ArrowRight, AudioLines, Radio,
 } from "lucide-react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
@@ -32,9 +31,6 @@ function StoryCard({ a }: { a: Article }) {
       <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/50 border border-white/20 text-[9px] font-mono font-bold tracking-widest text-white uppercase">
         {a.category}
       </span>
-      <span className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/15 border border-primary/40 text-[9px] font-mono font-bold text-primary uppercase">
-        <ShieldCheck className="w-3 h-3" /> AI Verified
-      </span>
 
       <div className="relative z-10 p-4">
         <h3 className="font-display font-bold text-base leading-snug text-white line-clamp-3">
@@ -42,14 +38,6 @@ function StoryCard({ a }: { a: Article }) {
         </h3>
         <div className="mt-2 text-[10px] font-mono text-white/60 truncate">
           GAINN AI Desk · {Array.isArray(a.sources) ? a.sources[0] : a.sources} · {a.readTime || 3} min read
-        </div>
-        <div className="mt-2.5 flex items-center justify-between">
-          <span className="flex items-center gap-1 text-[10px] font-mono text-white/60">
-            <MessageSquare className="w-3 h-3" /> {(a.headline.length * 3) % 180 + 12}
-          </span>
-          <span className="px-2 py-0.5 rounded-full border border-primary/50 text-[10px] font-mono text-primary">
-            {a.credibilityScore}% Trust
-          </span>
         </div>
       </div>
     </Link>
@@ -197,27 +185,6 @@ export default function PrimeTimePage() {
               no bias, fully AI-verified. Real stories, real images, real insights.
             </p>
 
-            {/* Stat cards */}
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="card-glass rounded-lg px-4 py-3">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-                  <Users className="w-3 h-3" /> Nightly viewers
-                </div>
-                <div className="mt-1 font-display text-2xl font-bold text-white">2.4M</div>
-              </div>
-              <div className="card-glass rounded-lg px-4 py-3">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-                  <Star className="w-3 h-3" /> Viewer rating
-                </div>
-                <div className="mt-1 font-display text-2xl font-bold text-white">4.9★</div>
-              </div>
-              <div className="card-glass rounded-lg px-4 py-3 border-gainn-red/30">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-gainn-red uppercase tracking-widest">
-                  <Radio className="w-3 h-3" /> Live
-                </div>
-                <div className="mt-1 text-xs font-mono text-white">every night 9PM ET</div>
-              </div>
-            </div>
 
             {/* Tonight's Stories carousel */}
             <div className="mt-8">
@@ -323,14 +290,6 @@ export default function PrimeTimePage() {
                       : voiceState === "loading" ? "Cueing AI narration…"
                       : voiceState === "premium" ? "AI anchor narrating · auto-advances"
                       : "AI narration playing · auto-advances"}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="flex -space-x-2">
-                      {["bg-primary/70", "bg-gainn-red/70", "bg-emerald-500/70"].map((c, i) => (
-                        <span key={i} className={cn("w-5 h-5 rounded-full border border-black/60", c)} />
-                      ))}
-                    </span>
-                    <span className="text-[10px] font-mono text-white/70">+2.4M watching</span>
                   </span>
                 </div>
                 <Link
