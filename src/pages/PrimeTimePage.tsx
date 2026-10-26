@@ -153,7 +153,7 @@ export default function PrimeTimePage() {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-gainn-red/50 text-[10px] font-mono font-bold tracking-widest text-gainn-red uppercase">
-                <span className="w-2 h-2 rounded-full bg-gainn-red live-dot" /> Live every night · 9 PM IST
+                Every night · 9 PM IST
               </span>
               <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase">
                 GAINN Flagship Show
