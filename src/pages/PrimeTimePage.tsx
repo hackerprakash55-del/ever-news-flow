@@ -331,6 +331,11 @@ export default function PrimeTimePage() {
               {isLive ? "Live feed" : "Latest feed"} · {articles.length} stories
             </span>
           </div>
+          {articles.length === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Tonight's stories are being prepared. Check back shortly.
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {articles.slice(0, gridCount).map((a) => <StoryCard key={a.id} a={a} />)}
           </div>
