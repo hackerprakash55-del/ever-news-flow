@@ -53,6 +53,13 @@ export function speechLocale(code: string): string {
 /** Translate one or more strings with Sarvam. Falls back to the originals. */
 export async function translateTexts(texts: string[], target: string): Promise<string[]> {
   if (!texts.length || target === "en-IN") return texts;
+  // The translate function accepts at most 40 strings per call — send in chunks.
+  if (texts.length > 40) {
+    const chunks: string[][] = [];
+    for (let i = 0; i < texts.length; i += 40) chunks.push(texts.slice(i, i + 40));
+    const results = await Promise.all(chunks.map((c) => translateTexts(c, target)));
+    return results.flat();
+  }
   try {
     const { data, error } = await supabase.functions.invoke("sarvam-translate", {
       body: { texts, target },

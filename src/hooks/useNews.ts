@@ -166,7 +166,7 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
     fetchedAt: null,
     totalResults: isDevMode ? MOCK_ARTICLES.length : 0,
     isCached: Boolean(cachedFeed),
-    isFallback: !cachedFeed,
+    isFallback: !cachedFeed && isDevMode,
     notice: cachedFeed
       ? "Loading the latest feed; showing stories saved on this device."
       : isDevMode
@@ -183,8 +183,8 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
   } = useQuery({
     queryKey,
     queryFn: () => fetchLiveNews(category, fetchSize, location, lang),
-    initialData: immediateFeed,
-    initialDataUpdatedAt: Date.now(),
+    initialData: cachedFeed || isDevMode ? immediateFeed : undefined,
+    initialDataUpdatedAt: cachedFeed || isDevMode ? Date.now() : undefined,
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
