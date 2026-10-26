@@ -1,74 +1,66 @@
-name: Auto Render & Upload to YouTube
+name: GAINN Shorts – render & upload to YouTube
 
 on:
-  repository_dispatch:
-    types: [render_video]
+  schedule:
+    - cron: "15 */4 * * *"   # every 4 hours (daily cap enforced by the backend)
+  workflow_dispatch: {}
 
 jobs:
   render-and-upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
+    timeout-minutes: 20
+    env:
+      FN: ${{ secrets.GAINN_FUNCTIONS_URL }}
+      RS: ${{ secrets.RENDERER_SECRET }}
+      AK: ${{ secrets.GAINN_PUBLISHABLE_KEY }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg jq fonts-noto-core fonts-noto-extra
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      - name: Get next story
+        id: next
+        run: |
+          curl -sS -X POST "$FN/youtube-publisher" -H "apikey: $AK" -H "x-renderer-secret: $RS" \
+            -H "Content-Type: application/json" -d '{"action":"next"}' > next.json
+          jq 'del(.audioBase64)' next.json
+          ID=$(jq -r '.item.id // empty' next.json)
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
 
-    - name: Install FFmpeg
-      run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Render vertical Short
+        if: steps.next.outputs.id != ''
+        run: |
+          set -e
+          jq -r '.item.title' next.json | fold -s -w 24 > title.txt
+          jq -r '.item.source_name // "GAINN"' next.json > source.txt
+          if [ "$(jq -r '.audioBase64 // empty' next.json)" != "" ]; then
+            jq -r '.audioBase64' next.json | base64 -d > voice.wav
+          else
+            ffmpeg -y -f lavfi -i anullsrc=r=22050:cl=mono -t 20 voice.wav
+          fi
+          DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 voice.wav)
+          DUR=$(python3 -c "print(min(58, float('$DUR')+1))")
+          FONT=/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf
+          [ -f "$FONT" ] || FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+          ffmpeg -y -f lavfi -i "color=c=0x060910:s=1080x1920:d=$DUR" -i voice.wav -filter_complex \
+            "[0]drawbox=y=0:w=iw:h=12:color=0x00D4FF:t=fill,\
+             drawtext=fontfile=$FONT:text='GAINN':fontsize=72:fontcolor=0x00D4FF:x=(w-tw)/2:y=180,\
+             drawtext=fontfile=$FONT:textfile=title.txt:fontsize=64:fontcolor=white:line_spacing=18:x=(w-tw)/2:y=(h-th)/2,\
+             drawtext=fontfile=$FONT:textfile=source.txt:fontsize=40:fontcolor=0xAAB4C3:x=(w-tw)/2:y=h-360,\
+             drawtext=fontfile=$FONT:text='ever-news-flow.lovable.app':fontsize=36:fontcolor=0x00D4FF:x=(w-tw)/2:y=h-260[v]" \
+            -map "[v]" -map 1:a -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -t "$DUR" short.mp4
 
-    - name: Install Python Dependencies
-      run: pip3 install google-api-python-client google-auth-oauthlib google-auth-httplib2
+      - name: Upload to YouTube
+        if: steps.next.outputs.id != ''
+        run: |
+          set -e
+          jq -n --arg id "${{ steps.next.outputs.id }}" --rawfile v <(base64 -w0 short.mp4) \
+            '{queueItemId:$id, videoBase64:$v, mimeType:"video/mp4"}' > upload.json
+          curl -sS -X POST "$FN/youtube-upload" -H "apikey: $AK" -H "x-renderer-secret: $RS" \
+            -H "Content-Type: application/json" --data-binary @upload.json | tee result.json
+          jq -e '.success == true' result.json
 
-    - name: Create Render Directory
-      run: mkdir -p ./temp_render
-
-    - name: Generate Video with FFmpeg
-      env:
-        STORY_TITLE: ${{ github.event.client_payload.story.title }}
-      run: |
-        ffmpeg -f lavfi -i color=black:s=640x360:d=10 \
-          -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:fontsize=24:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:text='$STORY_TITLE'" \
-          -c:v libx264 -pix_fmt yuv420p ./temp_render/output.mp4
-
-    - name: Upload to YouTube
-      env:
-        YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        STORY_TITLE: ${{ github.event.client_payload.story.title }}
-        STORY_CONTENT: ${{ github.event.client_payload.story.content }}
-      run: |
-        python3 - <<EOF
-        import os
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
-
-        youtube = build('youtube', 'v3', developerKey=os.environ['YOUTUBE_API_KEY'])
-        
-        body = {
-            'snippet': {
-                'title': f"[AUTO] {os.environ['STORY_TITLE']}",
-                'description': os.environ['STORY_CONTENT'],
-                'tags': ['news', 'automation'],
-                'categoryId': '25'
-            },
-            'status': {
-                'privacyStatus': 'public',
-                'madeForKids': False
-            }
-        }
-        
-        media = MediaFileUpload('./temp_render/output.mp4', chunksize=1024*1024, resumable=True)
-        request = youtube.videos().insert(part='snippet,status', body=body, media_body=media)
-        response = None
-        while response is None:
-            status, response = request.next_chunk()
-        print(f"Uploaded! ID: {response['id']}")
-        EOF
-
-    - name: Cleanup
-      if: always()
-      run: rm -rf ./temp_render
+      - name: Report render failure
+        if: failure() && steps.next.outputs.id != ''
+        run: |
+          curl -sS -X POST "$FN/youtube-publisher" -H "apikey: $AK" -H "x-renderer-secret: $RS" \
+            -H "Content-Type: application/json" -d "{\"action\":\"fail\",\"id\":\"${{ steps.next.outputs.id }}\",\"error\":\"Render step failed in GitHub Actions\"}"

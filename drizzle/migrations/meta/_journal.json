@@ -8,6 +8,13 @@
       "when": 1792740272088,
       "tag": "0000_tighten_intel_table_read_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792993231070,
+      "tag": "0001_migration",
+      "breakpoints": true
     }
   ]
 }

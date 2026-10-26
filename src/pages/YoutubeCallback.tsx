@@ -1,74 +1,56 @@
-import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
-/**
- * YouTube OAuth Callback Handler
- * 
- * This page captures the OAuth token from YouTube/Google after user consent.
- * The token is stored in localStorage and used for subsequent API calls.
- * 
- * URL format after consent:
- * /auth/youtube/callback#access_token=YA29...&token_type=Bearer&expires_in=3599&scope=...
- */
+/** Receives Google's authorization code and hands it to the backend, which stores a renewable token. */
 export default function YoutubeCallback() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [state, setState] = useState<"working" | "done" | "error">("working");
+  const [message, setMessage] = useState("Connecting your YouTube channel…");
+  const ran = useRef(false);
 
   useEffect(() => {
-    // YouTube OAuth returns the token in the URL hash (fragment), not query params
-    const hash = window.location.hash.substring(1); // Remove leading #
-    const params = new URLSearchParams(hash);
-    
-    const accessToken = params.get("access_token");
-    const error = params.get("error");
-
-    if (error) {
-      console.error("YouTube OAuth error:", error);
+    if (ran.current) return;
+    ran.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const err = params.get("error");
+    if (err || !code) {
+      setState("error");
+      setMessage(err ? `Google said: ${err}` : "No authorization code was returned.");
       return;
     }
-
-    if (accessToken) {
-      // Store token in localStorage for future use
-      localStorage.setItem("youtube_oauth_token", accessToken);
-      
-      // Optionally extract expiry time
-      const expiresIn = params.get("expires_in");
-      if (expiresIn) {
-        const expiryTime = Date.now() + parseInt(expiresIn, 10) * 1000;
-        localStorage.setItem("youtube_oauth_token_expiry", expiryTime.toString());
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("youtube-oauth", {
+        body: { action: "exchange", code, redirectUri: `${window.location.origin}/auth/youtube/callback` },
+      });
+      if (error || !data?.connected) {
+        let details = data?.error || error?.message || "Connection failed";
+        try { details = (await (error as any)?.context?.json())?.error ?? details; } catch { /* ignore */ }
+        setState("error");
+        setMessage(details);
+        return;
       }
-
-      // Redirect to the review queue page
-      setTimeout(() => {
-        navigate("/shorts-review-queue");
-      }, 2000);
-    }
+      setState("done");
+      setMessage(`Connected to ${data.channel?.channel_title ?? "your channel"}. Scheduled Shorts will now upload automatically.`);
+      setTimeout(() => navigate("/shorts-review-queue"), 2500);
+    })();
   }, [navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-6 w-6 text-green-600" />
-            YouTube Connected
+            {state === "working" && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+            {state === "done" && <CheckCircle className="h-6 w-6 text-primary" />}
+            {state === "error" && <AlertCircle className="h-6 w-6 text-destructive" />}
+            YouTube
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Alert className="bg-green-50 border-green-200">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
-              Your YouTube account has been successfully connected. You will be redirected to the Shorts Review Queue shortly.
-            </AlertDescription>
-          </Alert>
-          
-          <p className="mt-4 text-sm text-muted-foreground">
-            You can now approve and upload Shorts directly to your YouTube channel from the review queue.
-          </p>
-        </CardContent>
+        <CardContent><p className="text-sm text-muted-foreground">{message}</p></CardContent>
       </Card>
     </div>
   );
