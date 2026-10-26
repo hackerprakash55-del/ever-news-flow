@@ -18,6 +18,9 @@ export const PrimeTimeHero = () => {
   const rundown = (withImages.length >= 5 ? withImages : articles).slice(1, 6);
   const ticker = articles.slice(0, 3).map((a) => a.headline);
 
+  // Don't show an empty show — hide the section until real stories are loaded.
+  if (articles.length === 0) return null;
+
   return (
     <section className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-4">
       {/* ── Cinematic hero band ── */}
