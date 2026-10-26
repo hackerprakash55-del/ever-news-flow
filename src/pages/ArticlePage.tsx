@@ -9,7 +9,7 @@ import {
   Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark,
   BookmarkCheck, ChevronRight, ExternalLink, MapPin, Layers, TrendingUp, ChevronRight as Next,
 } from "lucide-react";
-import { Twitter, Linkedin, Link2, Sparkles, UserPlus } from "lucide-react";
+import { Twitter, Linkedin, Link2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNews } from "@/hooks/useNews";
 import { FeedStatusBanner } from "@/components/FeedStatusBanner";
