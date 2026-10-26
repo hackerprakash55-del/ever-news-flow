@@ -27,7 +27,7 @@ async function getDailyPublishedCount(date: string): Promise<number> {
     .select('*', { count: 'exact', head: true })
     .gte('created_at', `${date}T00:00:00Z`)
     .lt('created_at', `${date}T23:59:59Z`)
-    .eq('publish_status', 'success');
+    .in('publish_status', ['success', 'triggered']);
   
   return count || 0;
 }

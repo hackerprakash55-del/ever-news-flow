@@ -23,6 +23,7 @@ const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
 const TrendingPage     = lazy(() => import("./pages/TrendingPage"));
 const ShortsPage       = lazy(() => import("./pages/ShortsPage"));
 const ShortsReviewQueue = lazy(() => import("./pages/ShortsReviewQueue"));
+const AdminHealthCheck = lazy(() => import("./pages/AdminHealthCheck"));
 const YoutubeCallback  = lazy(() => import("./pages/YoutubeCallback"));
 const PrimeTimePage    = lazy(() => import("./pages/PrimeTimePage"));
 const PrimeTimeSchedulePage = lazy(() => import("./pages/PrimeTimeSchedulePage"));
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="/trending"   element={<TrendingPage />} />
                 <Route path="/shorts"     element={<ShortsPage />} />
                 <Route path="/shorts/:id" element={<ShortsPage />} />
+                <Route path="/admin/health" element={<AuthGuard><AdminHealthCheck /></AuthGuard>} />
                 <Route path="/shorts-review-queue" element={<AuthGuard><ShortsReviewQueue /></AuthGuard>} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
