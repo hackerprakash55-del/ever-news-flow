@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      FN: ${{ secrets.GAINN_FUNCTIONS_URL }}
+      FN: https://lwdzzvrzsrssaocaprnl.supabase.co/functions/v1
       RS: ${{ secrets.RENDERER_SECRET }}
-      AK: ${{ secrets.GAINN_PUBLISHABLE_KEY }}
+      AK: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3ZHp6dnJ6c3Jzc2FvY2Fwcm5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NzEwNzcsImV4cCI6MjA4ODU0NzA3N30.zbBNAlbQjv3CIbNIsX3S3MkkXTzjmx5febTlGa2mmBk
     steps:
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y ffmpeg jq fonts-noto-core fonts-noto-extra
