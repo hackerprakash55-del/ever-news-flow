@@ -442,9 +442,11 @@ export default function AIVideoPage() {
   ) => {
     const fallbackUrl = makeFallbackThumbnail(title, category);
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      const bearer = sess.session?.access_token ?? anonKey;
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-thumbnail`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${anonKey}`, apikey: anonKey, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${bearer}`, apikey: anonKey, "Content-Type": "application/json" },
         body: JSON.stringify({ thumbnailPrompt: thumbnailPrompt || title, title }),
       });
       const json = await res.json().catch(() => ({}));
