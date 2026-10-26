@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Play, Pause, SkipForward, Volume2, VolumeX, ArrowRight, AudioLines, Radio,
+  Play, Pause, SkipForward, Volume2, VolumeX, ArrowRight, AudioLines, Radio, Captions,
 } from "lucide-react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
@@ -55,6 +55,7 @@ export default function PrimeTimePage() {
   const [clock, setClock] = useState(new Date());
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(true);
   const [voiceState, setVoiceState] = useState<"idle" | "loading" | "premium" | "browser">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -277,12 +278,30 @@ export default function PrimeTimePage() {
                 >
                   {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
+                <button
+                  onClick={() => setShowCaptions((c) => !c)}
+                  aria-label={showCaptions ? "Hide captions" : "Show captions"}
+                  className={cn("w-11 h-11 rounded-full bg-black/40 border border-white/25 backdrop-blur-md flex items-center justify-center hover:bg-black/60 active:scale-95 transition",
+                    showCaptions ? "text-primary" : "text-white/50")}
+                >
+                  <Captions className="w-5 h-5" />
+                </button>
               </div>
 
               <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h2 className="font-display font-bold text-lg leading-snug text-white line-clamp-2">
+                {playing && showCaptions && feature && (
+                  <p className="mb-2 px-3 py-1.5 rounded-md bg-black/70 border border-white/10 text-[12px] leading-snug text-white/95 line-clamp-2 max-w-2xl">
+                    {scriptFor(feature)}
+                  </p>
+                )}
+                <h2 className="font-display font-bold text-lg leading-snug text-white line-clamp-2 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)]">
                   {feature?.headline}
                 </h2>
+                {feature && (
+                  <p className="mt-1 text-[10px] font-mono text-white/60">
+                    Source: {Array.isArray(feature.sources) ? feature.sources[0] : feature.sources}
+                  </p>
+                )}
                 <div className="mt-2 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-[10px] font-mono text-primary">
                     <AudioLines className={cn("w-4 h-4", playing && "animate-pulse")} />
@@ -317,6 +336,26 @@ export default function PrimeTimePage() {
                 </div>
               </div>
             </div>
+
+            {/* Transcript & per-story sources */}
+            {tonight.length > 0 && (
+              <details className="mt-4 rounded-xl border border-border bg-surface-1/50 overflow-hidden">
+                <summary className="px-4 py-3 text-xs font-mono uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-foreground transition">
+                  Transcript & sources · {tonight.length} stories
+                </summary>
+                <ol className="px-4 pb-4 space-y-4">
+                  {tonight.map((a, i) => (
+                    <li key={a.id + i} className="border-l-2 border-primary/40 pl-3">
+                      <p className="text-sm font-semibold text-foreground leading-snug">{a.headline}</p>
+                      <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-3">{scriptFor(a)}</p>
+                      <p className="mt-1 text-[10px] font-mono text-primary/80">
+                        Source: {Array.isArray(a.sources) ? a.sources[0] : a.sources}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )}
           </div>
         </section>
 

@@ -59,6 +59,15 @@ const CATEGORY_ICONS: Record<string, string> = {
   Environment: "🌿", Science: "🚀", Health: "🏥", "Global Affairs": "🌍",
 };
 
+// Editorial collections give the archive named, browsable strands.
+const COLLECTIONS: Record<string, string> = {
+  AI: "Tech Briefing", Technology: "Tech Briefing",
+  Economy: "Markets Wrap", Politics: "The Political Desk",
+  Science: "Science Desk", Environment: "Planet Watch",
+  Health: "Health Desk", "Global Affairs": "World Tonight",
+};
+const collectionOf = (cat: string | null) => COLLECTIONS[cat ?? "Global Affairs"] ?? "World Tonight";
+
 // ── Data fetching ─────────────────────────────────────────────────────────
 
 async function fetchVideos(): Promise<VideoRecord[]> {
@@ -205,6 +214,7 @@ function SkeletonCard() {
 export default function VideoLibraryPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCollection, setActiveCollection] = useState("All");
   const [activeVideo, setActiveVideo] = useState<VideoModalSource | null>(null);
 
   const playReport = (video: VideoRecord) => setActiveVideo({
@@ -222,6 +232,9 @@ export default function VideoLibraryPage() {
 
   const filtered = useMemo(() => {
     let result = videos;
+    if (activeCollection !== "All") {
+      result = result.filter((v) => collectionOf(v.category) === activeCollection);
+    }
     if (activeCategory !== "All") {
       result = result.filter((v) => (v.category ?? "Global Affairs") === activeCategory);
     }
