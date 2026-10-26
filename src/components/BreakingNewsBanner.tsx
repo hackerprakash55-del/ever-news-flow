@@ -1,26 +1,7 @@
 import { BreakingAlert } from "@/data/mockData";
 import { useNews } from "@/hooks/useNews";
-import { Zap, TrendingUp } from "lucide-react";
-import { useEffect, useState, useMemo, useRef } from "react";
-
-// ── Animated Count-Up ──────────────────────────────────────
-function useCountUp(target: number, duration = 1200) {
-  const [value, setValue] = useState(0);
-  const started = useRef(false);
-  useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    const start = performance.now();
-    const step = (now: number) => {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(eased * target));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [target, duration]);
-  return value;
-}
+import { Zap } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
 
 // ── Breaking Banner ────────────────────────────────────────
 export const BreakingNewsBanner = () => {
@@ -98,41 +79,3 @@ export const BreakingNewsBanner = () => {
   );
 };
 
-// ── Animated Stats Bar ─────────────────────────────────────
-const StatItem = ({ label, value, rawValue, color, isLive }: {
-  label: string; value: string; rawValue: number; color: string; isLive?: boolean;
-}) => {
-  const count = useCountUp(rawValue, 1400);
-  const formatted = count.toLocaleString();
-
-  return (
-    <div className="bg-surface-1 px-3 py-3 text-center relative group">
-      <div className="flex items-center justify-center gap-1.5 mb-0.5">
-        <div className={`text-lg font-bold font-mono ${color}`}>{formatted}{value.includes("%") ? "%" : ""}</div>
-        {isLive && (
-          <span className="w-1.5 h-1.5 rounded-full bg-gainn-green live-dot" />
-        )}
-      </div>
-      <div className="text-[10px] text-muted-foreground leading-tight">{label}</div>
-    </div>
-  );
-};
-
-export const StatsBar = () => {
-  const stats = [
-    { label: "Articles Today", value: "1,247", rawValue: 1247, color: "text-gainn-cyan", isLive: true },
-    { label: "Sources Monitored", value: "12,891", rawValue: 12891, color: "text-accent" },
-    { label: "Fact Checks", value: "8,432", rawValue: 8432, color: "text-gainn-green", isLive: true },
-    { label: "Misinformation Blocked", value: "384", rawValue: 384, color: "text-gainn-red" },
-    { label: "Languages", value: "52", rawValue: 52, color: "text-gainn-purple" },
-    { label: "Agent Uptime", value: "99.7%", rawValue: 99, color: "text-gainn-amber" },
-  ];
-
-  return (
-    <div className="grid grid-cols-3 md:grid-cols-6 gap-px bg-border rounded-lg overflow-hidden border border-border">
-      {stats.map((stat) => (
-        <StatItem key={stat.label} {...stat} />
-      ))}
-    </div>
-  );
-};
