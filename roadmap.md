@@ -1,16 +1,19 @@
-# Roadmap
+# GAINN Roadmap
 
-- [x] Swap ArticlePage text to TranslatedArticleBody; Hindi article verified end to end
-- [x] Hindi Prime Time dashboard (English/हिन्दी toggle, Hindi sources, Hindi narration) + Hindi X post templates
-- [x] Sarvam voice fallback queue (Sarvam -> ElevenLabs -> browser, never stops)
-- [x] Publish GAINN to live URL
-- [x] Site-wide language switch (headlines/summaries + narration follow the chosen language) — verified in preview
-- [x] Hindi Prime Time schedule page (time picker, day picker, live bulletin) — verified end to end in Hindi
-- [ ] Blocked: news provider is on the free developer plan (100 requests/day) — Hindi live feed falls back to cached stories until the plan is upgraded (paid upgrade on the provider's own site)
-- [ ] Persist the public live-news cache so fresh signed-out browsers receive the same latest stories
-- [ ] Remove fabricated verification scores and perspective claims; add source-backed article verification data/UI
-- [ ] Defer below-fold homepage work and improve ticker/image rendering without changing the layout
-- [x] Route compatible backend text-generation calls through OpenRouter first, with Lovable AI fallback
+## Frontend & design research (done 2026-10-26)
+- [x] Audit GAINN pages via screenshots; research 15 top news sites; report → /mnt/documents/GAINN_frontend_ux_research.md
+- [ ] P0 trust killers: remove fake metrics, "AI Verified" chip, public Generate buttons, stale Video Library, mock Breaking Now stories
+- [ ] P1 article page: full body instead of 2-sentence teaser, story-specific AI analysis, real <a> links, fix "Live feed unavailable"
+- [ ] P2 presentation: Prime Time scrim/rundown, Shorts chips+progress+captions, homepage badge discipline, mobile overlaps
+- [ ] P3 differentiators: per-segment sources, captions/transcripts, named video collections
 
-- [x] YouTube Shorts: renewable channel connection, scheduled render+upload queue
-- [ ] YouTube Shorts: owner adds GitHub Actions secrets + Google redirect URL, then first live upload
+## Open / waiting on user
+- [ ] Grievance Officer full legal name (placeholder "Prakash, Founder, GAINN" on /grievance)
+- [ ] Verify GitHub scheduled Shorts run shows green tick in Actions
+- [ ] Legal: MIB registration + Grievance Officer appointment (user-only step)
+- [ ] Payments collection (requested earlier, not implemented)
+- [ ] Fresh security scan before broad sharing
+
+## Known technical constraints
+- OpenRouter deepseek free unavailable → text gen falls back to Lovable AI
+- News provider free tier limits Hindi live-feed refresh (cached stories)
