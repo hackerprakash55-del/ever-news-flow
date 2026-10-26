@@ -294,9 +294,11 @@ export default function PrimeTimePage() {
                     {scriptFor(feature)}
                   </p>
                 )}
-                <h2 className="font-display font-bold text-lg leading-snug text-white line-clamp-2 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)]">
-                  {feature?.headline}
-                </h2>
+                {!(playing && showCaptions && feature) && (
+                  <h2 className="font-display font-bold text-lg leading-snug text-white line-clamp-2 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)]">
+                    {feature?.headline}
+                  </h2>
+                )}
                 {feature && (
                   <p className="mt-1 text-[10px] font-mono text-white/60">
                     Source: {Array.isArray(feature.sources) ? feature.sources[0] : feature.sources}
