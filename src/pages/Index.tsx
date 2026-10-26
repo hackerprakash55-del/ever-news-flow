@@ -37,17 +37,17 @@ const FOOTER_COLUMNS: { title: string; links: { label: string; href: string }[] 
   {
     title: "Company",
     links: [
-      { label: "Newsroom", href: "/newsroom" },
-      { label: "How we verify", href: "/newsroom" },
-      { label: "Coverage", href: "/trending" },
+      { label: "About", href: "/about" },
+      { label: "How we verify", href: "/about" },
+      { label: "Corrections", href: "/corrections" },
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "Editorial standards", href: "/" },
-      { label: "Privacy", href: "/" },
-      { label: "Terms", href: "/" },
+      { label: "Grievance Officer", href: "/grievance" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
     ],
   },
   {
@@ -55,7 +55,7 @@ const FOOTER_COLUMNS: { title: string; links: { label: string; href: string }[] 
     links: [
       { label: "Newsletter", href: "/settings" },
       { label: "Account", href: "/settings" },
-      { label: "Contact", href: "/settings" },
+      { label: "Contact", href: "/contact" },
     ],
   },
 ];
