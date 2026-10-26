@@ -70,7 +70,7 @@ function SiteFooter() {
               GAINN — Global AI Intelligence &amp; News Network
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Neutral, source-checked reporting. Every story is AI-verified against primary
+              Neutral, source-checked reporting. Every story shows its original source, with checks against other
               sources and published without editorial spin.
             </p>
           </div>
