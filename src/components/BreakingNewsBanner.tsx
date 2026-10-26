@@ -30,7 +30,8 @@ export const BreakingNewsBanner = () => {
   const { articles, isLive } = useNews({ pageSize: 30 });
 
   const alerts: BreakingAlert[] = useMemo(() => {
-    if (!isLive || articles.length === 0) return BREAKING_ALERTS;
+    // Never invent breaking news — show nothing when the live feed is down.
+    if (!isLive || articles.length === 0) return [];
     const breaking = articles.filter((a) => a.isBreaking);
     const pool = breaking.length > 0 ? breaking : articles.slice(0, 5);
     return pool.slice(0, 6).map((a, i) => ({
