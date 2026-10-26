@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNews } from "@/hooks/useNews";
-import { Play, Loader2, Film, ArrowUpRight, Sparkles, Eye, Radio } from "lucide-react";
+import { Play, Loader2, Film, ArrowUpRight, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { VideoModal, type VideoModalSource } from "@/components/VideoModal";
 import { getVideoGradient } from "@/lib/videoVisuals";
@@ -69,12 +69,6 @@ async function autoGenerateScript(topic: string): Promise<VideoRecord | null> {
   }
 }
 
-// Deterministic view count from video id
-function getViewCount(id: string): string {
-  const n = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const views = (n % 90 + 10) * 100 + (n % 47) * 10;
-  return views >= 1000 ? `${(views / 1000).toFixed(1)}K` : String(views);
-}
 
 export function TrendingVideosSection() {
   const navigate = useNavigate();
@@ -201,7 +195,7 @@ export function TrendingVideosSection() {
   );
 }
 
-function VideoSectionHeader({ generating, onRefresh }: { generating: boolean; onRefresh?: () => void }) {
+function VideoSectionHeader({ generating }: { generating: boolean; onRefresh?: () => void }) {
   return (
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
@@ -213,27 +207,15 @@ function VideoSectionHeader({ generating, onRefresh }: { generating: boolean; on
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1 text-[10px] font-mono text-gainn-red px-2 py-0.5 rounded-full border border-gainn-red/30 bg-gainn-red/10">
-          <span className="w-1.5 h-1.5 rounded-full bg-gainn-red live-dot" /> LIVE
-        </span>
-        {onRefresh && (
-          <button onClick={onRefresh}
-            className="flex items-center gap-1 text-[10px] font-mono text-gainn-blue hover:text-gainn-cyan transition-colors">
-            <Sparkles className="w-3 h-3" /> Generate New
-          </button>
-        )}
-      </div>
     </div>
   );
 }
 
-function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest: boolean; onClick: () => void }) {
+function VideoCard({ video, onClick }: { video: VideoRecord; isNewest: boolean; onClick: () => void }) {
   const colorClass = CATEGORY_COLORS[video.category] || CATEGORY_COLORS["General"];
   const icon = CATEGORY_ICON[video.category] || "📰";
   const gradient = getVideoGradient(video.category);
   const timeAgo = getTimeAgo(video.created_at);
-  const views = getViewCount(video.id);
 
   return (
     <div
@@ -275,26 +257,11 @@ function VideoCard({ video, isNewest, onClick }: { video: VideoRecord; isNewest:
           </div>
         </div>
 
-        {/* LIVE badge on newest */}
-        {isNewest && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded bg-gainn-red text-white text-[9px] font-bold font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-white live-dot" />
-            🔴 LIVE
-          </div>
-        )}
-
         {/* Category badge */}
-        {!isNewest && (
-          <div className="absolute top-2 left-2">
-            <span className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded border ${colorClass}`}>
-              {video.category.toUpperCase()}
-            </span>
-          </div>
-        )}
-
-        {/* View count top-right */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 text-[10px] font-mono text-white/80 bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-sm">
-          <Eye className="w-3 h-3" /> {views}
+        <div className="absolute top-2 left-2">
+          <span className={`text-[9px] font-bold font-mono px-2 py-0.5 rounded border ${colorClass}`}>
+            {video.category.toUpperCase()}
+          </span>
         </div>
 
         {/* Duration bottom-right */}

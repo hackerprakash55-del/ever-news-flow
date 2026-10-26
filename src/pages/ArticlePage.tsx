@@ -158,7 +158,6 @@ function AuthorCard({ article }: { article: Article }) {
   const name = (article as any).author || "GAINN Editorial AI";
   const title = `${article.category} Desk · AI Correspondent`;
   const initials = name.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
-  const articleCount = 120 + (article.id.charCodeAt(0) % 80);
 
   return (
     <div
@@ -178,7 +177,7 @@ function AuthorCard({ article }: { article: Article }) {
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-foreground truncate">{name}</div>
         <div className="text-[11px] text-muted-foreground font-mono truncate">
-          {title} · {articleCount} articles
+          {title}
         </div>
       </div>
       <button
@@ -200,66 +199,6 @@ function AuthorCard({ article }: { article: Article }) {
 }
 
 // ── AI Analysis section ────────────────────────────────────
-function AIAnalysis({ article }: { article: Article }) {
-  const cat = article.category;
-  const why = [
-    `${article.summary} The story directly shapes how ${cat.toLowerCase()} stakeholders allocate attention and capital this week.`,
-    `Beyond the headline, this signals a structural shift that ripples across adjacent markets, policy debates, and public sentiment.`,
-  ].join(" ");
-  const next1 = `Expect follow-on coverage within 48 hours as institutional actors respond and additional verified sources weigh in.`;
-  const next2 = `Watch for a measurable shift in related indicators — sentiment, pricing, or policy proposals — over the next 1–2 weeks.`;
-
-  return (
-    <div
-      className="mt-10 rounded-xl p-6"
-      style={{
-        background: "rgba(0,212,255,0.04)",
-        borderLeft: "4px solid #00D4FF",
-        border: "1px solid rgba(0,212,255,0.15)",
-        borderLeftWidth: 4,
-        backdropFilter: "blur(14px)",
-      }}
-    >
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="w-4 h-4 text-[#00D4FF]" />
-        <h2 className="text-base font-display font-bold text-foreground">
-          <span className="mr-1">🤖</span> GAINN AI Analysis
-        </h2>
-        <span className="ml-auto text-[10px] font-mono px-2 py-0.5 rounded bg-[#00D4FF]/10 text-[#00D4FF] border border-[#00D4FF]/30">
-          BETA
-        </span>
-      </div>
-
-      <div className="space-y-5 text-sm">
-        <section>
-          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[#00D4FF] mb-1.5">
-            Why This Matters
-          </h3>
-          <p className="text-foreground/90 leading-relaxed">{why}</p>
-        </section>
-
-        <section>
-          <h3 className="text-[11px] font-mono uppercase tracking-wider text-[#00D4FF] mb-2">
-            What Happens Next
-          </h3>
-          <ul className="space-y-2">
-            {[next1, next2].map((t, i) => (
-              <li key={i} className="flex gap-2.5 text-sm text-foreground/90">
-                <span
-                  className="flex-shrink-0 w-5 h-5 rounded-full grid place-items-center text-[10px] font-mono font-bold mt-0.5"
-                  style={{ background: "rgba(0,212,255,0.15)", color: "#00D4FF" }}
-                >
-                  {i + 1}
-                </span>
-                <span className="leading-relaxed">{t}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </div>
-  );
-}
 
 // ── Auto-load infinite scroll ─────────────────────────────
 function InfiniteAutoLoad({ nextArticle }: { nextArticle: Article }) {
@@ -494,6 +433,33 @@ export default function ArticlePage() {
 
   const { articles: liveArticles, isCached, isFallback, notice } = useNews({ category: "all", pageSize: 20 });
 
+  // Lazy-expand short live articles into a full readable body.
+  const [expandedBody, setExpandedBody] = useState<string | null>(null);
+  useEffect(() => {
+    if (!article || !article.id.startsWith("live-")) return;
+    const existing = article.body || "";
+    if (existing.split(/\s+/).length >= 120) return; // already a full body
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    if (!supabaseUrl || !anonKey) return;
+    let cancelled = false;
+    fetch(`${supabaseUrl}/functions/v1/expand-article`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${anonKey}`, apikey: anonKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        headline: article.headline,
+        summary: article.summary,
+        content: existing,
+        source: article.sources?.[0] || "Unknown Source",
+        publishedAt: article.publishedAt,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d?.body && d.body.length > existing.length) setExpandedBody(d.body); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [article?.id]);
+
   useEffect(() => {
     if (!user || !article) return;
     supabase.from("saved_articles").select("id").eq("user_id", user.id).eq("article_id", article.id).single()
@@ -538,8 +504,7 @@ export default function ArticlePage() {
   }
 
   const allArticles = [
-    ...MOCK_ARTICLES,
-    ...liveArticles.filter((a) => !MOCK_ARTICLES.find((m) => m.id === a.id)),
+    ...(liveArticles.length > 0 ? liveArticles : MOCK_ARTICLES),
   ];
 
   const sameCategory = allArticles.filter((a) => a.id !== article!.id && a.category === article!.category).slice(0, 3);
@@ -553,7 +518,8 @@ export default function ArticlePage() {
 
   const verificationStatus = verificationLabel(article);
   const isLiveArticle = article.id.startsWith("live-");
-  const paragraphs = article.body ? article.body.split("\n\n").filter(Boolean) : [];
+  const fullBody = expandedBody || article.body;
+  const paragraphs = fullBody ? fullBody.split("\n\n").filter(Boolean) : [];
 
   // SEO fields
   const pageTitle = `${article.headline} | GAINN`;
@@ -733,7 +699,6 @@ export default function ArticlePage() {
               <ArticleVerificationBlock article={article} />
 
               {/* ── More Stories ── */}
-              <AIAnalysis article={article} />
               <MoreStories articles={allArticles} current={article} />
 
               {/* ── Continue Reading ── */}

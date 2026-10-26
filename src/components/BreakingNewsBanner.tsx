@@ -1,4 +1,4 @@
-import { BREAKING_ALERTS, BreakingAlert } from "@/data/mockData";
+import { BreakingAlert } from "@/data/mockData";
 import { useNews } from "@/hooks/useNews";
 import { Zap, TrendingUp } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -30,7 +30,8 @@ export const BreakingNewsBanner = () => {
   const { articles, isLive } = useNews({ pageSize: 30 });
 
   const alerts: BreakingAlert[] = useMemo(() => {
-    if (!isLive || articles.length === 0) return BREAKING_ALERTS;
+    // Never invent breaking news — show nothing when the live feed is down.
+    if (!isLive || articles.length === 0) return [];
     const breaking = articles.filter((a) => a.isBreaking);
     const pool = breaking.length > 0 ? breaking : articles.slice(0, 5);
     return pool.slice(0, 6).map((a, i) => ({
@@ -73,7 +74,7 @@ export const BreakingNewsBanner = () => {
           </p>
           <div className="flex items-center gap-3 mt-0.5">
             <span className="text-[10px] font-mono text-muted-foreground">{alert.region}</span>
-            <span className="text-[10px] text-gainn-cyan font-mono">✦ AI Verified</span>
+            <span className="text-[10px] text-gainn-cyan font-mono">✦ Source shown</span>
             {isLive && <span className="text-[10px] font-mono text-gainn-green">● Live Feed</span>}
           </div>
         </div>
