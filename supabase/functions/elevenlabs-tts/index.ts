@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireUserOrService } from "../_shared/supa.ts";
 
 // George - deep, authoritative news anchor voice
 const VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
@@ -12,6 +13,12 @@ serve(async (req) => {
   }
 
   try {
+    if (!(await requireUserOrService(req)).ok) {
+      return new Response(
+        JSON.stringify({ error: "Sign in for premium voice.", useClientFallback: true, status: 401 }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     if (!ELEVENLABS_API_KEY) {
       return new Response(

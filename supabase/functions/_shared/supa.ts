@@ -65,3 +65,18 @@ export async function requireServiceOrAdmin(req: Request) {
   }
 }
 
+
+/** Allows internal service-role callers or any signed-in user. */
+export async function requireUserOrService(req: Request) {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  if (!bearer) return { ok: false as const };
+  if (serviceKey && bearer === serviceKey) return { ok: true as const, service: true };
+  try {
+    const { data, error } = await userClient(authHeader).auth.getClaims(bearer);
+    const c = data?.claims as { sub?: string; role?: string } | undefined;
+    if (!error && c?.sub && c.role === "authenticated") return { ok: true as const, service: false, userId: c.sub };
+  } catch (_) { /* fallthrough */ }
+  return { ok: false as const };
+}
