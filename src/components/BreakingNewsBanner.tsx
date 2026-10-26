@@ -1,4 +1,4 @@
-import { BREAKING_ALERTS, BreakingAlert } from "@/data/mockData";
+import { BreakingAlert } from "@/data/mockData";
 import { useNews } from "@/hooks/useNews";
 import { Zap, TrendingUp } from "lucide-react";
 import { useEffect, useState, useMemo, useRef } from "react";

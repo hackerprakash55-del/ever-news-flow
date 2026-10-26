@@ -1,6 +1,6 @@
 import { Article } from "@/data/mockData";
 import { Shield, Zap, Bookmark, BookmarkCheck, Share2, Crown } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { trackArticleView } from "@/components/SoftSignInPrompt";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,10 +12,9 @@ import { useReveal } from "@/hooks/useReveal";
 import { verificationLabel } from "@/components/ArticleVerificationBlock";
 
 // Store live article in sessionStorage so the article page can retrieve it
-function storeAndNavigate(article: Article, navigate: (path: string) => void) {
+function storeArticle(article: Article) {
   try { sessionStorage.setItem(`article-${article.id}`, JSON.stringify(article)); } catch {}
   trackArticleView();
-  navigate(`/article/${article.id}`);
 }
 
 // Read-progress bar shown at bottom of card
@@ -116,40 +115,13 @@ function useArticleActions(article: Article) {
   return { isSaved, saving, toggleSave, share };
 }
 
-// Mock author data derived deterministically from article id
-function getAuthor(article: Article) {
-  const authors = [
-    { name: "Sarah Chen", avatar: "SC", role: "Senior AI Correspondent" },
-    { name: "Marcus Webb", avatar: "MW", role: "Global Affairs Editor" },
-    { name: "Priya Nair", avatar: "PN", role: "Science Reporter" },
-    { name: "James Okafor", avatar: "JO", role: "Economics Analyst" },
-    { name: "Elena Vasquez", avatar: "EV", role: "Climate Correspondent" },
-    { name: "Kai Tanaka", avatar: "KT", role: "Technology Editor" },
-  ];
-  const idx = article.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % authors.length;
-  return authors[idx];
-}
-
-// Mock comment count
-function getCommentCount(article: Article) {
-  return (article.id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 89) + 12;
-}
-
-// Source credibility helper
-function getSourceReliability(score: number) {
-  if (score >= 95) return { label: "Very High", color: "text-gainn-green" };
-  if (score >= 85) return { label: "High", color: "text-gainn-amber" };
-  return { label: "Medium", color: "text-muted-foreground" };
-}
 
 // ── Hero Card ──────────────────────────────────────────────
 export const HeroArticleCard = ({ article }: { article: Article }) => {
-  const navigate = useNavigate();
   const { isSaved, saving, toggleSave, share } = useArticleActions(article);
-  const author = getAuthor(article);
 
   return (
-    <div className="block group cursor-pointer animate-hero-rise" onClick={() => storeAndNavigate(article, navigate)}>
+    <Link to={`/article/${article.id}`} className="block group cursor-pointer animate-hero-rise" onClick={() => storeArticle(article)}>
       <div className="card-glass relative overflow-hidden" style={{ minHeight: 480 }}>
         {article.imageUrl ? (
           <img
@@ -171,7 +143,7 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
           <h2 className="hero-headline text-foreground mb-3 group-hover:text-primary transition-colors">
             {article.headline}
           </h2>
-          <MetaLine parts={[article.sources?.[0], author.name, `${article.readTime} min read`]} />
+          <MetaLine parts={[article.sources?.[0], `${article.readTime} min read`]} />
           <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{article.summary}</p>
 
           {/* Action buttons */}
@@ -200,23 +172,22 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
 // ── Standard Card ──────────────────────────────────────────
 export const ArticleCard = ({ article, isPremium }: { article: Article; isPremium?: boolean }) => {
-  const navigate = useNavigate();
   const { isSaved, saving, toggleSave, share } = useArticleActions(article);
-  const author = getAuthor(article);
   const alreadyRead = isArticleRead(article.id);
   const revealRef = useReveal<HTMLDivElement>();
 
   return (
-    <div
-      ref={revealRef}
+    <Link
+      to={`/article/${article.id}`}
+      ref={revealRef as React.Ref<HTMLAnchorElement>}
       className="block group cursor-pointer reveal"
-      onClick={() => storeAndNavigate(article, navigate)}
+      onClick={() => storeArticle(article)}
     >
       <div
         className="card-glass overflow-hidden h-full flex flex-col relative"
@@ -262,7 +233,7 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
           <h3 className={`text-[15px] font-display mb-2 line-clamp-3 group-hover:text-accent transition-colors leading-snug ${alreadyRead ? "text-muted-foreground" : "text-foreground"}`}>
             {article.headline}
           </h3>
-          <MetaLine parts={[article.sources?.[0], author.name, `${article.readTime} min read`]} />
+          <MetaLine parts={[article.sources?.[0], `${article.readTime} min read`]} />
           <p className="text-xs text-muted-foreground line-clamp-2 mt-2 mb-4">{article.summary}</p>
 
           {/* Footer row */}
@@ -291,17 +262,16 @@ export const ArticleCard = ({ article, isPremium }: { article: Article; isPremiu
         {/* Reading progress bar at bottom of card */}
         <ReadProgressBar articleId={article.id} />
       </div>
-    </div>
+    </Link>
   );
 };
 
 // ── Compact List Card ──────────────────────────────────────
 export const ArticleListItem = ({ article, index }: { article: Article; index: number }) => {
-  const navigate = useNavigate();
   const status = verificationLabel(article);
 
   return (
-    <div className="block group cursor-pointer" onClick={() => storeAndNavigate(article, navigate)}>
+    <Link to={`/article/${article.id}`} className="block group cursor-pointer" onClick={() => storeArticle(article)}>
       <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-2 transition-colors">
         <span className="text-xs font-mono text-muted-foreground/40 w-6 flex-shrink-0">
           {String(index + 1).padStart(2, "0")}
@@ -315,7 +285,7 @@ export const ArticleListItem = ({ article, index }: { article: Article; index: n
             : status.label}
         </span>
       </div>
-    </div>
+    </Link>
   );
 };
 
