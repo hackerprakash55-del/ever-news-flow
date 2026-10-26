@@ -8,10 +8,12 @@ import {
   findCachedTopic,
   upsertTopicMemory,
 } from "../_shared/memory.ts";
-import { serviceClient } from "../_shared/supa.ts";
+import { serviceClient, requireServiceOrAdmin } from "../_shared/supa.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const auth = await requireServiceOrAdmin(req);
+  if (!auth.ok) return jsonResponse({ error: auth.error }, auth.status);
   try {
     const { action, payload } = await req.json();
     switch (action) {

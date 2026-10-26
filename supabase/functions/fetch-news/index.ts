@@ -572,7 +572,12 @@ serve(async (req) => {
     const location = url.searchParams.get("location") || "India";
     const pageSize = Math.min(Number(url.searchParams.get("pageSize") || "20"), 30);
     const searchQuery = url.searchParams.get("q") || ""; // free-text keyword search
-    const shouldExpand = url.searchParams.get("expand") === "true";
+    const wantsExpand = url.searchParams.get("expand") === "true";
+    // AI expansion and verification cost money: only internal/admin callers may request them.
+    const privileged = (wantsExpand || url.searchParams.get("verify") === "true")
+      ? (await requireServiceOrAdmin(req)).ok
+      : false;
+    const shouldExpand = wantsExpand && privileged;
     const lang = url.searchParams.get("lang") === "hi" ? "hi" : "en";
 
     const t0 = Date.now();
@@ -607,7 +612,7 @@ serve(async (req) => {
     // Verification is intentionally opt-in. Reading rollout settings and
     // starting the multi-agent newsroom on every normal feed request adds
     // backend latency but does not change the article list.
-    const shouldVerify = url.searchParams.get("verify") === "true";
+    const shouldVerify = privileged && url.searchParams.get("verify") === "true";
     if (shouldVerify && svc) {
       try {
         const { data: flag } = await svc

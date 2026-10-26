@@ -57,6 +57,7 @@ serve(async (req) => {
                 .from("claims")
                 .select("id, claim_text, confidence")
                 .in("id", c.claim_ids)
+                .eq("status", "verified")
                 .order("confidence", { ascending: false })
                 .limit(10);
               verifiedClaims = cs ?? [];
