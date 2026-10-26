@@ -2,9 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-// Sarvam bulbul:v2 — Indian-accent, multilingual news narration.
-const SPEAKER = "anushka";
-const MODEL = "bulbul:v2";
+// Sarvam bulbul:v3 — Indian-accent, multilingual news narration (v2 was retired).
+const SPEAKER = "shubh";
+const MODEL = "bulbul:v3";
 const MAX_CHARS = 1400; // keep a single fast request
 
 const SUPPORTED = new Set([

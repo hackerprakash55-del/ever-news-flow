@@ -15,7 +15,7 @@ async function narrate(text: string, language: string): Promise<string | null> {
   const res = await fetch("https://api.sarvam.ai/text-to-speech", {
     method: "POST",
     headers: { "api-subscription-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text.slice(0, 1400), target_language_code: language, speaker: "anushka", model: "bulbul:v2" }),
+    body: JSON.stringify({ text: text.slice(0, 1400), target_language_code: language, speaker: "shubh", model: "bulbul:v3" }),
   });
   if (!res.ok) { console.error("Sarvam", res.status, await res.text()); return null; }
   const d = await res.json();
