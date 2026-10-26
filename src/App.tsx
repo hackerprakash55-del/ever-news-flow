@@ -29,6 +29,7 @@ const PrimeTimePage    = lazy(() => import("./pages/PrimeTimePage"));
 const PrimeTimeSchedulePage = lazy(() => import("./pages/PrimeTimeSchedulePage"));
 const OAuthConsent     = lazy(() => import("./pages/OAuthConsent"));
 const NotFound         = lazy(() => import("./pages/NotFound"));
+const TrustPage        = lazy(() => import("./pages/TrustPage"));
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,9 @@ const App = () => (
                 <Route path="/settings"   element={<AuthGuard><SettingsPage /></AuthGuard>} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                {["about","contact","grievance","corrections","privacy","terms"].map((p) => (
+                  <Route key={p} path={`/${p}`} element={<TrustPage />} />
+                ))}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

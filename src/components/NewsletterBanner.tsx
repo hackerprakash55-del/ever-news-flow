@@ -31,7 +31,7 @@ export const NewsletterBanner = () => {
                 The GAINN Daily Brief
               </h3>
               <p className="text-sm text-muted-foreground">
-                AI-curated headlines, fact-checked and bias-scored. Delivered at 6 AM, 12 PM & 6 PM.
+                AI-curated Indian headlines with the original source on every story. Delivered at 6 AM, 12 PM & 6 PM.
               </p>
               <div className="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-muted-foreground/60">
                 <span>✦ Free daily headlines</span>

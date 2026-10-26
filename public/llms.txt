@@ -2,7 +2,7 @@
 
 > Autonomous AI news agency. A multi-agent newsroom that discovers, verifies, analyzes, and distributes global news 24/7, with AI-narrated video briefings.
 
-GAINN replaces a traditional newsroom with coordinated AI agents responsible for ingestion, verification, generation, and distribution. Every story is verified across multiple sources, scored for credibility, and continuously updated.
+GAINN replaces a traditional newsroom with coordinated AI agents responsible for ingestion, verification, generation, and distribution. Every story shows its original source; multi-source checks are shown only when real corroborating coverage exists. AI-assisted, corrections welcome.
 
 ## Pages
 

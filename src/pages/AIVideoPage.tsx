@@ -679,7 +679,7 @@ export default function AIVideoPage() {
             Video Reports
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
-            Generate long-form, balanced news videos on any global topic — AI-researched, fact-checked, and delivered from all perspectives.
+            Generate long-form, balanced news videos on any global topic — AI-assisted and based on real reporting, with sources shown.
           </p>
         </div>
 
@@ -943,7 +943,7 @@ export default function AIVideoPage() {
                     { label: "Neutral Bias Score", value: "0.00", good: true },
                     { label: "Perspectives Covered", value: "3+ sides", good: true },
                     { label: "Source Attribution", value: "Included", good: true },
-                    { label: "Fact-Checked", value: "AI Verified", good: true },
+                    { label: "Sources", value: "Shown", good: true },
                     { label: "Voice Model", value: "ElevenLabs", good: true },
                   ].map((item) => (
                     <div key={item.label} className="flex items-center justify-between text-xs">

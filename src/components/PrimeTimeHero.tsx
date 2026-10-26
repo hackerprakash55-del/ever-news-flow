@@ -18,6 +18,9 @@ export const PrimeTimeHero = () => {
   const rundown = (withImages.length >= 5 ? withImages : articles).slice(1, 6);
   const ticker = articles.slice(0, 3).map((a) => a.headline);
 
+  // Don't show an empty show — hide the section until real stories are loaded.
+  if (articles.length === 0) return null;
+
   return (
     <section className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-4">
       {/* ── Cinematic hero band ── */}
@@ -83,7 +86,7 @@ export const PrimeTimeHero = () => {
             {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
           <span className="ml-1 text-[10px] font-mono text-muted-foreground hidden sm:inline">
-            AI-narrated · AI-verified · no anchors, no bias
+            AI-narrated · sources shown · corrections welcome
           </span>
         </div>
       </div>
@@ -92,7 +95,7 @@ export const PrimeTimeHero = () => {
       <aside className="card-glass rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <span className="text-sm font-semibold">Tonight's Rundown</span>
-          <span className="text-[10px] font-mono text-gainn-red">● LIVE 9PM ET</span>
+          <span className="text-[10px] font-mono text-gainn-red">● LIVE 9 PM IST</span>
         </div>
         <div className="p-2 space-y-1">
           {rundown.map((a) => (
@@ -119,7 +122,7 @@ export const PrimeTimeHero = () => {
           ))}
         </div>
         <div className="px-4 py-2.5 border-t border-border flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
-          <ShieldCheck className="w-3 h-3 text-primary" /> Every story AI-verified before air
+          <ShieldCheck className="w-3 h-3 text-primary" /> Original source shown for every story
         </div>
       </aside>
     </section>

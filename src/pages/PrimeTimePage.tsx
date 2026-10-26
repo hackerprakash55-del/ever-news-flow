@@ -142,7 +142,7 @@ export default function PrimeTimePage() {
       <SeoHead
         path="/prime-time"
         title="Prime Time — GAINN's Nightly AI-Narrated News Show"
-        description="GAINN Prime Time: a nightly AI-narrated news broadcast with cinematic deep-dives, real photojournalism and AI-verified reporting. Real stories, real images, real insights."
+        description="GAINN Prime Time: a nightly AI-narrated news broadcast with cinematic deep-dives, real photojournalism and source-shown reporting. Real stories, real images, real insights."
       />
       <div className="ambient-orbs" aria-hidden="true"><span /></div>
       <GlobalHeader />
@@ -153,7 +153,7 @@ export default function PrimeTimePage() {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-gainn-red/50 text-[10px] font-mono font-bold tracking-widest text-gainn-red uppercase">
-                <span className="w-2 h-2 rounded-full bg-gainn-red live-dot" /> Live every night · 9PM ET
+                <span className="w-2 h-2 rounded-full bg-gainn-red live-dot" /> Live every night · 9 PM IST
               </span>
               <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase">
                 GAINN Flagship Show
@@ -182,7 +182,7 @@ export default function PrimeTimePage() {
             <p className="mt-4 max-w-xl text-sm md:text-base text-muted-foreground leading-relaxed">
               GAINN's nightly flagship show. AI-narrated cinematic deep-dives on every major story,
               with live visuals, real photojournalism and professional broadcast quality — no anchors,
-              no bias, fully AI-verified. Real stories, real images, real insights.
+              sources shown, AI-assisted, corrections welcome. Real stories, real images, real insights.
             </p>
 
 
@@ -331,6 +331,11 @@ export default function PrimeTimePage() {
               {isLive ? "Live feed" : "Latest feed"} · {articles.length} stories
             </span>
           </div>
+          {articles.length === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Tonight's stories are being prepared. Check back shortly.
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {articles.slice(0, gridCount).map((a) => <StoryCard key={a.id} a={a} />)}
           </div>
