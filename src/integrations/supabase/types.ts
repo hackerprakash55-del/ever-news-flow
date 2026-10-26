@@ -1052,6 +1052,87 @@ export type Database = {
         }
         Relationships: []
       }
+      youtube_credentials: {
+        Row: {
+          channel_id: string | null
+          channel_title: string | null
+          connected_at: string
+          connected_by: string | null
+          id: string
+          refresh_token: string
+        }
+        Insert: {
+          channel_id?: string | null
+          channel_title?: string | null
+          connected_at?: string
+          connected_by?: string | null
+          id?: string
+          refresh_token: string
+        }
+        Update: {
+          channel_id?: string | null
+          channel_title?: string | null
+          connected_at?: string
+          connected_by?: string | null
+          id?: string
+          refresh_token?: string
+        }
+        Relationships: []
+      }
+      youtube_publish_queue: {
+        Row: {
+          article_id: string
+          attempts: number
+          created_at: string
+          error_message: string | null
+          id: string
+          language: string
+          script: string
+          source_name: string | null
+          source_url: string | null
+          status: string
+          title: string
+          updated_at: string
+          uploaded_at: string | null
+          youtube_url: string | null
+          youtube_video_id: string | null
+        }
+        Insert: {
+          article_id: string
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          language?: string
+          script: string
+          source_name?: string | null
+          source_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          uploaded_at?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Update: {
+          article_id?: string
+          attempts?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          language?: string
+          script?: string
+          source_name?: string | null
+          source_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          youtube_url?: string | null
+          youtube_video_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
