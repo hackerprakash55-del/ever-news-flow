@@ -1,10 +1,11 @@
 # GAINN Roadmap
 
-## Active: Frontend & design research (requested 2026-10-26)
-- [ ] Audit GAINN frontend page-by-page (home, Prime Time, Shorts, videos, article page, newsroom) via screenshots
-- [ ] Research 10–15 top news sites' design patterns (homepage, article, video/shorts, live TV)
-- [ ] Write comparison + prioritized improvement report → /mnt/documents
-- [ ] Present findings; ask user what to fix first
+## Frontend & design research (done 2026-10-26)
+- [x] Audit GAINN pages via screenshots; research 15 top news sites; report → /mnt/documents/GAINN_frontend_ux_research.md
+- [ ] P0 trust killers: remove fake metrics, "AI Verified" chip, public Generate buttons, stale Video Library, mock Breaking Now stories
+- [ ] P1 article page: full body instead of 2-sentence teaser, story-specific AI analysis, real <a> links, fix "Live feed unavailable"
+- [ ] P2 presentation: Prime Time scrim/rundown, Shorts chips+progress+captions, homepage badge discipline, mobile overlaps
+- [ ] P3 differentiators: per-segment sources, captions/transcripts, named video collections
 
 ## Open / waiting on user
 - [ ] Grievance Officer full legal name (placeholder "Prakash, Founder, GAINN" on /grievance)
