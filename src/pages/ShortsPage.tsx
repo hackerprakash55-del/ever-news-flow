@@ -246,7 +246,7 @@ export default function ShortsPage() {
 
   const shareToX = (a: Article) => {
     const url = `${window.location.origin}/article/${a.id}`;
-    const text = `${a.headline}\n\n✓ AI Verified — GAINN`;
+    const text = `${a.headline}\n\nSource shown · GAINN`;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=GAINN,AINews`,
       "_blank",
@@ -402,13 +402,9 @@ export default function ShortsPage() {
                       liked[a.id] ? "text-red-500" : "text-white/85 hover:text-red-400")}
                   >
                     <Heart className={cn("w-6 h-6", liked[a.id] && "fill-current")} />
-                    <span className="text-[10px] font-mono">
-                      {(a.headline.length * 7) % 900 + 42 + (liked[a.id] ? 1 : 0)}
-                    </span>
                   </button>
                   <button aria-label="Share" onClick={() => share(a)} className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition">
                     <Share2 className="w-6 h-6" />
-                    <span className="text-[10px] font-mono">{(a.headline.length * 3) % 300 + 11}</span>
                   </button>
                   <button aria-label="Post on X" onClick={() => shareToX(a)} className="flex flex-col items-center text-white/85 hover:text-cyan-300 transition active:scale-90">
                     <Twitter className="w-6 h-6" />

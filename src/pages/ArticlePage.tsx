@@ -158,7 +158,6 @@ function AuthorCard({ article }: { article: Article }) {
   const name = (article as any).author || "GAINN Editorial AI";
   const title = `${article.category} Desk · AI Correspondent`;
   const initials = name.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
-  const articleCount = 120 + (article.id.charCodeAt(0) % 80);
 
   return (
     <div
@@ -178,7 +177,7 @@ function AuthorCard({ article }: { article: Article }) {
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-foreground truncate">{name}</div>
         <div className="text-[11px] text-muted-foreground font-mono truncate">
-          {title} · {articleCount} articles
+          {title}
         </div>
       </div>
       <button
@@ -538,8 +537,7 @@ export default function ArticlePage() {
   }
 
   const allArticles = [
-    ...MOCK_ARTICLES,
-    ...liveArticles.filter((a) => !MOCK_ARTICLES.find((m) => m.id === a.id)),
+    ...(liveArticles.length > 0 ? liveArticles : MOCK_ARTICLES),
   ];
 
   const sameCategory = allArticles.filter((a) => a.id !== article!.id && a.category === article!.category).slice(0, 3);

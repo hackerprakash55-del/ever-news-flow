@@ -71,13 +71,6 @@ async function fetchVideos(): Promise<VideoRecord[]> {
   return (data ?? []) as VideoRecord[];
 }
 
-// Deterministic fake view count from video id
-function fakeViews(id: string) {
-  let n = 0;
-  for (let i = 0; i < id.length; i++) n += id.charCodeAt(i);
-  const base = ((n * 7919) % 48_000) + 1_200;
-  return base.toLocaleString();
-}
 
 // ── VideoCard ────────────────────────────────────────────────────────────────
 function VideoCard({ video, onPlayReport }: { video: VideoRecord; onPlayReport: (v: VideoRecord) => void }) {
@@ -96,7 +89,6 @@ function VideoCard({ video, onPlayReport }: { video: VideoRecord; onPlayReport: 
         month: "short", day: "numeric", year: "numeric",
       })
     : "—";
-  const views = fakeViews(video.id);
 
   return (
     <div
@@ -158,9 +150,6 @@ function VideoCard({ video, onPlayReport }: { video: VideoRecord; onPlayReport: 
         <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono flex-wrap">
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" /> {readMins} min
-          </span>
-          <span className="flex items-center gap-1">
-            <Eye className="w-3 h-3" /> {views} views
           </span>
           <span className="ml-auto">{createdAt}</span>
         </div>
@@ -300,12 +289,6 @@ export default function VideoLibraryPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link to="/video">
-                <Button size="sm" className="gap-2 bg-gainn-purple hover:bg-gainn-purple/90 text-white">
-                  <Zap className="w-3.5 h-3.5" />
-                  Generate New Report
-                </Button>
-              </Link>
               <Button
                 variant="outline"
                 size="sm"
