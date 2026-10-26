@@ -59,6 +59,15 @@ const CATEGORY_ICONS: Record<string, string> = {
   Environment: "🌿", Science: "🚀", Health: "🏥", "Global Affairs": "🌍",
 };
 
+// Editorial collections give the archive named, browsable strands.
+const COLLECTIONS: Record<string, string> = {
+  AI: "Tech Briefing", Technology: "Tech Briefing",
+  Economy: "Markets Wrap", Politics: "The Political Desk",
+  Science: "Science Desk", Environment: "Planet Watch",
+  Health: "Health Desk", "Global Affairs": "World Tonight",
+};
+const collectionOf = (cat: string | null) => COLLECTIONS[cat ?? "Global Affairs"] ?? "World Tonight";
+
 // ── Data fetching ─────────────────────────────────────────────────────────
 
 async function fetchVideos(): Promise<VideoRecord[]> {
@@ -151,6 +160,9 @@ function VideoCard({ video, onPlayReport }: { video: VideoRecord; onPlayReport: 
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" /> {readMins} min
           </span>
+          <span className="flex items-center gap-1 text-gainn-purple/80">
+            <Tag className="w-3 h-3" /> {collectionOf(video.category)}
+          </span>
           <span className="ml-auto">{createdAt}</span>
         </div>
 
@@ -205,6 +217,7 @@ function SkeletonCard() {
 export default function VideoLibraryPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCollection, setActiveCollection] = useState("All");
   const [activeVideo, setActiveVideo] = useState<VideoModalSource | null>(null);
 
   const playReport = (video: VideoRecord) => setActiveVideo({
@@ -222,6 +235,9 @@ export default function VideoLibraryPage() {
 
   const filtered = useMemo(() => {
     let result = videos;
+    if (activeCollection !== "All") {
+      result = result.filter((v) => collectionOf(v.category) === activeCollection);
+    }
     if (activeCategory !== "All") {
       result = result.filter((v) => (v.category ?? "Global Affairs") === activeCategory);
     }
@@ -237,7 +253,7 @@ export default function VideoLibraryPage() {
       );
     }
     return result;
-  }, [videos, activeCategory, search]);
+  }, [videos, activeCategory, activeCollection, search]);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { All: videos.length };
@@ -320,6 +336,24 @@ export default function VideoLibraryPage() {
               </button>
             )}
           </div>
+
+          {/* ── Named collections ── */}
+          <div className="flex gap-2 overflow-x-auto mt-4 pb-1 scrollbar-none">
+            {["All", ...Array.from(new Set(videos.map((v) => collectionOf(v.category))))].map((name) => (
+              <button
+                key={name}
+                onClick={() => setActiveCollection(name)}
+                className={cn(
+                  "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                  activeCollection === name
+                    ? "bg-gainn-purple/20 text-gainn-purple border-gainn-purple/40"
+                    : "text-muted-foreground border-border hover:text-foreground"
+                )}
+              >
+                {name === "All" ? "All collections" : name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -374,14 +408,14 @@ export default function VideoLibraryPage() {
               <Library className="w-7 h-7 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-foreground">
-              {search || activeCategory !== "All" ? "No matching reports" : "No reports yet"}
+              {search || activeCategory !== "All" || activeCollection !== "All" ? "No matching reports" : "No reports yet"}
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              {search || activeCategory !== "All"
-                ? "Try a different search term or category filter."
+              {search || activeCategory !== "All" || activeCollection !== "All"
+                ? "Try a different search term or filter."
                 : "Generate your first AI news report to see it here."}
             </p>
-            {!search && activeCategory === "All" && (
+            {!search && activeCategory === "All" && activeCollection === "All" && (
               <Link to="/video">
                 <Button size="sm" className="gap-2 bg-gainn-purple hover:bg-gainn-purple/90 text-white mt-2">
                   <Zap className="w-3.5 h-3.5" /> Generate First Report

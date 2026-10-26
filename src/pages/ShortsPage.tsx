@@ -6,7 +6,7 @@ import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { getLanguage } from "@/lib/language";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
-import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter, Captions } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Article } from "@/data/mockData";
 import { toast } from "sonner";
@@ -93,6 +93,7 @@ export default function ShortsPage() {
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(true);
   const [premium, setPremium] = useState<"idle" | "loading" | "playing" | "browser">("idle");
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -302,6 +303,9 @@ export default function ShortsPage() {
             <button onClick={() => setPaused(p => !p)} className="p-2 rounded-full hover:bg-white/10" aria-label={paused ? "Play" : "Pause"}>
               {paused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
             </button>
+            <button onClick={() => setShowCaptions(c => !c)} className={cn("p-2 rounded-full hover:bg-white/10", showCaptions ? "text-cyan-300" : "text-white/50")} aria-label={showCaptions ? "Hide captions" : "Show captions"}>
+              <Captions className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -353,9 +357,16 @@ export default function ShortsPage() {
                   <h1 className="font-serif text-3xl md:text-4xl leading-tight font-bold text-white drop-shadow-lg">
                     {a.headline}
                   </h1>
-                  <p className="mt-3 text-sm md:text-base text-white/85 line-clamp-4">
-                    {a.summary || a.body?.slice(0, 220)}
-                  </p>
+                  {(!isActive || !showCaptions) && (
+                    <p className="mt-3 text-sm md:text-base text-white/85 line-clamp-4">
+                      {a.summary || a.body?.slice(0, 220)}
+                    </p>
+                  )}
+                  {isActive && showCaptions && (
+                    <p className="mt-3 px-3 py-2 rounded-lg bg-black/60 border border-white/10 text-sm md:text-base leading-snug text-white line-clamp-4">
+                      {scriptFor(a)}
+                    </p>
+                  )}
 
                   <div className="mt-4 flex items-center gap-2 text-[11px] text-white/60">
                     <span>Source: {Array.isArray(a.sources) ? a.sources[0] : a.sources}</span>

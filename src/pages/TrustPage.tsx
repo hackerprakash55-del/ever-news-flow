@@ -38,7 +38,7 @@ const PAGES: Record<string, Page> = {
     body: (
       <>
         <p>In line with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, GAINN has appointed a Grievance Officer based in India.</p>
-        <p><strong>Grievance Officer:</strong> Prakash, Founder, GAINN<br />{contactLine}</p>
+        <p><strong>Grievance Officer:</strong> Prakash Chand Jain, Founder, GAINN<br />{contactLine}</p>
         <h2>Process</h2>
         <ul>
           <li>We acknowledge complaints within 24 hours.</li>
