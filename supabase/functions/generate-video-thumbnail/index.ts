@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { userClient } from "../_shared/supa.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,20 @@ serve(async (req) => {
     }
 
     const { thumbnailPrompt, title } = await req.json();
+
+    // Paid AI images only for signed-in users; everyone else gets the free branded fallback.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const { data: claimData } = token
+      ? await userClient(authHeader).auth.getClaims(token).catch(() => ({ data: null }))
+      : { data: null };
+    const sub = (claimData as { claims?: { sub?: string; role?: string } } | null)?.claims;
+    if (!sub?.sub || sub.role !== "authenticated") {
+      return new Response(
+        JSON.stringify({ imageUrl: fallbackThumbnail(typeof title === "string" ? title : "GAINN Live Report"), fallback: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!thumbnailPrompt) {
       return new Response(
