@@ -56,9 +56,9 @@ export const BreakingNewsBanner = () => {
     <div className="relative overflow-hidden rounded-lg border border-gainn-red/50 bg-gainn-red/8 shadow-[0_0_20px_hsl(0_90%_58%/0.15)]">
       {/* Full-width animated red bar at top */}
       <div className="h-0.5 w-full breaking-bar" style={{ background: "var(--gradient-breaking)" }} />
-      <div className="flex items-center gap-0 min-h-[52px]">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-0 min-h-[52px]">
         {/* Severity label block */}
-        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3 bg-gainn-red text-white h-full">
+        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 sm:py-3 bg-gainn-red text-white sm:self-stretch">
           <span className="w-2 h-2 rounded-full bg-white live-dot" />
           <Zap className="w-3.5 h-3.5 bolt-swing" />
           <span className="text-xs font-black uppercase tracking-widest whitespace-nowrap">
