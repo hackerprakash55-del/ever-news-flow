@@ -288,7 +288,7 @@ export default function PrimeTimePage() {
                 </button>
               </div>
 
-              <div className="absolute bottom-0 left-0 right-0 p-4">
+              <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
                 {playing && showCaptions && feature && (
                   <p className="mb-2 px-3 py-1.5 rounded-md bg-black/70 border border-white/10 text-[12px] leading-snug text-white/95 line-clamp-2 max-w-2xl">
                     {scriptFor(feature)}
@@ -314,7 +314,7 @@ export default function PrimeTimePage() {
                 <Link
                   to={feature ? `/article/${feature.id}` : "#"}
                   state={feature ? { article: feature } : undefined}
-                  className="mt-2 inline-block text-[10px] font-mono text-white/70 hover:text-primary transition"
+                  className="mt-2 inline-block text-[10px] font-mono text-white/70 hover:text-primary transition pointer-events-auto"
                 >
                   Read the full story →
                 </Link>
