@@ -11,3 +11,6 @@
 - [ ] Remove fabricated verification scores and perspective claims; add source-backed article verification data/UI
 - [ ] Defer below-fold homepage work and improve ticker/image rendering without changing the layout
 - [x] Route compatible backend text-generation calls through OpenRouter first, with Lovable AI fallback
+
+- [x] YouTube Shorts: renewable channel connection, scheduled render+upload queue
+- [ ] YouTube Shorts: owner adds GitHub Actions secrets + Google redirect URL, then first live upload
