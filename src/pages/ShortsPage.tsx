@@ -6,7 +6,7 @@ import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { getLanguage } from "@/lib/language";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
-import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Article } from "@/data/mockData";
 import { toast } from "sonner";
@@ -343,15 +343,12 @@ export default function ShortsPage() {
                 {/* Content overlay */}
                 <div className="relative z-10 h-full flex flex-col justify-end px-5 pb-8 pt-16 max-w-2xl mx-auto">
                   <div className="flex items-center gap-2 mb-3">
-                    {a.isBreaking && <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold tracking-wider">BREAKING</span>}
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/25 text-white text-[10px] font-bold tracking-wider">
-                      <Sparkles className="w-3 h-3" />AI
-                    </span>
+                    {a.isBreaking
+                      ? <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold tracking-wider">BREAKING</span>
+                      : <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/25 text-white text-[10px] font-bold tracking-wider">
+                          <Sparkles className="w-3 h-3" />AI
+                        </span>}
                     <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-semibold">{a.category}</span>
-                    <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-300"><ShieldCheck className="w-3 h-3" />{a.credibilityScore}% TRUST</span>
-                    <span className="px-2 py-0.5 rounded-full border border-white/20 text-white/70 text-[10px] font-mono">
-                      {a.isBreaking ? "TRENDING" : "RECENT"}
-                    </span>
                   </div>
                   <h1 className="font-serif text-3xl md:text-4xl leading-tight font-bold text-white drop-shadow-lg">
                     {a.headline}

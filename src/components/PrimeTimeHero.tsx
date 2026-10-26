@@ -95,7 +95,7 @@ export const PrimeTimeHero = () => {
       <aside className="card-glass rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <span className="text-sm font-semibold">Tonight's Rundown</span>
-          <span className="text-[10px] font-mono text-gainn-red">● LIVE 9 PM IST</span>
+          <span className="text-[10px] font-mono text-gainn-red">● TONIGHT 9 PM IST</span>
         </div>
         <div className="p-2 space-y-1">
           {rundown.map((a) => (

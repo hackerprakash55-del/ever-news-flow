@@ -180,12 +180,12 @@ export const HeroArticleCard = ({ article }: { article: Article }) => {
 export const ArticleCard = ({ article, isPremium }: { article: Article; isPremium?: boolean }) => {
   const { isSaved, saving, toggleSave, share } = useArticleActions(article);
   const alreadyRead = isArticleRead(article.id);
-  const revealRef = useReveal<HTMLDivElement>();
+  const revealRef = useReveal<HTMLAnchorElement>();
 
   return (
     <Link
       to={`/article/${article.id}`}
-      ref={revealRef as React.Ref<HTMLAnchorElement>}
+      ref={revealRef}
       className="block group cursor-pointer reveal"
       onClick={() => storeArticle(article)}
     >

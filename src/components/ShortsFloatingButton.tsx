@@ -13,10 +13,10 @@ export function ShortsFloatingButton() {
     <Link
       to="/shorts"
       aria-label="Open GAINN Shorts"
-      className="fixed z-40 bottom-5 right-4 md:bottom-6 md:right-6 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium text-accent-foreground bg-accent border border-accent/40 shadow-lg hover:opacity-90 transition-opacity"
+      className="fixed z-40 bottom-5 right-4 md:bottom-6 md:right-6 flex items-center gap-2 p-3 md:px-4 md:py-2.5 rounded-full text-sm font-medium text-accent-foreground bg-accent border border-accent/40 shadow-lg hover:opacity-90 transition-opacity"
     >
       <Play className="w-4 h-4 fill-current" />
-      Shorts
+      <span className="hidden md:inline">Shorts</span>
     </Link>
   );
 }

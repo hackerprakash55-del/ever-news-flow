@@ -26,14 +26,14 @@ function StoryCard({ a }: { a: Article }) {
     >
       <img src={a.imageUrl || FALLBACK} alt={a.headline} loading="lazy"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-black/40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-black/35" />
 
       <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/50 border border-white/20 text-[9px] font-mono font-bold tracking-widest text-white uppercase">
         {a.category}
       </span>
 
       <div className="relative z-10 p-4">
-        <h3 className="font-display font-bold text-base leading-snug text-white line-clamp-3">
+        <h3 className="font-display font-bold text-base leading-snug text-white line-clamp-3 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)]">
           {a.headline}
         </h3>
         <div className="mt-2 text-[10px] font-mono text-white/60 truncate">
@@ -153,7 +153,7 @@ export default function PrimeTimePage() {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-gainn-red/50 text-[10px] font-mono font-bold tracking-widest text-gainn-red uppercase">
-                <span className="w-2 h-2 rounded-full bg-gainn-red live-dot" /> Live every night · 9 PM IST
+                Every night · 9 PM IST
               </span>
               <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase">
                 GAINN Flagship Show
@@ -244,10 +244,10 @@ export default function PrimeTimePage() {
               <img src={feature?.imageUrl || FALLBACK} alt={feature?.headline || "Prime Time preview"}
                 className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-[9000ms]",
                   playing ? "scale-110" : "scale-100 group-hover:scale-105")} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/45" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/40" />
 
               <span className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gainn-red text-white text-[10px] font-mono font-bold tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-white live-dot" /> LIVE
+                PRIME TIME
               </span>
               <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/50 border border-white/20 text-[10px] font-mono text-white/80">
                 STORY {Math.min(activeStory + 1, tonight.length || 1)} / {tonight.length || 1}

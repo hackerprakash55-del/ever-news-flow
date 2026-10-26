@@ -1,7 +1,6 @@
 // expand-article: on-demand full body for a single story.
 // Called lazily from the article page when the feed only has a short teaser.
-// Uses Lovable AI (Gemini) with OpenRouter as an optional first choice,
-// mirroring fetch-news' expandArticleBody but for one article per request.
+// Uses the same Lovable AI (Gemini) expansion path as fetch-news.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,18 +13,10 @@ async function expandArticleBody(
   partialContent: string,
   sourceName: string,
   publishedAt: string,
-  openRouterApiKey: string | undefined,
   lovableApiKey: string | undefined,
 ): Promise<string> {
   const knownFacts = [title, description, partialContent].filter(Boolean).join("\n");
-  const apiKey = openRouterApiKey ?? lovableApiKey;
-  if (!apiKey) return partialContent || description;
-  const endpoint = openRouterApiKey
-    ? "https://openrouter.ai/api/v1/chat/completions"
-    : "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const model = openRouterApiKey
-    ? "deepseek/deepseek-chat:free"
-    : "google/gemini-3-flash-preview";
+  if (!lovableApiKey) return partialContent || description;
 
   const messages = [
     {
@@ -52,21 +43,17 @@ Write the article body now:`,
     },
   ];
 
-  const requestExpansion = (target: string, key: string, selectedModel: string) =>
-    fetch(target, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: selectedModel, messages, temperature: 0.2, max_tokens: 900 }),
-    });
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableApiKey}` },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages,
+      temperature: 0.2,
+      max_tokens: 900,
+    }),
+  });
 
-  let response = await requestExpansion(endpoint, apiKey, model);
-  if (!response.ok && openRouterApiKey && lovableApiKey) {
-    response = await requestExpansion(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      lovableApiKey,
-      "google/gemini-3-flash-preview",
-    );
-  }
   if (!response.ok) {
     console.error("expand-article AI error:", response.status);
     return partialContent || description;
@@ -98,7 +85,6 @@ Deno.serve(async (req) => {
       typeof content === "string" ? content : "",
       typeof source === "string" ? source : "Unknown Source",
       typeof publishedAt === "string" ? publishedAt : new Date().toISOString(),
-      Deno.env.get("OPENROUTER_API_KEY"),
       Deno.env.get("LOVABLE_API_KEY"),
     );
 

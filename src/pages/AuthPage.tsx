@@ -127,7 +127,7 @@ export default function AuthPage() {
           <div className="flex items-center justify-center gap-1.5 text-xs font-mono text-gainn-green">
             <div className="w-1.5 h-1.5 rounded-full bg-gainn-green animate-pulse" />
             <Radio className="w-3 h-3" />
-            108 AI Agents Live
+            AI Agents · 24/7
           </div>
         </div>
 
