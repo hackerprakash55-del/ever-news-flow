@@ -6,7 +6,7 @@ import { tuneUtterance, waitForVoices } from "@/lib/voice";
 import { getLanguage } from "@/lib/language";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { SeoHead } from "@/components/SeoHead";
-import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, ShieldCheck, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, ExternalLink, Share2, Bookmark, Radio, Heart, Download, Sparkles, Twitter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Article } from "@/data/mockData";
 import { toast } from "sonner";
