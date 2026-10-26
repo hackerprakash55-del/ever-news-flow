@@ -1,8 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { SeoHead } from "@/components/SeoHead";
 
-// Contact details below are placeholders until the owner supplies real ones.
-const CONTACT_EMAIL = "";
+const CONTACT_EMAIL = "hackerprakash55@gmail.com";
 const UPDATED = "26 October 2026";
 
 type Page = { title: string; description: string; body: JSX.Element };
