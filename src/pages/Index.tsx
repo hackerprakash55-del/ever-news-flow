@@ -67,11 +67,11 @@ function SiteFooter() {
         <div className="grid grid-cols-1 md:grid-cols-[1.4fr_repeat(4,1fr)] gap-10">
           <div className="max-w-sm">
             <div className="text-base font-display font-semibold text-foreground mb-2">
-              GAINN — Global AI Intelligence &amp; News Network
+              GAINN — Indian news, sources shown
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Neutral, source-checked reporting. Every story shows its original source, with checks against other
-              sources and published without editorial spin.
+              Live Indian and local news in Hindi and 10 Indian languages, read aloud. Every story links its original
+              source. AI-assisted — spotted a mistake? Tell us on the Corrections page.
             </p>
           </div>
           {FOOTER_COLUMNS.map((col) => (
@@ -91,7 +91,7 @@ function SiteFooter() {
         </div>
         <div className="border-t border-border mt-12 pt-6 flex flex-col md:flex-row items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground">© 2026 GAINN. All rights reserved.</span>
-          <span className="text-[11px] font-mono text-muted-foreground/50">24/7 autonomous newsroom</span>
+          <span className="text-[11px] font-mono text-muted-foreground/50">AI-assisted · sources shown · corrections welcome</span>
         </div>
       </div>
     </footer>
