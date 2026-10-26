@@ -29,6 +29,7 @@ const PrimeTimePage    = lazy(() => import("./pages/PrimeTimePage"));
 const PrimeTimeSchedulePage = lazy(() => import("./pages/PrimeTimeSchedulePage"));
 const OAuthConsent     = lazy(() => import("./pages/OAuthConsent"));
 const NotFound         = lazy(() => import("./pages/NotFound"));
+const TrustPage        = lazy(() => import("./pages/TrustPage"));
 
 const queryClient = new QueryClient();
 

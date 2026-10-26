@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { SeoHead } from "@/components/SeoHead";
 
 // Contact details below are placeholders until the owner supplies real ones.
@@ -85,7 +85,7 @@ const PAGES: Record<string, Page> = {
 };
 
 export default function TrustPage() {
-  const { slug = "about" } = useParams();
+  const slug = useLocation().pathname.replace(/^\//, "") || "about";
   const page = PAGES[slug] ?? PAGES.about;
   return (
     <main className="max-w-3xl mx-auto px-4 md:px-6 py-16">
