@@ -49,6 +49,7 @@ export const BreakingNewsBanner = () => {
     return () => clearInterval(interval);
   }, [alerts]);
 
+  if (alerts.length === 0) return null;
   const alert = alerts[currentIdx] ?? alerts[0];
 
   return (
