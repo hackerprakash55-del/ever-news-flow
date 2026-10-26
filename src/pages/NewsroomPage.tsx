@@ -5,7 +5,6 @@ import { NewsTickerBar } from "@/components/NewsTickerBar";
 import { AgentCard, DepartmentOverview } from "@/components/AgentCard";
 import { PipelineLog } from "@/components/PipelineLog";
 import { AGENTS, DEPARTMENT_STATS, MOCK_ARTICLES } from "@/data/mockData";
-import { StatsBar } from "@/components/BreakingNewsBanner";
 import {
   Activity, Cpu, Shield, Eye, Radio, Database, Zap,
   TrendingUp, CheckCircle, AlertTriangle, Clock, Globe, Play, Pause, SkipForward
@@ -272,10 +271,10 @@ export default function NewsroomPage() {
           </Link>
         </div>
 
-        {/* Stats Bar (moved from homepage) */}
-        <div className="mb-6">
-          <StatsBar />
-        </div>
+        {/* Honest framing: this dashboard visualises the agent pipeline */}
+        <p className="mb-6 text-[11px] font-mono text-muted-foreground/70">
+          Simulated view of the GAINN agent pipeline — figures shown for illustration, not measured totals.
+        </p>
 
         {/* Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
