@@ -1,223 +1,87 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Uploads a rendered Short to the connected YouTube channel using the
+// server-held refresh token. Callers: the scheduled renderer (x-renderer-secret) or an admin.
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireAdmin } from "../_shared/supa.ts";
+import { getYoutubeAccessToken, isRenderer, serviceClient } from "../_shared/youtube.ts";
 
-serve(async (req: Request) => {
-  // CORS headers for preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Test-Secrets",
-      },
-    });
-  }
+const SITE = "https://ever-news-flow.lovable.app";
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+function b64ToBytes(b64: string) {
+  const bin = atob(b64.includes(",") ? b64.split(",")[1] : b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const db = serviceClient();
+  let queueId: string | null = null;
   try {
-    // Special test mode for secrets check
-    const isTestMode = req.headers.get("X-Test-Secrets") === "true";
-    if (isTestMode) {
-      const clientId = Deno.env.get("YOUTUBE_CLIENT_ID") || Deno.env.get("VITE_YOUTUBE_CLIENT_ID");
-      const clientSecret = Deno.env.get("YOUTUBE_CLIENT_SECRET");
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          secretsStatus: {
-            clientId: clientId ? "present" : "missing",
-            clientSecret: clientSecret ? "present" : "missing",
-          },
-        }),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
+    if (!isRenderer(req)) {
+      const a = await requireAdmin(req.headers.get("Authorization") ?? "");
+      if (!a.ok) return json({ error: a.error }, a.status);
     }
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new Error("Missing or invalid authorization header");
-    }
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: { headers: { Authorization: authHeader } },
-      }
-    );
-
-    // Verify admin access
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      throw new Error("Unauthorized: admin access required");
-    }
-
     const { queueItemId, videoBase64, mimeType = "video/mp4" } = await req.json();
-    
-    if (!queueItemId || !videoBase64) {
-      throw new Error("queueItemId and videoBase64 are required");
+    if (typeof queueItemId !== "string" || typeof videoBase64 !== "string") {
+      return json({ error: "queueItemId and videoBase64 are required" }, 400);
     }
+    queueId = queueItemId;
+    const { data: item } = await db.from("youtube_publish_queue").select("*").eq("id", queueItemId).maybeSingle();
+    if (!item) return json({ error: "Queue item not found" }, 404);
+    if (item.status === "uploaded") return json({ success: true, youtubeUrl: item.youtube_url, already: true });
 
-    // Fetch queue item to get video metadata
-    const { data: queueItem, error: queueError } = await supabaseClient
-      .from("review_queue")
-      .select(`
-        *,
-        generated_videos (
-          id,
-          title,
-          social_caption
-        ),
-        verification_runs (
-          id,
-          verification_status,
-          consensus_score
-        )
-      `)
-      .eq("id", queueItemId)
-      .single();
+    const accessToken = await getYoutubeAccessToken();
+    const hi = item.language === "hi-IN";
+    const description = [
+      item.script,
+      "",
+      item.source_name ? `${hi ? "स्रोत" : "Source"}: ${item.source_name}` : "",
+      item.source_url ? `${hi ? "मूल रिपोर्ट" : "Original report"}: ${item.source_url}` : "",
+      hi ? "AI-सहायता से तैयार · स्रोत दिखाया गया" : "AI-assisted summary · source shown · corrections welcome",
+      `${hi ? "और खबरें" : "More news"}: ${SITE}`,
+      "",
+      hi ? "#GAINN #हिंदीसमाचार #Shorts" : "#GAINN #IndiaNews #Shorts",
+    ].filter(Boolean).join("\n");
 
-    if (queueError || !queueItem) {
-      throw new Error("Queue item not found");
-    }
-
-    // Double-check verification status before upload
-    if (!queueItem.verification_runs || queueItem.verification_runs.length === 0) {
-      throw new Error("Cannot upload: no verification record exists");
-    }
-
-    const verification = queueItem.verification_runs[0];
-    if (verification.verification_status !== "verified") {
-      throw new Error(`Cannot upload: verification status is "${verification.verification_status}"`);
-    }
-
-    const video = queueItem.generated_videos;
-    if (!video) {
-      throw new Error("No associated video content found");
-    }
-
-    // Get YouTube OAuth token from request (passed by client after OAuth flow)
-    const youtubeToken = req.headers.get("X-Youtube-Token");
-    if (!youtubeToken) {
-      throw new Error("YouTube OAuth token required in X-Youtube-Token header");
-    }
-
-    // Prepare video metadata for YouTube
-    const title = `[Short] ${video.title}`;
-    const description = buildYouTubeDescription(video, verification);
-    const tags = generateTags(video.category, verification);
-
-    // Convert base64 video to blob for upload
-    const videoBlob = base64ToBlob(videoBase64, mimeType);
-
-    // Create FormData for YouTube API multipart upload
-    const formData = new FormData();
-    
     const metadata = {
-      snippet: {
-        title: title,
-        description: description,
-        categoryId: "25", // News & Politics
-        tags: tags,
-      },
-      status: {
-        privacyStatus: "public", // Or "private" / "unlisted" based on preference
-      },
+      snippet: { title: item.title.slice(0, 95), description: description.slice(0, 4900), categoryId: "25", tags: ["GAINN", "India news", "news shorts"], defaultLanguage: hi ? "hi" : "en" },
+      status: { privacyStatus: Deno.env.get("YOUTUBE_PRIVACY") || "public", selfDeclaredMadeForKids: false, containsSyntheticMedia: true },
     };
 
-    formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-    formData.append("file", videoBlob, "short.mp4");
+    const boundary = "gainn" + crypto.randomUUID();
+    const video = b64ToBytes(videoBase64);
+    const enc = new TextEncoder();
+    const head = enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`);
+    const tail = enc.encode(`\r\n--${boundary}--`);
+    const payload = new Uint8Array(head.length + video.length + tail.length);
+    payload.set(head, 0); payload.set(video, head.length); payload.set(tail, head.length + video.length);
 
-    // Upload to YouTube Data API v3
-    const youtubeResponse = await fetch(
-      "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&uploadType=multipart",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${youtubeToken}`,
-        },
-        body: formData,
-      }
-    );
-
-    if (!youtubeResponse.ok) {
-      const errorBody = await youtubeResponse.text();
-      console.error("YouTube API error:", errorBody);
-      throw new Error(`YouTube upload failed: ${youtubeResponse.status} ${errorBody}`);
+    const yt = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&uploadType=multipart", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": `multipart/related; boundary=${boundary}` },
+      body: payload,
+    });
+    if (!yt.ok) {
+      const t = await yt.text();
+      throw new Error(`[${yt.status}] YouTube upload failed: ${t.slice(0, 800)}`);
     }
-
-    const youtubeResult = await youtubeResponse.json();
-    
-    // Update queue item with posted timestamp and YouTube video ID
-    const { error: updateError } = await supabaseClient
-      .from("review_queue")
-      .update({
-        approved_at: queueItem.approved_at || new Date().toISOString(),
-        posted_at: new Date().toISOString(),
-        platform_post_id: youtubeResult.id,
-        platform_url: `https://youtube.com/shorts/${youtubeResult.id}`,
-      })
-      .eq("id", queueItemId);
-
-    if (updateError) {
-      console.error("Failed to update queue status:", updateError);
+    const result = await yt.json();
+    const url = `https://youtube.com/shorts/${result.id}`;
+    const now = new Date().toISOString();
+    await db.from("youtube_publish_queue").update({ status: "uploaded", youtube_video_id: result.id, youtube_url: url, uploaded_at: now, updated_at: now, error_message: null }).eq("id", item.id);
+    await db.from("published_shorts").insert({ article_id: item.article_id, article_url: item.source_url, youtube_video_id: result.id, youtube_video_url: url, published_at: now, status: "success" });
+    return json({ success: true, youtubeVideoId: result.id, youtubeUrl: url });
+  } catch (e) {
+    const msg = (e as Error).message;
+    console.error("youtube-upload error:", msg);
+    if (queueId) {
+      const { data: row } = await db.from("youtube_publish_queue").select("attempts").eq("id", queueId).maybeSingle();
+      const attempts = (row?.attempts ?? 0) + 1;
+      await db.from("youtube_publish_queue").update({ status: attempts >= 3 ? "failed" : "queued", attempts, error_message: msg.slice(0, 1000), updated_at: new Date().toISOString() }).eq("id", queueId);
     }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        youtubeVideoId: youtubeResult.id,
-        youtubeUrl: `https://youtube.com/shorts/${youtubeResult.id}`,
-      }),
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
-  } catch (error) {
-    console.error("youtube-upload error:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return json({ success: false, error: msg }, 500);
   }
 });
-
-function buildYouTubeDescription(video: any, verification: any): string {
-  const sourcesCount = verification.sources_checked?.length || 0;
-  const score = Math.round((verification.consensus_score || 0) * 100);
-  
-  let description = `${video.social_caption || ""}\n\n`;
-  description += `🔍 AI-Verified: ${sourcesCount} sources checked, ${score}% consensus\n`;
-  description += `Sources: ${verification.sources_checked?.map((s: any) => s.outlet).join(", ") || "Multiple"}\n\n`;
-  description += `#AINews #Verified #Shorts #${(video.category || "News").replace(/\s/g, "")}`;
-  
-  return description;
-}
-
-function generateTags(category?: string, verification?: any): string[] {
-  const baseTags = ["AI news", "verified news", "AI verified", "news shorts"];
-  const categoryTag = category ? [category] : [];
-  const sourceTags = verification?.sources_checked?.slice(0, 3).map((s: any) => s.outlet) || [];
-  
-  return [...baseTags, ...categoryTag, ...sourceTags].filter(Boolean);
-}
-
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const byteCharacters = atob(base64.split(",")[1] || base64);
-  const byteNumbers = new Array(byteCharacters.length);
-  for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
-  }
-  const byteArray = new Uint8Array(byteNumbers);
-  return new Blob([byteArray], { type: mimeType });
-}
