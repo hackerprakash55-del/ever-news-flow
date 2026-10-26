@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireUserOrService } from "../_shared/supa.ts";
 
 const SUPPORTED = new Set([
   "en-IN", "hi-IN", "bn-IN", "gu-IN", "kn-IN", "ml-IN",
@@ -31,6 +32,10 @@ serve(async (req) => {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
+  if (!(await requireUserOrService(req)).ok) {
+    return json({ error: "Sign in to translate stories." });
+  }
 
   try {
     const SARVAM_API_KEY = Deno.env.get("SARVAM_API_KEY");

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireUserOrService } from "../_shared/supa.ts";
 
 // Sarvam bulbul:v3 — Indian-accent, multilingual news narration (v2 was retired).
 const SPEAKER = "shubh";
@@ -24,6 +25,9 @@ serve(async (req) => {
     });
 
   try {
+    if (!(await requireUserOrService(req)).ok) {
+      return json({ error: "Sign in for premium voice.", useClientFallback: true, status: 401 });
+    }
     const SARVAM_API_KEY = Deno.env.get("SARVAM_API_KEY");
     if (!SARVAM_API_KEY) {
       return json({ error: "Sarvam voice is not configured.", useClientFallback: true });

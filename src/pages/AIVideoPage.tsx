@@ -468,9 +468,11 @@ export default function AIVideoPage() {
   // Helper: generate script + thumbnail for one topic and save to DB
   const autoGenerateOneTopic = async (t: typeof SUGGESTED_TOPICS[0], supabaseUrl: string, anonKey: string) => {
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) return;
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${anonKey}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${sess.session.access_token}`, apikey: anonKey, "Content-Type": "application/json" },
         body: JSON.stringify({ topic: t.label }),
       });
       if (!res.ok) return;
@@ -591,10 +593,12 @@ export default function AIVideoPage() {
     setUseBrowserVoice(false);
 
     try {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) throw new Error("Please sign in to generate a video report.");
       const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${anonKey}`,
+          Authorization: `Bearer ${sess.session.access_token}`,
           apikey: anonKey,
           "Content-Type": "application/json",
         },

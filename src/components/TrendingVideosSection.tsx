@@ -40,10 +40,12 @@ async function autoGenerateScript(topic: string): Promise<VideoRecord | null> {
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !anonKey) return null;
   try {
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) return null;
     const res = await fetch(`${supabaseUrl}/functions/v1/generate-video-script`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${anonKey}`,
+        Authorization: `Bearer ${sess.session.access_token}`,
         apikey: anonKey,
         "Content-Type": "application/json",
       },
