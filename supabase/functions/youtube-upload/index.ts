@@ -15,6 +15,29 @@ function b64ToBytes(b64: string) {
   return out;
 }
 
+// Set the story's real photo as the YouTube thumbnail. Non-fatal: if the photo
+// is missing or the upload fails, YouTube keeps its auto-generated frame.
+async function setThumbnail(accessToken: string, videoId: string, imageUrl: string | null): Promise<boolean> {
+  if (!imageUrl || !imageUrl.startsWith("http")) return false;
+  try {
+    const img = await fetch(imageUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; GAINN/1.0)" } });
+    if (!img.ok) return false;
+    const type = img.headers.get("content-type") ?? "";
+    if (!type.startsWith("image/")) return false;
+    const bytes = new Uint8Array(await img.arrayBuffer());
+    if (bytes.length < 10_000 || bytes.length > 2_000_000) return false; // YouTube: min 640px, max 2MB
+    const up = await fetch(
+      `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${videoId}`,
+      { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": type.split(";")[0] }, body: bytes },
+    );
+    if (!up.ok) console.error("thumbnail set failed", up.status, (await up.text()).slice(0, 300));
+    return up.ok;
+  } catch (e) {
+    console.error("thumbnail error", e);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const db = serviceClient();
@@ -24,7 +47,20 @@ Deno.serve(async (req) => {
       const a = await requireAdmin(req.headers.get("Authorization") ?? "");
       if (!a.ok) return json({ error: a.error }, a.status);
     }
-    const { queueItemId, videoBase64, mimeType = "video/mp4" } = await req.json();
+    const body = await req.json();
+    const { queueItemId, videoBase64, mimeType = "video/mp4", action } = body;
+
+    // "thumbnail": (re)set the story photo as the YouTube thumbnail for an
+    // already-uploaded Short — used to upgrade older Shorts in place.
+    if (action === "thumbnail") {
+      if (typeof queueItemId !== "string") return json({ error: "queueItemId required" }, 400);
+      const { data: it } = await db.from("youtube_publish_queue").select("*").eq("id", queueItemId).maybeSingle();
+      if (!it?.youtube_video_id) return json({ error: "Queue item not found or not uploaded" }, 404);
+      const token = await getYoutubeAccessToken();
+      const ok = await setThumbnail(token, it.youtube_video_id, it.image_url ?? null);
+      return json({ success: ok, videoId: it.youtube_video_id });
+    }
+
     if (typeof queueItemId !== "string" || typeof videoBase64 !== "string") {
       return json({ error: "queueItemId and videoBase64 are required" }, 400);
     }
@@ -73,7 +109,8 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     await db.from("youtube_publish_queue").update({ status: "uploaded", youtube_video_id: result.id, youtube_url: url, uploaded_at: now, updated_at: now, error_message: null }).eq("id", item.id);
     await db.from("published_shorts").insert({ article_id: item.article_id, article_url: item.source_url, youtube_video_id: result.id, youtube_video_url: url, published_at: now, status: "success" });
-    return json({ success: true, youtubeVideoId: result.id, youtubeUrl: url });
+    const thumbOk = await setThumbnail(accessToken, result.id, item.image_url ?? null);
+    return json({ success: true, youtubeVideoId: result.id, youtubeUrl: url, thumbnailSet: thumbOk });
   } catch (e) {
     const msg = (e as Error).message;
     console.error("youtube-upload error:", msg);
