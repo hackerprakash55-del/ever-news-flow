@@ -159,20 +159,9 @@ export function TrendingVideosSection() {
     );
   }
 
+  // No recent reports → hide the section entirely instead of showing an empty box
   if (videos.length === 0) {
-    return (
-      <div>
-        <VideoSectionHeader generating={false} />
-        <div className="card-glass rounded-xl p-6 flex flex-col items-center gap-3 text-center border border-dashed border-border">
-          <Film className="w-8 h-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No videos yet. Visit the Video Studio to generate your first report.</p>
-          <button onClick={() => navigate("/video")}
-            className="px-4 py-2 rounded-lg bg-gainn-blue text-background text-xs font-semibold hover:bg-gainn-blue/80 transition-colors">
-            Open Video Studio
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
