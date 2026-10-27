@@ -47,7 +47,20 @@ Deno.serve(async (req) => {
       const a = await requireAdmin(req.headers.get("Authorization") ?? "");
       if (!a.ok) return json({ error: a.error }, a.status);
     }
-    const { queueItemId, videoBase64, mimeType = "video/mp4" } = await req.json();
+    const body = await req.json();
+    const { queueItemId, videoBase64, mimeType = "video/mp4", action } = body;
+
+    // "thumbnail": (re)set the story photo as the YouTube thumbnail for an
+    // already-uploaded Short — used to upgrade older Shorts in place.
+    if (action === "thumbnail") {
+      if (typeof queueItemId !== "string") return json({ error: "queueItemId required" }, 400);
+      const { data: it } = await db.from("youtube_publish_queue").select("*").eq("id", queueItemId).maybeSingle();
+      if (!it?.youtube_video_id) return json({ error: "Queue item not found or not uploaded" }, 404);
+      const token = await getYoutubeAccessToken();
+      const ok = await setThumbnail(token, it.youtube_video_id, it.image_url ?? null);
+      return json({ success: ok, videoId: it.youtube_video_id });
+    }
+
     if (typeof queueItemId !== "string" || typeof videoBase64 !== "string") {
       return json({ error: "queueItemId and videoBase64 are required" }, 400);
     }
