@@ -1170,6 +1170,7 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          image_url: string | null
           language: string
           script: string
           source_name: string | null
@@ -1187,6 +1188,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          image_url?: string | null
           language?: string
           script: string
           source_name?: string | null
@@ -1204,6 +1206,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          image_url?: string | null
           language?: string
           script?: string
           source_name?: string | null

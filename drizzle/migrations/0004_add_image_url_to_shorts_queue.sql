@@ -1,0 +1,1 @@
+ALTER TABLE public.youtube_publish_queue ADD COLUMN IF NOT EXISTS image_url TEXT;

@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       const ins = await db.from("youtube_publish_queue").insert({
         article_id: String(pick.id), title: String(pick.headline).slice(0, 200), script,
         source_name: typeof source === "string" ? source : source?.name ?? null, source_url: pick.url, language: lang,
+        image_url: typeof pick.imageUrl === "string" && pick.imageUrl.startsWith("http") ? pick.imageUrl : null,
       }).select("*").single();
       if (ins.error) throw ins.error;
       item = ins.data;
