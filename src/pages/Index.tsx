@@ -40,6 +40,7 @@ const FOOTER_COLUMNS: { title: string; links: { label: string; href: string }[] 
       { label: "About", href: "/about" },
       { label: "How we verify", href: "/about" },
       { label: "Corrections", href: "/corrections" },
+      { label: "Advertise", href: "/sponsor" },
     ],
   },
   {

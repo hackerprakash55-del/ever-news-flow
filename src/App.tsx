@@ -77,7 +77,7 @@ const App = () => (
                 <Route path="/settings"   element={<AuthGuard><SettingsPage /></AuthGuard>} />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                {["about","contact","grievance","corrections","privacy","terms"].map((p) => (
+                {["about","contact","grievance","corrections","privacy","terms","sponsor"].map((p) => (
                   <Route key={p} path={`/${p}`} element={<TrustPage />} />
                 ))}
                 <Route path="*" element={<NotFound />} />
