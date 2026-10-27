@@ -29,6 +29,13 @@
       "when": 1793089066497,
       "tag": "0003_secure_existing_news_refresh",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793090062611,
+      "tag": "0004_add_image_url_to_shorts_queue",
+      "breakpoints": true
     }
   ]
 }
