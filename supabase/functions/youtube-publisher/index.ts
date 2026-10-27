@@ -57,34 +57,12 @@ Deno.serve(async (req) => {
     if ((count ?? 0) >= DAILY_CAP) return json({ item: null, reason: `Daily limit of ${DAILY_CAP} reached` });
 
     let { data: item } = await db.from("youtube_publish_queue").select("*")
-      .eq("status", "queued").order("created_at").limit(1).maybeSingle();
+      .eq("status", "queued").not("candidate_id", "is", null).order("created_at").limit(1).maybeSingle();
 
-    if (!item) {
-      // Pick the freshest real story from the shared news cache that hasn't been queued yet.
-      const { data: caches } = await db.from("news_feed_cache").select("articles, language")
-        .order("fetched_at", { ascending: false }).limit(5);
-      const { data: done } = await db.from("youtube_publish_queue").select("article_id")
-        .gte("created_at", new Date(Date.now() - 7 * 86400 * 1000).toISOString());
-      const used = new Set((done ?? []).map((d) => d.article_id));
-      let pick: any = null, lang = "en-IN";
-      for (const c of caches ?? []) {
-        for (const a of (c.articles as any[]) ?? []) {
-          if (a?.id && a?.headline && a?.url && !used.has(String(a.id))) { pick = a; lang = c.language === "hi" ? "hi-IN" : "en-IN"; break; }
-        }
-        if (pick) break;
-      }
-      if (!pick) return json({ item: null, reason: "No new stories to publish" });
-      const source = pick.verification?.sources_checked?.[0]?.outlet ?? pick.sources?.[0] ?? null;
-      const summary = String(pick.summary ?? "").replace(/\s+/g, " ").trim();
-      const script = `${pick.headline}. ${summary}`.slice(0, 900);
-      const ins = await db.from("youtube_publish_queue").insert({
-        article_id: String(pick.id), title: String(pick.headline).slice(0, 200), script,
-        source_name: typeof source === "string" ? source : source?.name ?? null, source_url: pick.url, language: lang,
-        image_url: typeof pick.imageUrl === "string" && pick.imageUrl.startsWith("http") ? pick.imageUrl : null,
-      }).select("*").single();
-      if (ins.error) throw ins.error;
-      item = ins.data;
-    }
+    if (!item) return json({ item: null, reason: "No editor-approved stories to publish" });
+    const { data: candidate, error: candidateError } = await db.from("short_candidates").select("status").eq("id", item.candidate_id).maybeSingle();
+    if (candidateError) throw candidateError;
+    if (candidate?.status !== "approved") return json({ item: null, reason: "Editorial approval is required" });
 
     let audio: string;
     try {
