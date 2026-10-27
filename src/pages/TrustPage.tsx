@@ -81,6 +81,34 @@ const PAGES: Record<string, Page> = {
       </>
     ),
   },
+  sponsor: {
+    title: "Advertise with GAINN",
+    description: "Founding-supporter advertising and Hindi video production for local businesses, from GAINN.",
+    body: (
+      <>
+        <p>GAINN is a young, independent Hindi-first news service. Our audience is small but growing — so instead of selling inflated reach, we offer honest <strong>founding-supporter packages</strong> and <strong>video production for your own channels</strong>.</p>
+        <h2>Founding supporter — ₹1,000 / 30 days</h2>
+        <ul>
+          <li>One clearly labelled business profile article, written and produced by us.</li>
+          <li>A "Supported by" banner on the site for 30 days.</li>
+          <li>An honest report at the end: actual views and clicks, nothing invented.</li>
+        </ul>
+        <h2>Hindi video production — from ₹1,000 per video</h2>
+        <ul>
+          <li>A 30–60 second vertical video about your business, in Hindi or English, with voice narration.</li>
+          <li>Delivered to you to post on your own WhatsApp, YouTube or Instagram.</li>
+          <li>Ready within 3 working days of receiving your details.</li>
+        </ul>
+        <h2>Our promises</h2>
+        <ul>
+          <li>Every paid placement is clearly labelled as advertising.</li>
+          <li>Payment never buys favourable news coverage or the removal of criticism.</li>
+          <li>We report real numbers, even when they are small.</li>
+        </ul>
+        <p>To start, email us with your business name, city and what you'd like: {contactLine}</p>
+      </>
+    ),
+  },
 };
 
 export default function TrustPage() {
