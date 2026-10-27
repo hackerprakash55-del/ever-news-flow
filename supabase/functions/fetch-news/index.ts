@@ -572,7 +572,7 @@ serve(async (req) => {
     const shouldExpand = wantsExpand && privileged;
     const lang = url.searchParams.get("lang") === "hi" ? "hi" : "en";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const trustedRefresh = (!!serviceKey && (req.headers.get("Authorization") === `Bearer ${serviceKey}` || req.headers.get("x-cron-secret") === serviceKey))
+    let trustedRefresh = (!!serviceKey && (req.headers.get("Authorization") === `Bearer ${serviceKey}` || req.headers.get("x-cron-secret") === serviceKey))
       || (url.searchParams.get("publishTranslations") === "true" && (await requireServiceOrAdmin(req)).ok);
     const publishTranslations = (items: any[]) => {
       if (!trustedRefresh || lang !== "en" || location !== "India" || category !== "all" || searchQuery || !svc) return;
@@ -588,6 +588,14 @@ serve(async (req) => {
     const svc = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
       : null;
+    if (svc && req.headers.has("x-news-refresh-secret")) {
+      const { data } = await svc.from("news_translation_worker").select("refresh_secret").eq("id", "hindi").maybeSingle();
+      trustedRefresh = !!data?.refresh_secret && req.headers.get("x-news-refresh-secret") === data.refresh_secret;
+    }
+    if (svc && trustedRefresh && url.searchParams.get("publishTranslations") === "true" && SUPABASE_URL) {
+      const { error: secretError } = await svc.from("news_translation_worker").update({ refresh_secret: crypto.randomUUID() + crypto.randomUUID() }).eq("id", "hindi");
+      if (!secretError) await svc.rpc("configure_trusted_news_refresh", { endpoint: `${SUPABASE_URL}/functions/v1/fetch-news` });
+    }
 
     // ── Serve fresh cache immediately if within TTL ──
     const ckey = cacheKey(category, location, pageSize, searchQuery, shouldExpand, lang);

@@ -20,7 +20,7 @@ export async function publishHindiTranslations(svc: any, articles: any[]) {
       if (error) throw error;
     }
     const { data: jobs, error } = await svc.from("news_translation_queue").select("content_hash,source_url,texts")
-      .eq("status", "pending").order("created_at", { ascending: false }).limit(TRANSLATION_BATCH_SIZE);
+      .eq("status", "pending").order("created_at", { ascending: true }).limit(TRANSLATION_BATCH_SIZE);
     if (error) throw error;
     const deadline = Date.now() + 90_000;
     for (const job of jobs ?? []) {
