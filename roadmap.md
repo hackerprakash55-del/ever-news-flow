@@ -1,8 +1,8 @@
 # GAINN Roadmap
 
 ## Current monitoring repairs
-- [ ] Repair and verify direct RSS and Google News RSS parsing.
-- [ ] Address silent signed-out translation without removing paid-service protection.
+- [x] Repair and verify direct RSS and Google News RSS parsing (six tests, four live feeds in Deno, deployed feed returns RSS stories).
+- [ ] Public Indian-language reading with protected generation — awaiting approval of the plan.
 
 ## Frontend & design research (done 2026-10-26)
 - [x] Audit GAINN pages via screenshots; research 15 top news sites; report → /mnt/documents/GAINN_frontend_ux_research.md
