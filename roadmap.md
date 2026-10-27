@@ -1,5 +1,10 @@
 # GAINN Roadmap
 
+## Missing Shorts narration
+- [x] Identify the silent-audio fallback in the publisher and renderer; direct YouTube audio retrieval is blocked by YouTube bot protection.
+- [x] Block missing/silent narration, deploy publisher, pass four regression tests, and verify a real-photo MP4 with audible narration (-13.5 dB).
+- [ ] Replace the four affected uploads with narrated versions — five-per-day publishing limit currently reached; existing YouTube video content cannot be replaced in place.
+
 ## Current monitoring repairs
 - [x] Repair and verify direct RSS and Google News RSS parsing (six tests, four live feeds in Deno, deployed feed returns RSS stories).
 - [x] Public Hindi reading with protected generation — bounded publication on the existing five-minute refresh; signed-out headline, summary and source body verified. Other languages show explicit availability/sign-in notices.

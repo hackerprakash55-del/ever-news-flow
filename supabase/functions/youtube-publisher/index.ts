@@ -4,23 +4,11 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { requireAdmin } from "../_shared/supa.ts";
 import { isRenderer, serviceClient } from "../_shared/youtube.ts";
+import { generateShortsNarration } from "../_shared/shorts-narration.ts";
 
 const DAILY_CAP = parseInt(Deno.env.get("DAILY_AUTO_PUBLISH_CAP") || "5");
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-async function narrate(text: string, language: string): Promise<string | null> {
-  const key = Deno.env.get("SARVAM_API_KEY");
-  if (!key) return null;
-  const res = await fetch("https://api.sarvam.ai/text-to-speech", {
-    method: "POST",
-    headers: { "api-subscription-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text.slice(0, 1400), target_language_code: language, speaker: "shubh", model: "bulbul:v3" }),
-  });
-  if (!res.ok) { console.error("Sarvam", res.status, await res.text()); return null; }
-  const d = await res.json();
-  return d?.audios?.[0] ?? null;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -85,9 +73,18 @@ Deno.serve(async (req) => {
       item = ins.data;
     }
 
-    await db.from("youtube_publish_queue").update({ status: "rendering", updated_at: new Date().toISOString() }).eq("id", item.id);
     const intro = item.language === "hi-IN" ? "गेन रिपोर्ट। " : "GAINN report. ";
-    const audio = await narrate(intro + item.script, item.language);
+    let audio: string;
+    try {
+      audio = await generateShortsNarration(intro + item.script, item.language, Deno.env.get("SARVAM_API_KEY"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Narration failed; upload stopped.";
+      await db.from("youtube_publish_queue").update({
+        status: "queued", error_message: message, updated_at: new Date().toISOString(),
+      }).eq("id", item.id);
+      return json({ error: message }, 503);
+    }
+    await db.from("youtube_publish_queue").update({ status: "rendering", error_message: null, updated_at: new Date().toISOString() }).eq("id", item.id);
     return json({ item, audioBase64: audio });
   } catch (e) {
     console.error("youtube-publisher error", e);
