@@ -283,11 +283,11 @@ export const ArticleListItem = ({ article, index }: { article: Article; index: n
         <h4 className="flex-1 min-w-0 text-[13px] text-foreground/90 group-hover:text-accent transition-colors truncate">
           {article.headline}
         </h4>
-        <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
-          {status.canShowScore && article.verification?.credibility_score
-            ? `${article.verification.credibility_score.value}%`
-            : status.label}
-        </span>
+        {status.canShowScore && article.verification?.credibility_score && (
+          <span className="text-[10px] font-mono text-muted-foreground/50 flex-shrink-0">
+            {article.verification.credibility_score.value}%
+          </span>
+        )}
       </div>
     </Link>
   );
