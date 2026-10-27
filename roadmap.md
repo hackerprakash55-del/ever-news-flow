@@ -2,7 +2,7 @@
 
 ## Current monitoring repairs
 - [x] Repair and verify direct RSS and Google News RSS parsing (six tests, four live feeds in Deno, deployed feed returns RSS stories).
-- [ ] Public Indian-language reading with protected generation — awaiting approval of the plan.
+- [x] Public Hindi reading with protected generation — bounded publication on the existing five-minute refresh; signed-out headline, summary and source body verified. Other languages show explicit availability/sign-in notices.
 
 ## Frontend & design research (done 2026-10-26)
 - [x] Audit GAINN pages via screenshots; research 15 top news sites; report → /mnt/documents/GAINN_frontend_ux_research.md

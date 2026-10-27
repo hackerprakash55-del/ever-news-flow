@@ -642,6 +642,63 @@ export type Database = {
         }
         Relationships: []
       }
+      news_translation_queue: {
+        Row: {
+          completed_at: string | null
+          content_hash: string
+          created_at: string
+          source_url: string
+          status: string
+          texts: Json
+        }
+        Insert: {
+          completed_at?: string | null
+          content_hash: string
+          created_at?: string
+          source_url: string
+          status?: string
+          texts: Json
+        }
+        Update: {
+          completed_at?: string | null
+          content_hash?: string
+          created_at?: string
+          source_url?: string
+          status?: string
+          texts?: Json
+        }
+        Relationships: []
+      }
+      news_translation_worker: {
+        Row: {
+          id: string
+          lease_token: string | null
+          lease_until: string
+          paused_reason: string | null
+          paused_until: string | null
+          refresh_secret: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          lease_token?: string | null
+          lease_until?: string
+          paused_reason?: string | null
+          paused_until?: string | null
+          refresh_secret?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          lease_token?: string | null
+          lease_until?: string
+          paused_reason?: string | null
+          paused_until?: string | null
+          refresh_secret?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pipeline_decisions: {
         Row: {
           category: string | null
@@ -763,6 +820,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      published_text_translations: {
+        Row: {
+          published_at: string
+          source_content_hash: string
+          source_url: string
+          target: string
+          text_hash: string
+          translated_text: string
+        }
+        Insert: {
+          published_at?: string
+          source_content_hash: string
+          source_url: string
+          target: string
+          text_hash: string
+          translated_text: string
+        }
+        Update: {
+          published_at?: string
+          source_content_hash?: string
+          source_url?: string
+          target?: string
+          text_hash?: string
+          translated_text?: string
+        }
+        Relationships: []
       }
       saved_articles: {
         Row: {
@@ -1138,6 +1222,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_news_translation_lease: {
+        Args: { token: string }
+        Returns: boolean
+      }
+      configure_trusted_news_refresh: {
+        Args: { endpoint: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

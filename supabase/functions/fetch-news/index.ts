@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireServiceOrAdmin } from "../_shared/supa.ts";
 import { parseRssItems, rssText, rssLink, rssImage, rssDate } from "./rss.ts";
+import { publishHindiTranslations } from "../_shared/publish-translations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -570,6 +571,15 @@ serve(async (req) => {
       : false;
     const shouldExpand = wantsExpand && privileged;
     const lang = url.searchParams.get("lang") === "hi" ? "hi" : "en";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    let trustedRefresh = (!!serviceKey && (req.headers.get("Authorization") === `Bearer ${serviceKey}` || req.headers.get("x-cron-secret") === serviceKey))
+      || (url.searchParams.get("publishTranslations") === "true" && (await requireServiceOrAdmin(req)).ok);
+    const publishTranslations = (items: any[]) => {
+      if (!trustedRefresh || lang !== "en" || location !== "India" || category !== "all" || searchQuery || !svc) return;
+      const task = publishHindiTranslations(svc, items);
+      const runtime = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (task: Promise<unknown>) => void } }).EdgeRuntime;
+      if (runtime) runtime.waitUntil(task);
+    };
 
     const t0 = Date.now();
 
@@ -578,11 +588,20 @@ serve(async (req) => {
     const svc = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
       : null;
+    if (svc && req.headers.has("x-news-refresh-secret")) {
+      const { data } = await svc.from("news_translation_worker").select("refresh_secret").eq("id", "hindi").maybeSingle();
+      trustedRefresh = !!data?.refresh_secret && req.headers.get("x-news-refresh-secret") === data.refresh_secret;
+    }
+    if (svc && trustedRefresh && url.searchParams.get("publishTranslations") === "true" && SUPABASE_URL) {
+      const { error: secretError } = await svc.from("news_translation_worker").update({ refresh_secret: crypto.randomUUID() + crypto.randomUUID() }).eq("id", "hindi");
+      if (!secretError) await svc.rpc("configure_trusted_news_refresh", { endpoint: `${SUPABASE_URL}/functions/v1/fetch-news` });
+    }
 
     // ── Serve fresh cache immediately if within TTL ──
     const ckey = cacheKey(category, location, pageSize, searchQuery, shouldExpand, lang);
     const cached = responseCache.get(ckey);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      publishTranslations((cached.payload as any).articles ?? []);
       return new Response(JSON.stringify({ ...(cached.payload as object), cached: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -753,6 +772,7 @@ serve(async (req) => {
       // Try persistent DB cache
       const persisted = await readPersistentCache(svc, ckey);
       if (persisted) {
+        publishTranslations(persisted.articles);
         console.log("Serving persistent DB cache");
         return new Response(JSON.stringify(persisted), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -902,6 +922,7 @@ serve(async (req) => {
     };
     responseCache.set(ckey, { at: Date.now(), payload });
     await writePersistentCache(svc, ckey, category, location, lang, searchQuery, pageSize, payload);
+    publishTranslations(articles);
     return new Response(JSON.stringify(payload), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

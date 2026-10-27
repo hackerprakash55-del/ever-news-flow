@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Languages, Loader2 } from "lucide-react";
 import { useLanguage, translateTexts, LANGUAGES } from "@/lib/language";
+import { Link } from "react-router-dom";
 
 interface Props {
   headline: string;
@@ -23,6 +24,8 @@ export const TranslatedArticleBody = ({ headline, summary, paragraphs, between }
 
   useEffect(() => {
     let cancelled = false;
+    setTranslated(null);
+    setLoading(false);
     if (lang === "en-IN") {
       setTranslated(null);
       return;
@@ -33,10 +36,11 @@ export const TranslatedArticleBody = ({ headline, summary, paragraphs, between }
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang, headline, summary, paragraphs.length]);
+  }, [lang, headline, summary, paragraphs.join("\n\n")]);
 
   const text = translated ?? source;
   const langLabel = LANGUAGES.find((l) => l.code === lang)?.native;
+  const translatedCount = translated?.filter((value, i) => value !== source[i]).length ?? 0;
 
   return (
     <>
@@ -48,7 +52,8 @@ export const TranslatedArticleBody = ({ headline, summary, paragraphs, between }
         <div data-testid="translation-status" className="flex items-center gap-2 mb-4 text-xs font-mono text-muted-foreground">
           {loading
             ? <><Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> Translating to {langLabel}…</>
-            : <><Languages className="w-3.5 h-3.5 text-primary" /> AI translation · {langLabel}</>}
+            : <><Languages className="w-3.5 h-3.5 text-primary" /> {translatedCount === source.length ? `AI translation · ${langLabel}` : translatedCount ? `Partial translation · ${langLabel} · remaining text is original` : "Translation unavailable · original text"}
+              {translatedCount < source.length && <Link to="/auth" className="text-primary underline">Sign in</Link>}</>}
         </div>
       )}
 

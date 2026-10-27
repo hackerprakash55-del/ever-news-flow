@@ -10,7 +10,7 @@ function applyCache(articles: Article[], lang: string): Article[] {
   return articles.map((a) => {
     const h = cache.get(key(lang, a.id, "h"));
     const s = cache.get(key(lang, a.id, "s"));
-    return h || s ? { ...a, headline: h || a.headline, summary: s || a.summary } : a;
+    return h || s ? { ...a, originalHeadline: a.originalHeadline ?? a.headline, originalSummary: a.originalSummary ?? a.summary, headline: h || a.headline, summary: s || a.summary } : a;
   });
 }
 
@@ -38,8 +38,8 @@ export function useLocalizedArticles(articles: Article[], limit = 20): Article[]
     const texts = missing.flatMap((a) => [a.headline, a.summary || a.headline]);
     translateTexts(texts, lang).then((res) => {
       missing.forEach((a, i) => {
-        cache.set(key(lang, a.id, "h"), res[i * 2] || a.headline);
-        cache.set(key(lang, a.id, "s"), res[i * 2 + 1] || a.summary);
+        if (res[i * 2] && res[i * 2] !== a.headline) cache.set(key(lang, a.id, "h"), res[i * 2]);
+        if (res[i * 2 + 1] && res[i * 2 + 1] !== a.summary) cache.set(key(lang, a.id, "s"), res[i * 2 + 1]);
       });
       if (!cancelled) setOut(applyCache(articles, lang));
     });
