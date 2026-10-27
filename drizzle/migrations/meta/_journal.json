@@ -43,6 +43,13 @@
       "when": 1793103358684,
       "tag": "0005_editorial_short_candidates",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793103481544,
+      "tag": "0006_enforce_final_hindi_editorial_review",
+      "breakpoints": true
     }
   ]
 }
