@@ -56,8 +56,6 @@ export const BreakingNewsBanner = () => {
           </p>
           <div className="flex items-center gap-3 mt-0.5">
             <span className="text-[10px] font-mono text-muted-foreground">{alert.region}</span>
-            <span className="text-[10px] text-gainn-cyan font-mono">✦ Source shown</span>
-            {isLive && <span className="text-[10px] font-mono text-gainn-green">● Live Feed</span>}
           </div>
         </div>
         {/* Dot nav */}
