@@ -572,7 +572,8 @@ serve(async (req) => {
     const shouldExpand = wantsExpand && privileged;
     const lang = url.searchParams.get("lang") === "hi" ? "hi" : "en";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const trustedRefresh = !!serviceKey && (req.headers.get("Authorization") === `Bearer ${serviceKey}` || req.headers.get("x-cron-secret") === serviceKey);
+    const trustedRefresh = (!!serviceKey && (req.headers.get("Authorization") === `Bearer ${serviceKey}` || req.headers.get("x-cron-secret") === serviceKey))
+      || (url.searchParams.get("publishTranslations") === "true" && (await requireServiceOrAdmin(req)).ok);
     const publishTranslations = (items: any[]) => {
       if (!trustedRefresh || lang !== "en" || location !== "India" || category !== "all" || searchQuery || !svc) return;
       const task = publishHindiTranslations(svc, items);
