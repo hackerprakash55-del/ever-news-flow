@@ -35,8 +35,8 @@ export function ShortsPreviewStrip() {
               </div>
             </div>
             <div className="absolute bottom-1.5 left-2 right-2">
-              <span className="block text-[10px] uppercase tracking-wider text-foreground/80 truncate">
-                {a.category}
+              <span className="block text-[10px] font-medium text-foreground/90 leading-tight line-clamp-2">
+                {a.headline.replace(/ - [^-]+$/, "")}
               </span>
             </div>
           </button>

@@ -38,6 +38,10 @@ function ReadProgressBar({ articleId }: { articleId: string }) {
 // Single trust indicator: shield + score. Cyan is the only accent used for trust.
 const TrustBadge = ({ article }: { article: Article }) => {
   const status = verificationLabel(article);
+  // Cards stay quiet unless a story is genuinely verified — repeating
+  // "Single-source" on every card reads as noise, not honesty. The article
+  // page still shows the full verification detail.
+  if (status.status !== "verified") return null;
   return (
   <TooltipProvider>
     <Tooltip>
