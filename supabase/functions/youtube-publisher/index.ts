@@ -86,7 +86,6 @@ Deno.serve(async (req) => {
       item = ins.data;
     }
 
-    const intro = item.language === "hi-IN" ? "गेन रिपोर्ट। " : "GAINN report. ";
     let audio: string;
     try {
       const hindi = await prepareHindiShort(item.title, item.script, Deno.env.get("SARVAM_API_KEY"));
