@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ExternalLink, Youtube } from "lucide-react";
 import { useState } from "react";
+import EditorialShortsQueue from "@/components/EditorialShortsQueue";
 
 export default function ShortsReviewQueue() {
   const qc = useQueryClient();
@@ -62,10 +63,12 @@ export default function ShortsReviewQueue() {
           {status.isError && <p className="text-sm text-destructive">Couldn't load channel status — admin access is required.</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <p className="text-sm text-muted-foreground">
-            Once connected, new Indian stories are narrated, rendered as vertical Shorts and uploaded automatically every few hours (max 5 per day).
+            Approved stories are narrated in Hindi and uploaded every four hours (max 5 per day).
           </p>
         </CardContent>
       </Card>
+
+      <EditorialShortsQueue />
 
       <Card>
         <CardHeader><CardTitle>Recent Shorts</CardTitle></CardHeader>

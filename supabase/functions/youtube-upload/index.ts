@@ -88,6 +88,14 @@ Deno.serve(async (req) => {
     if (!item) return json({ error: "Queue item not found" }, 404);
     const repair = item.status === "uploaded" && replacesVideoId === item.youtube_video_id && item.language === "hi-IN";
     if (item.status === "uploaded" && !repair) return json({ success: true, youtubeUrl: item.youtube_url, already: true });
+    let evidence: { official_url: string; corroborating_url: string } | null = null;
+    if (!repair) {
+      if (item.status !== "rendering" || !item.candidate_id) return json({ error: "An editor-approved rendered Short is required" }, 409);
+      const { data: candidate, error } = await db.from("short_candidates").select("status,official_url,corroborating_url").eq("id", item.candidate_id).maybeSingle();
+      if (error) throw error;
+      if (candidate?.status !== "approved") return json({ error: "Editorial approval is required" }, 409);
+      evidence = candidate;
+    }
 
     const accessToken = await getYoutubeAccessToken();
     const hi = item.language === "hi-IN";
@@ -96,6 +104,7 @@ Deno.serve(async (req) => {
       "",
       item.source_name ? `${hi ? "स्रोत" : "Source"}: ${item.source_name}` : "",
       item.source_url ? `${hi ? "मूल रिपोर्ट" : "Original report"}: ${item.source_url}` : "",
+      evidence ? `Official announcement: ${evidence.official_url}\nIndependent report: ${evidence.corroborating_url}` : "",
       hi ? "AI-सहायता से तैयार · स्रोत दिखाया गया" : "AI-assisted summary · source shown · corrections welcome",
       `${hi ? "और खबरें" : "More news"}: ${SITE}`,
       "",

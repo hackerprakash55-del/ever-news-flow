@@ -1,5 +1,10 @@
 # GAINN Roadmap
 
+## Source-backed growth pilot
+- [ ] Add an editor-reviewed story-to-Short queue with evidence links and approval gates, reusing existing publishing limits.
+- [ ] Verify candidate review and approval end-to-end with real source input.
+- [ ] Connect Instagram professional account publishing; requires account authorization.
+
 ## Missing Shorts narration
 - [x] Upload four Hindi replacements: HdbNE2F0TZU, ClJl8HLYJRo, qMr28L2mvH4, k9z5RI5S7rE; audio validated, YouTube confirms processed; all four old IDs already absent (no deletion needed).
 - [x] Scheduled Shorts translate English source title/scripts to Hindi before speech; deployed and translation/narration tests pass.
