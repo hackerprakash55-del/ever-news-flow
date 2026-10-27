@@ -11,8 +11,9 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
-    // Edge function imports use Deno's npm specifier; tests use the same pinned package.
-    // Keep this mapping scoped to the test runner.
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "npm:fast-xml-parser@5.3.0": "fast-xml-parser",
+    },
   },
 });

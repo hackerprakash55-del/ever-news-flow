@@ -1,5 +1,9 @@
 # GAINN Roadmap
 
+## Current monitoring repairs
+- [ ] Repair and verify direct RSS and Google News RSS parsing.
+- [ ] Address silent signed-out translation without removing paid-service protection.
+
 ## Frontend & design research (done 2026-10-26)
 - [x] Audit GAINN pages via screenshots; research 15 top news sites; report → /mnt/documents/GAINN_frontend_ux_research.md
 - [x] P0 trust killers: removed fake metrics, "AI Verified" chip, public Generate buttons, fake views/lives, mock Breaking Now stories
