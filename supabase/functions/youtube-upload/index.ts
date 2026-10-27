@@ -48,7 +48,25 @@ Deno.serve(async (req) => {
       if (!a.ok) return json({ error: a.error }, a.status);
     }
     const body = await req.json();
-    const { queueItemId, videoBase64, mimeType = "video/mp4", action } = body;
+    const { queueItemId, videoBase64, mimeType = "video/mp4", action, replacesVideoId } = body;
+
+    if (action === "delete-replaced") {
+      if (typeof queueItemId !== "string" || typeof body.oldVideoId !== "string") return json({ error: "Queue item and old video ID required" }, 400);
+      const { data: item } = await db.from("youtube_publish_queue").select("*").eq("id", queueItemId).eq("status", "uploaded").maybeSingle();
+      if (!item?.youtube_video_id || item.youtube_video_id === body.oldVideoId || item.language !== "hi-IN") return json({ error: "A new Hindi replacement is required before deletion" }, 409);
+      const { data: old } = await db.from("published_shorts").select("id").eq("article_id", item.article_id).eq("youtube_video_id", body.oldVideoId).maybeSingle();
+      if (!old) return json({ error: "Old video does not belong to this story" }, 404);
+      const token = await getYoutubeAccessToken();
+      const check = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=status,processingDetails,snippet&id=${item.youtube_video_id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!check.ok) return json({ error: "Could not verify replacement on YouTube" }, 502);
+      const result = await check.json();
+      const replacement = result.items?.[0];
+      if (replacement?.status?.uploadStatus !== "processed" || replacement?.snippet?.defaultLanguage !== "hi") return json({ error: "Replacement is not yet processed; old video kept" }, 409);
+      const deleted = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(body.oldVideoId)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      if (!deleted.ok) return json({ error: "YouTube deletion needs channel permission. Reconnect YouTube and approve video management.", status: deleted.status }, deleted.status);
+      await db.from("published_shorts").update({ status: "deleted", error_message: `Replaced by ${item.youtube_video_id}` }).eq("id", old.id);
+      return json({ success: true, deletedVideoId: body.oldVideoId, replacementUrl: item.youtube_url });
+    }
 
     // "thumbnail": (re)set the story photo as the YouTube thumbnail for an
     // already-uploaded Short — used to upgrade older Shorts in place.
@@ -67,7 +85,8 @@ Deno.serve(async (req) => {
     queueId = queueItemId;
     const { data: item } = await db.from("youtube_publish_queue").select("*").eq("id", queueItemId).maybeSingle();
     if (!item) return json({ error: "Queue item not found" }, 404);
-    if (item.status === "uploaded") return json({ success: true, youtubeUrl: item.youtube_url, already: true });
+    const repair = item.status === "uploaded" && replacesVideoId === item.youtube_video_id && item.language === "hi-IN";
+    if (item.status === "uploaded" && !repair) return json({ success: true, youtubeUrl: item.youtube_url, already: true });
 
     const accessToken = await getYoutubeAccessToken();
     const hi = item.language === "hi-IN";

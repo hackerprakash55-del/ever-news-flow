@@ -5,6 +5,7 @@ import { ALLOWED_REDIRECTS, serviceClient } from "../_shared/youtube.ts";
 const SCOPES = [
   "https://www.googleapis.com/auth/youtube.upload",
   "https://www.googleapis.com/auth/youtube.readonly",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
 ].join(" ");
 
 const json = (b: unknown, status = 200) =>

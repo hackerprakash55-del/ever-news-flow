@@ -5,6 +5,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { requireAdmin } from "../_shared/supa.ts";
 import { isRenderer, serviceClient } from "../_shared/youtube.ts";
 import { generateShortsNarration } from "../_shared/shorts-narration.ts";
+import { prepareHindiShort } from "../_shared/hindi-shorts.ts";
 
 const DAILY_CAP = parseInt(Deno.env.get("DAILY_AUTO_PUBLISH_CAP") || "5");
 const json = (b: unknown, status = 200) =>
@@ -20,6 +21,18 @@ Deno.serve(async (req) => {
     const db = serviceClient();
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "next";
+
+    // Explicit repairs only: an already uploaded item is re-rendered, not a new scheduled story.
+    if (action === "repair-hindi") {
+      if (typeof body.id !== "string") return json({ error: "id required" }, 400);
+      const { data: item } = await db.from("youtube_publish_queue").select("*").eq("id", body.id).eq("status", "uploaded").maybeSingle();
+      if (!item?.youtube_video_id) return json({ error: "Uploaded Short not found" }, 404);
+      const hindi = await prepareHindiShort(item.title, item.script, Deno.env.get("SARVAM_API_KEY"));
+      const audio = await generateShortsNarration("गेन रिपोर्ट। " + hindi.script, "hi-IN", Deno.env.get("SARVAM_API_KEY"));
+      const { error } = await db.from("youtube_publish_queue").update(hindi).eq("id", item.id);
+      if (error) throw error;
+      return json({ item: { ...item, ...hindi }, replacesVideoId: item.youtube_video_id, audioBase64: audio });
+    }
 
     if (action === "fail") {
       if (typeof body.id !== "string") return json({ error: "id required" }, 400);
@@ -76,7 +89,11 @@ Deno.serve(async (req) => {
     const intro = item.language === "hi-IN" ? "गेन रिपोर्ट। " : "GAINN report. ";
     let audio: string;
     try {
-      audio = await generateShortsNarration(intro + item.script, item.language, Deno.env.get("SARVAM_API_KEY"));
+      const hindi = await prepareHindiShort(item.title, item.script, Deno.env.get("SARVAM_API_KEY"));
+      const { error } = await db.from("youtube_publish_queue").update(hindi).eq("id", item.id);
+      if (error) throw error;
+      item = { ...item, ...hindi };
+      audio = await generateShortsNarration("गेन रिपोर्ट। " + item.script, "hi-IN", Deno.env.get("SARVAM_API_KEY"));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Narration failed; upload stopped.";
       await db.from("youtube_publish_queue").update({
