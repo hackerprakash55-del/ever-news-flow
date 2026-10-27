@@ -676,6 +676,7 @@ export type Database = {
           lease_until: string
           paused_reason: string | null
           paused_until: string | null
+          refresh_secret: string | null
           updated_at: string
         }
         Insert: {
@@ -684,6 +685,7 @@ export type Database = {
           lease_until?: string
           paused_reason?: string | null
           paused_until?: string | null
+          refresh_secret?: string | null
           updated_at?: string
         }
         Update: {
@@ -692,6 +694,7 @@ export type Database = {
           lease_until?: string
           paused_reason?: string | null
           paused_until?: string | null
+          refresh_secret?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1222,6 +1225,10 @@ export type Database = {
       acquire_news_translation_lease: {
         Args: { token: string }
         Returns: boolean
+      }
+      configure_trusted_news_refresh: {
+        Args: { endpoint: string }
+        Returns: undefined
       }
       has_role: {
         Args: {
