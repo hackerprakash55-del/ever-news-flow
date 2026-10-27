@@ -15,7 +15,9 @@ jobs:
       AK: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3ZHp6dnJ6c3Jzc2FvY2Fwcm5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NzEwNzcsImV4cCI6MjA4ODU0NzA3N30.zbBNAlbQjv3CIbNIsX3S3MkkXTzjmx5febTlGa2mmBk
     steps:
       - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg jq fonts-noto
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg jq fonts-noto python3-pil
 
       - name: Get next story
         id: next
@@ -32,20 +34,44 @@ jobs:
           IMG=$(jq -r '.item.image_url // empty' next.json)
           if [ -n "$IMG" ]; then
             curl -sSL --max-time 30 "$IMG" -o story.jpg || rm -f story.jpg
-            # verify it is actually an image
             if [ -f story.jpg ] && ! ffprobe -v error -show_entries stream=codec_type -of csv=p=0 story.jpg | grep -q video; then
               rm -f story.jpg
             fi
+          fi
+
+      - name: Prepare title (shaped image for Hindi, plain text otherwise)
+        if: steps.next.outputs.id != ''
+        run: |
+          LANG=$(jq -r '.item.language // "en-IN"' next.json)
+          jq -r '.item.title' next.json > title_raw.txt
+          jq -r '.item.source_name // "GAINN"' next.json > source.txt
+          jq -r '.item.category // "News"' next.json | tr '[:lower:]' '[:upper:]' > category.txt
+          if [ "$LANG" = "hi-IN" ]; then
+            # ffmpeg drawtext cannot shape Devanagari; render the title as an image with proper shaping
+            python3 - <<'PYEOF'
+          from PIL import Image, ImageDraw, ImageFont
+          import textwrap, glob
+          text = open("title_raw.txt", encoding="utf-8").read().strip()
+          lines = []
+          for para in text.split("\n"):
+              lines.extend(textwrap.wrap(para, width=18) or [""])
+          candidates = glob.glob("/usr/share/fonts/**/NotoSansDevanagari*Bold*.ttf", recursive=True) or \
+                       glob.glob("/usr/share/fonts/**/NotoSansDevanagari*.ttf", recursive=True)
+          font = ImageFont.truetype(candidates[0], 62)
+          img = Image.new("RGBA", (1000, 120 * len(lines) + 40), (0, 0, 0, 0))
+          d = ImageDraw.Draw(img)
+          d.multiline_text((0, 0), "\n".join(lines), font=font, fill=(255, 255, 255, 255),
+                           spacing=16, stroke_width=2, stroke_fill=(0, 0, 0, 180))
+          img.crop(img.getbbox()).save("title_hi.png")
+          PYEOF
+          else
+            fold -s -w 22 title_raw.txt > title.txt
           fi
 
       - name: Render vertical Short
         if: steps.next.outputs.id != ''
         run: |
           set -e
-          jq -r '.item.title' next.json | fold -s -w 22 > title.txt
-          jq -r '.item.source_name // "GAINN"' next.json > source.txt
-          CAT=$(jq -r '.item.category // "News"' next.json | tr '[:lower:]' '[:upper:]')
-          echo "$CAT" > category.txt
           if [ "$(jq -r '.audioBase64 // empty' next.json)" != "" ]; then
             jq -r '.audioBase64' next.json | base64 -d > voice.wav
           else
@@ -54,32 +80,36 @@ jobs:
           DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 voice.wav)
           DUR=$(python3 -c "print(min(58, float('$DUR')+1))")
           FRAMES=$(python3 -c "print(int(float('$DUR')*30))")
-          # Hindi-capable fonts
-          FONT_B=/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf
-          [ -f "$FONT_B" ] || FONT_B=/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf
-          [ -f "$FONT_B" ] || FONT_B=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+          LATIN=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
 
-          OVERLAY="drawbox=y=0:w=iw:h=10:color=0x00D4FF:t=fill,\
-drawtext=fontfile=$FONT_B:text='GAINN':fontsize=64:fontcolor=0x00D4FF:x=60:y=110,\
-drawtext=fontfile=$FONT_B:textfile=category.txt:fontsize=40:fontcolor=white:borderw=2:bordercolor=0x00D4FF:x=60:y=h-640,\
-drawtext=fontfile=$FONT_B:textfile=title.txt:fontsize=62:fontcolor=white:line_spacing=16:x=60:y=h-560:box=0,\
-drawtext=fontfile=$FONT_B:textfile=source.txt:fontsize=38:fontcolor=0xAAB4C3:x=60:y=h-200,\
-drawtext=fontfile=$FONT_B:text='ever-news-flow.lovable.app':fontsize=34:fontcolor=0x00D4FF:x=60:y=h-130"
+          BRAND="drawbox=y=0:w=iw:h=10:color=0x00D4FF:t=fill,\
+drawtext=fontfile=$LATIN:text='GAINN':fontsize=64:fontcolor=0x00D4FF:x=60:y=110,\
+drawtext=fontfile=$LATIN:textfile=category.txt:fontsize=40:fontcolor=white:borderw=2:bordercolor=0x00D4FF:x=60:y=h-660,\
+drawtext=fontfile=$LATIN:textfile=source.txt:fontsize=38:fontcolor=0xAAB4C3:x=60:y=h-200,\
+drawtext=fontfile=$LATIN:text='ever-news-flow.lovable.app':fontsize=34:fontcolor=0x00D4FF:x=60:y=h-130"
+
+          if [ -f title_hi.png ]; then
+            TITLE_OVERLAY="[tmp][1]overlay=60:H-h-580[tmp2];[tmp2]$BRAND[v]"
+            EXTRA_INPUT="-i title_hi.png"
+            AUDIO_MAP="2:a"
+          else
+            TITLE_OVERLAY="[tmp]drawtext=fontfile=$LATIN:textfile=title.txt:fontsize=62:fontcolor=white:line_spacing=16:x=60:y=h-580,$BRAND[v]"
+            EXTRA_INPUT=""
+            AUDIO_MAP="1:a"
+          fi
 
           if [ -f story.jpg ]; then
-            # Real photo background: cover-crop + slow zoom (Ken Burns), dark gradient at bottom for text
-            ffmpeg -y -loop 1 -i story.jpg -i voice.wav -filter_complex \
+            # Real photo background: cover-crop + slow zoom (Ken Burns), dark lower band for text
+            ffmpeg -y -loop 1 -i story.jpg $EXTRA_INPUT -i voice.wav -filter_complex \
               "[0]scale=1400:2489:force_original_aspect_ratio=increase,crop=1080:1920,zoompan=z='min(zoom+0.0009,1.18)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=$FRAMES:s=1080x1920:fps=30,eq=brightness=-0.12[bg];\
-               color=c=black@0.0:s=1080x1920:d=$DUR[clear];\
-               [bg][clear]overlay=0:0[tmp];\
-               [tmp]drawbox=y=ih*0.45:w=iw:h=ih*0.55:color=black@0.55:t=fill:enable='1',\
-               $OVERLAY[v]" \
-              -map "[v]" -map 1:a -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -c:a aac -shortest -t "$DUR" short.mp4
+               [bg]drawbox=y=ih*0.42:w=iw:h=ih*0.58:color=black@0.55:t=fill[tmp];\
+               $TITLE_OVERLAY" \
+              -map "[v]" -map $AUDIO_MAP -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -c:a aac -shortest -t "$DUR" short.mp4
           else
-            # No photo: animated dark gradient with slow drifting glow instead of flat black
-            ffmpeg -y -f lavfi -i "gradients=size=1080x1920:c0=0x060910:c1=0x0B1B2E:c2=0x060910:speed=0.02:duration=$DUR" -i voice.wav -filter_complex \
-              "[0]$OVERLAY[v]" \
-              -map "[v]" -map 1:a -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -c:a aac -shortest -t "$DUR" short.mp4
+            # No photo: animated dark gradient instead of flat black
+            ffmpeg -y -f lavfi -i "gradients=size=1080x1920:c0=0x060910:c1=0x0B1B2E:c2=0x060910:speed=0.02:duration=$DUR" $EXTRA_INPUT -i voice.wav -filter_complex \
+              "[0]format=yuv420p[tmp];$TITLE_OVERLAY" \
+              -map "[v]" -map $AUDIO_MAP -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -c:a aac -shortest -t "$DUR" short.mp4
           fi
 
       - name: Upload to YouTube
