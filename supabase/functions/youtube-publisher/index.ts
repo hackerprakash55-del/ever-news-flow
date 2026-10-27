@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
     const db = serviceClient();
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "next";
+    if (!["next", "fail", "repair-hindi"].includes(action)) return json({ error: "Unknown publishing action" }, 400);
 
     // Explicit repairs only: an already uploaded item is re-rendered, not a new scheduled story.
     if (action === "repair-hindi") {

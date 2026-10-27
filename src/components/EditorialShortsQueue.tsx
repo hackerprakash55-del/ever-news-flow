@@ -49,6 +49,12 @@ export default function EditorialShortsQueue() {
     finally { setBusy(false); }
   };
   const choose = (item: Story) => { setStory(item); setOfficial(''); setCorroboration(''); setNotes(''); setFacts(false); setRights(false); setMessage(''); };
+  const translate = async () => {
+    setBusy(true); setMessage('');
+    try { const hindi = await invoke({ action: 'translate', title: story.title, script: story.script }); setStory({ ...story, title: hindi.title, script: hindi.script }); setFacts(false); }
+    catch (e) { setMessage(e instanceof Error ? e.message : 'Hindi preparation failed.'); }
+    finally { setBusy(false); }
+  };
   return <section className="space-y-6 border-t border-border pt-8">
     <div className="flex items-center justify-between gap-4"><div><h2 className="text-2xl font-display">Story desk</h2><p className="text-sm text-muted-foreground mt-1">India · Recent reporting · Editorial approval required</p></div><Button size="icon" variant="outline" aria-label="Refresh story suggestions" title="Refresh story suggestions" disabled={discovery.isFetching} onClick={() => discovery.refetch()}><RefreshCw className="h-4 w-4" /></Button></div>
     {discovery.isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : discovery.isError ? <p role="alert" className="text-destructive text-sm">Story suggestions could not load. Admin access is required.</p> : <div className="grid md:grid-cols-2 gap-4">
@@ -69,6 +75,7 @@ export default function EditorialShortsQueue() {
       <div><Label htmlFor="corroboration">Independent corroboration URL</Label><Input id="corroboration" type="url" required value={corroboration} onChange={e => setCorroboration(e.target.value)} /></div></div>
       <div><Label htmlFor="evidence">Evidence notes & photo permission</Label><Textarea id="evidence" minLength={20} maxLength={2000} required value={notes} onChange={e => setNotes(e.target.value)} /></div>
       <div><Label htmlFor="narration">Narration draft</Label><Textarea id="narration" minLength={40} maxLength={900} required value={story.script} onChange={e => setStory({ ...story, script: e.target.value })} /></div>
+      <Button type="button" variant="outline" disabled={busy || !story.title || story.script.length < 40} onClick={translate}>Prepare Hindi draft</Button>
       <div className="flex items-center gap-2"><Checkbox id="facts" checked={facts} onCheckedChange={v => setFacts(v === true)} /><Label htmlFor="facts">I checked the claims against both sources</Label></div>
       <div className="flex items-center gap-2"><Checkbox id="rights" checked={rights} onCheckedChange={v => setRights(v === true)} /><Label htmlFor="rights">We have permission to use this photo</Label></div>
       <Button type="submit" disabled={busy || !facts || !rights}>{busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save for review</Button>
