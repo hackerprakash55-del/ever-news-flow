@@ -26,6 +26,8 @@ export type Article = {
   id: string;
   headline: string;
   summary: string;
+  originalHeadline?: string;
+  originalSummary?: string;
   body: string;
   category: string;
   credibilityScore?: number;

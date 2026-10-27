@@ -623,8 +623,8 @@ export default function ArticlePage() {
               </div>
 
               <TranslatedArticleBody
-                headline={article.headline}
-                summary={article.summary}
+                headline={article.originalHeadline ?? article.headline}
+                summary={article.originalSummary ?? article.summary}
                 paragraphs={paragraphs}
                 between={
                   <>

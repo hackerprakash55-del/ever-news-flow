@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { readPublishedTranslations } from "./published-translation";
+import { toast } from "sonner";
 
 export interface LanguageOption {
   code: string;
@@ -53,6 +55,15 @@ export function speechLocale(code: string): string {
 /** Translate one or more strings with Sarvam. Falls back to the originals. */
 export async function translateTexts(texts: string[], target: string): Promise<string[]> {
   if (!texts.length || target === "en-IN") return texts;
+  const published = await readPublishedTranslations(texts, target);
+  if (published.every((text) => text !== null)) return published.map((text, i) => text ?? texts[i]);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    toast.info(target === "hi-IN" ? "कुछ अनुवाद अभी उपलब्ध नहीं हैं — मूल पाठ दिखाया गया है।" : "Translation not published yet — showing original text.", {
+      id: `translation-${target}`, action: { label: "Sign in", onClick: () => { window.location.assign("/auth"); } },
+    });
+    return published.map((text, i) => text ?? texts[i]);
+  }
   // The translate function accepts at most 40 strings per call — send in chunks.
   if (texts.length > 40) {
     const chunks: string[][] = [];
@@ -66,6 +77,7 @@ export async function translateTexts(texts: string[], target: string): Promise<s
     });
     // sarvam-translate returns HTTP 200 even when key is missing; check for explicit error field
     if (error || !Array.isArray(data?.translations) || data?.error) {
+      toast.info("Translation unavailable — showing original text.", { id: `translation-${target}` });
       console.warn("Translation unavailable, using original text");
       return texts;
     }
