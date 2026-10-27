@@ -12,5 +12,7 @@ export default defineConfig({
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
+    // Edge function imports use Deno's npm specifier; tests use the same pinned package.
+    // Keep this mapping scoped to the test runner.
   },
 });

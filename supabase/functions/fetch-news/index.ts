@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireServiceOrAdmin } from "../_shared/supa.ts";
+import { parseRssItems, rssText, rssLink, rssImage, rssDate } from "./rss.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -313,10 +314,6 @@ function mapNewsApiArticle(raw: any, index: number, location: string, expandedBo
   };
 }
 
-function textOf(item: Element, selector: string): string {
-  return item.querySelector(selector)?.textContent?.trim() ?? "";
-}
-
 // ── Direct RSS feed sources (parallel fetchers) ─────────────────────────────
 // These are public RSS feeds from major Indian news outlets, meant for syndication.
 // We fetch them in parallel with NewsAPI to provide multiple independent sources
@@ -343,23 +340,18 @@ async function fetchDirectRssFeed(feedUrl: string, feedName: string, pageSize: n
     const response = await fetch(feedUrl, { signal: controller.signal });
     if (!response.ok) return [];
     const xml = await response.text();
-    const document = new DOMParser().parseFromString(xml, "application/xml");
-    if (!document || document.querySelector("parsererror")) return [];
-    
-    const items = Array.from(document.querySelectorAll("item, entry")).slice(0, pageSize * 2);
+    const items = parseRssItems(xml).slice(0, pageSize * 2);
     return items.map((item, index) => {
-      let headline = textOf(item, "title") || textOf(item, "title > text");
+      let headline = rssText(item.title);
       // Clean up common RSS title patterns like "Headline - Outlet Name"
       headline = headline.replace(/\s+-\s+[^-]+$/, "").trim();
       
-      const outlet = textOf(item, "source") || feedName;
-      const sourceUrl = textOf(item, "link") || textOf(item, "id") || "";
-      const pubDateStr = textOf(item, "pubDate") || textOf(item, "published") || textOf(item, "updated");
-      const publishedAt = pubDateStr ? new Date(pubDateStr).toISOString() : new Date().toISOString();
-      const description = textOf(item, "description") || textOf(item, "summary") || headline;
-      const imageUrl = textOf(item, "media\\:content") || 
-                       item.querySelector("media\\:content")?.getAttribute("url") ||
-                       textOf(item, "enclosure") || undefined;
+      const outlet = rssText(item.source) || feedName;
+      const sourceUrl = rssLink(item);
+      const pubDateStr = rssText(item.pubDate) || rssText(item.published) || rssText(item.updated);
+      const publishedAt = rssDate(pubDateStr);
+      const description = rssText(item.description) || rssText(item.summary) || headline;
+      const imageUrl = rssImage(item);
       
       return {
         id: `rss-${btoa(unescape(encodeURIComponent(sourceUrl || headline))).replace(/[^a-zA-Z0-9]/g, "").slice(-28)}-${index}`,
@@ -406,13 +398,11 @@ async function fetchPublicRss(category: string, location: string, pageSize: numb
     const response = await fetch(rssUrl, { signal: controller.signal });
     if (!response.ok) return [];
     const xml = await response.text();
-    const document = new DOMParser().parseFromString(xml, "application/xml");
-    if (!document) return [];
-    return Array.from(document.querySelectorAll("item")).slice(0, pageSize).map((item, index) => {
-      const headline = textOf(item, "title").replace(/\s+-\s+[^-]+$/, "");
-      const outlet = textOf(item, "source") || "Google News";
-      const sourceUrl = textOf(item, "link");
-      const publishedAt = new Date(textOf(item, "pubDate") || Date.now()).toISOString();
+    return parseRssItems(xml).slice(0, pageSize).map((item, index) => {
+      const headline = rssText(item.title).replace(/\s+-\s+[^-]+$/, "");
+      const outlet = rssText(item.source) || "Google News";
+      const sourceUrl = rssLink(item);
+      const publishedAt = rssDate(rssText(item.pubDate));
       return {
         id: `rss-${btoa(unescape(encodeURIComponent(sourceUrl || headline))).replace(/[^a-zA-Z0-9]/g, "").slice(-28)}-${index}`,
         headline,
