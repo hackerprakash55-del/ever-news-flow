@@ -154,10 +154,9 @@ function ShareRail({ article }: { article: Article }) {
 
 // ── Author card ────────────────────────────────────────────
 function AuthorCard({ article }: { article: Article }) {
-  const { toast } = useToast();
-  const [following, setFollowing] = useState(false);
-  const name = (article as any).author || "GAINN Editorial AI";
-  const title = `${article.category} Desk · AI Correspondent`;
+  const name = (article as any).author || "GAINN News Desk";
+  const source = article.sources?.[0];
+  const title = source ? `Via ${source} · sources shown` : `${article.category} Desk · sources shown`;
   const initials = name.split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
 
   return (
@@ -181,20 +180,6 @@ function AuthorCard({ article }: { article: Article }) {
           {title}
         </div>
       </div>
-      <button
-        onClick={() => {
-          setFollowing((f) => !f);
-          toast({ title: following ? "Unfollowed" : `Following ${name}` });
-        }}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-          following
-            ? "bg-transparent border border-[#00D4FF]/40 text-[#00D4FF]"
-            : "bg-[#00D4FF] text-[#001018] hover:scale-[1.03]"
-        }`}
-      >
-        <UserPlus className="w-3.5 h-3.5" />
-        {following ? "Following" : "Follow"}
-      </button>
     </div>
   );
 }

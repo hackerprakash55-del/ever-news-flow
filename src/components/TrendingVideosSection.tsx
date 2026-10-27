@@ -90,9 +90,12 @@ export function TrendingVideosSection() {
   const loadVideos = async () => {
     setIsLoading(true);
     try {
+      // Only show recent reports — stale months-old videos make the site look abandoned
+      const weekAgo = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
       const { data } = await supabase
         .from("generated_videos")
         .select("*")
+        .gte("created_at", weekAgo)
         .order("created_at", { ascending: false })
         .limit(3);
       if (data) setVideos(data as VideoRecord[]);
