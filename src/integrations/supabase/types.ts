@@ -893,6 +893,66 @@ export type Database = {
         }
         Relationships: []
       }
+      short_candidates: {
+        Row: {
+          article_id: string
+          corroborating_url: string
+          created_at: string
+          created_by: string
+          evidence_notes: string
+          facts_checked: boolean
+          id: string
+          image_rights_confirmed: boolean
+          image_url: string | null
+          official_url: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          script: string
+          source_name: string
+          source_url: string
+          status: string
+          title: string
+        }
+        Insert: {
+          article_id: string
+          corroborating_url: string
+          created_at?: string
+          created_by: string
+          evidence_notes: string
+          facts_checked?: boolean
+          id?: string
+          image_rights_confirmed?: boolean
+          image_url?: string | null
+          official_url: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          script: string
+          source_name: string
+          source_url: string
+          status?: string
+          title: string
+        }
+        Update: {
+          article_id?: string
+          corroborating_url?: string
+          created_at?: string
+          created_by?: string
+          evidence_notes?: string
+          facts_checked?: boolean
+          id?: string
+          image_rights_confirmed?: boolean
+          image_url?: string | null
+          official_url?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          script?: string
+          source_name?: string
+          source_url?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
       sources: {
         Row: {
           citation_quality: number
@@ -1167,6 +1227,7 @@ export type Database = {
         Row: {
           article_id: string
           attempts: number
+          candidate_id: string | null
           created_at: string
           error_message: string | null
           id: string
@@ -1185,6 +1246,7 @@ export type Database = {
         Insert: {
           article_id: string
           attempts?: number
+          candidate_id?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
@@ -1203,6 +1265,7 @@ export type Database = {
         Update: {
           article_id?: string
           attempts?: number
+          candidate_id?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
@@ -1218,7 +1281,15 @@ export type Database = {
           youtube_url?: string | null
           youtube_video_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "youtube_publish_queue_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "short_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1229,6 +1300,7 @@ export type Database = {
         Args: { token: string }
         Returns: boolean
       }
+      approve_short_candidate: { Args: { p_id: string }; Returns: string }
       configure_trusted_news_refresh: {
         Args: { endpoint: string }
         Returns: undefined
