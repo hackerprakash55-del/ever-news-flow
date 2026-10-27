@@ -109,7 +109,8 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     await db.from("youtube_publish_queue").update({ status: "uploaded", youtube_video_id: result.id, youtube_url: url, uploaded_at: now, updated_at: now, error_message: null }).eq("id", item.id);
     await db.from("published_shorts").insert({ article_id: item.article_id, article_url: item.source_url, youtube_video_id: result.id, youtube_video_url: url, published_at: now, status: "success" });
-    return json({ success: true, youtubeVideoId: result.id, youtubeUrl: url });
+    const thumbOk = await setThumbnail(accessToken, result.id, item.image_url ?? null);
+    return json({ success: true, youtubeVideoId: result.id, youtubeUrl: url, thumbnailSet: thumbOk });
   } catch (e) {
     const msg = (e as Error).message;
     console.error("youtube-upload error:", msg);
