@@ -15,6 +15,29 @@ function b64ToBytes(b64: string) {
   return out;
 }
 
+// Set the story's real photo as the YouTube thumbnail. Non-fatal: if the photo
+// is missing or the upload fails, YouTube keeps its auto-generated frame.
+async function setThumbnail(accessToken: string, videoId: string, imageUrl: string | null): Promise<boolean> {
+  if (!imageUrl || !imageUrl.startsWith("http")) return false;
+  try {
+    const img = await fetch(imageUrl, { headers: { "User-Agent": "Mozilla/5.0 (compatible; GAINN/1.0)" } });
+    if (!img.ok) return false;
+    const type = img.headers.get("content-type") ?? "";
+    if (!type.startsWith("image/")) return false;
+    const bytes = new Uint8Array(await img.arrayBuffer());
+    if (bytes.length < 10_000 || bytes.length > 2_000_000) return false; // YouTube: min 640px, max 2MB
+    const up = await fetch(
+      `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${videoId}`,
+      { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": type.split(";")[0] }, body: bytes },
+    );
+    if (!up.ok) console.error("thumbnail set failed", up.status, (await up.text()).slice(0, 300));
+    return up.ok;
+  } catch (e) {
+    console.error("thumbnail error", e);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const db = serviceClient();
