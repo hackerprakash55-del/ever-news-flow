@@ -22,7 +22,8 @@ jobs:
       - name: Get next story
         id: next
         run: |
-          curl -sS -X POST "$FN/youtube-publisher" -H "apikey: $AK" -H "x-renderer-secret: $RS" \
+          set -euo pipefail
+          curl --fail-with-body -sS -X POST "$FN/youtube-publisher" -H "apikey: $AK" -H "x-renderer-secret: $RS" \
             -H "Content-Type: application/json" -d '{"action":"next"}' > next.json
           jq 'del(.audioBase64)' next.json
           ID=$(jq -r '.item.id // empty' next.json)
@@ -73,12 +74,9 @@ jobs:
       - name: Render vertical Short
         if: steps.next.outputs.id != ''
         run: |
-          set -e
-          if [ "$(jq -r '.audioBase64 // empty' next.json)" != "" ]; then
-            jq -r '.audioBase64' next.json | base64 -d > voice.wav
-          else
-            ffmpeg -y -f lavfi -i anullsrc=r=22050:cl=mono -t 20 voice.wav
-          fi
+          set -euo pipefail
+          jq -er '.audioBase64 | select(type == "string" and length > 0)' next.json | base64 -d > voice.wav
+          python3 .github/scripts/check-shorts-audio.py voice.wav
           DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 voice.wav)
           DUR=$(python3 -c "print(min(58, float('$DUR')+1))")
           FRAMES=$(python3 -c "print(int(float('$DUR')*30))")
@@ -102,6 +100,7 @@ drawtext=fontfile=$LATIN:text='ever-news-flow.lovable.app':fontsize=34:fontcolor
               "[0]format=yuv420p[tmp];[tmp][1]overlay=60:H-h-240-overlay_h[tmp2];[tmp2]$BRAND[v]" \
               -map "[v]" -map 2:a -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -c:a aac -shortest -t "$DUR" short.mp4
           fi
+          python3 .github/scripts/check-shorts-audio.py short.mp4
 
       - name: Upload to YouTube
         if: steps.next.outputs.id != ''

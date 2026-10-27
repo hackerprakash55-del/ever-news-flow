@@ -1,5 +1,10 @@
 # GAINN Roadmap
 
+## Missing Shorts narration
+- [ ] Identify and verify the audio problem in the four remade Shorts.
+- [ ] Block silent uploads and verify a corrected narrated render.
+- [ ] Recover affected YouTube Shorts where possible; report any replacement required.
+
 ## Current monitoring repairs
 - [x] Repair and verify direct RSS and Google News RSS parsing (six tests, four live feeds in Deno, deployed feed returns RSS stories).
 - [x] Public Hindi reading with protected generation — bounded publication on the existing five-minute refresh; signed-out headline, summary and source body verified. Other languages show explicit availability/sign-in notices.
