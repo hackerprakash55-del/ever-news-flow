@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { generateShortsNarration } from "./shorts-narration";
+import { generateShortsNarration } from "../../supabase/functions/_shared/shorts-narration";
 
 describe("Shorts require narration before publication", () => {
   it("rejects missing voice configuration", async () => {
