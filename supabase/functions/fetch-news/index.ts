@@ -25,11 +25,19 @@ function cacheKey(category: string, location: string, pageSize: number, q: strin
 
 async function readPersistentCache(svc: any, key: string) {
   if (!svc) return null;
-  const { data, error } = await svc
+  let { data, error } = await svc
     .from("news_feed_cache")
     .select("articles,total_results,fetched_at,provider")
     .eq("cache_key", key)
     .maybeSingle();
+  if (!data?.articles?.length) {
+    const [category, location, , queryText, , language] = key.split("|");
+    const compatible = await svc.from("news_feed_cache").select("articles,total_results,fetched_at,provider")
+      .eq("category", category).eq("location", location).eq("language", language).eq("query_text", queryText)
+      .order("fetched_at", { ascending: false }).limit(1).maybeSingle();
+    data = compatible.data;
+    error = compatible.error;
+  }
   if (error || !data || !Array.isArray(data.articles) || data.articles.length === 0) return null;
   return {
     articles: data.articles,
@@ -600,9 +608,16 @@ serve(async (req) => {
     // ── Serve fresh cache immediately if within TTL ──
     const ckey = cacheKey(category, location, pageSize, searchQuery, shouldExpand, lang);
     const cached = responseCache.get(ckey);
-    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    if (cached && (cached.payload as any)?.articles?.length && Date.now() - cached.at < CACHE_TTL_MS) {
       publishTranslations((cached.payload as any).articles ?? []);
       return new Response(JSON.stringify({ ...(cached.payload as object), cached: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Cold Edge instances share the persistent fresh cache rather than refetching every visitor.
+    const saved = await readPersistentCache(svc, ckey);
+    if (!trustedRefresh && saved && Date.now() - Date.parse(saved.fetchedAt) < CACHE_TTL_MS) {
+      return new Response(JSON.stringify({ ...saved, stale: false, fallback: false, notice: null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -711,7 +726,7 @@ serve(async (req) => {
     }
 
     // Direct RSS feed fetch promises (parallel)
-    for (const feed of DIRECT_RSS_FEEDS) {
+    for (const feed of lang === "hi" ? [] : DIRECT_RSS_FEEDS) {
       fetchPromises.push(
         fetchDirectRssFeed(feed.url, feed.name, Math.ceil(pageSize / DIRECT_RSS_FEEDS.length))
           .then((articles) => {
@@ -721,6 +736,12 @@ serve(async (req) => {
             }
           })
       );
+    }
+    // Fetch actual Hindi reporting concurrently, not English RSS mislabeled as Hindi.
+    if (lang === "hi") {
+      fetchPromises.push(fetchPublicRss(category, location, pageSize, "hi").then((articles) => {
+        directRssArticles = articles;
+      }));
     }
 
     // Wait for all fetches to complete (with overall timeout)
@@ -761,7 +782,7 @@ serve(async (req) => {
       console.log(`Merged sources returned ${totalResults} articles`);
     } else {
       // NewsAPI failed or returned nothing — try stale in-memory cache
-      if (cached && Date.now() - cached.at < STALE_MAX_MS) {
+      if (cached && (cached.payload as any)?.articles?.length && Date.now() - cached.at < STALE_MAX_MS) {
         console.log("Serving stale in-memory cache");
         const cachedPayload = cached.payload as any;
         return new Response(JSON.stringify({ ...cachedPayload, cached: true, stale: true }), {
@@ -770,7 +791,7 @@ serve(async (req) => {
       }
 
       // Try persistent DB cache
-      const persisted = await readPersistentCache(svc, ckey);
+      const persisted = saved;
       if (persisted) {
         publishTranslations(persisted.articles);
         console.log("Serving persistent DB cache");
@@ -807,7 +828,6 @@ serve(async (req) => {
           fetchedAt: new Date().toISOString(),
           notice: "Live feed temporarily unavailable. Please try again shortly.",
         };
-        responseCache.set(ckey, { at: Date.now(), payload: fallbackPayload });
         return new Response(
           JSON.stringify(fallbackPayload),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

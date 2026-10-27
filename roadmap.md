@@ -1,9 +1,12 @@
 # GAINN Roadmap
 
 ## Missing Shorts narration
+- [x] Upload four Hindi replacements: HdbNE2F0TZU, ClJl8HLYJRo, qMr28L2mvH4, k9z5RI5S7rE; audio validated, YouTube confirms processed; all four old IDs already absent (no deletion needed).
+- [x] Scheduled Shorts translate English source title/scripts to Hindi before speech; deployed and translation/narration tests pass.
+- [x] Hindi requests use Hindi sources; compatible fresh persistent caches reduce repeat fetches; empty refresh retains saved stories. Live feed returned 60 Hindi headlines; signed-out browser retains Hindi after simulated empty refresh.
 - [x] Identify the silent-audio fallback in the publisher and renderer; direct YouTube audio retrieval is blocked by YouTube bot protection.
 - [x] Block missing/silent narration, deploy publisher, pass four regression tests, and verify a real-photo MP4 with audible narration (-13.5 dB).
-- [ ] Replace the four affected uploads with narrated versions — five-per-day publishing limit currently reached; existing YouTube video content cannot be replaced in place.
+- [x] Explicit repairs completed without changing the scheduled five-per-day publishing cap.
 
 ## Current monitoring repairs
 - [x] Repair and verify direct RSS and Google News RSS parsing (six tests, four live feeds in Deno, deployed feed returns RSS stories).

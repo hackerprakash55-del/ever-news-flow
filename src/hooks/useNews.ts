@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Article, MOCK_ARTICLES } from "@/data/mockData";
 import { useCallback, useEffect, useMemo } from "react";
 import { useLocalizedArticles } from "@/hooks/useLocalizedArticles";
+import { NEWS_REFRESH_MS, preserveNonemptyFeed } from "@/lib/feed-resilience";
+import { useLanguage } from "@/lib/language";
 
 // Map raw NewsAPI response shape to our Article type
 function mapToArticle(raw: any): Article {
@@ -152,7 +154,9 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   return result;
 }
 
-export function useNews({ category = "all", pageSize = 20, location = "India", lang = "en" }: UseNewsOptions = {}): NewsResult {
+export function useNews({ category = "all", pageSize = 20, location = "India", lang: requestedLang }: UseNewsOptions = {}): NewsResult {
+  const [readingLanguage] = useLanguage();
+  const lang = requestedLang ?? (readingLanguage === "hi-IN" ? "hi" : "en");
   const fetchSize = 30;
   const queryKey = ["news", category, location, lang];
   
@@ -182,10 +186,14 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
     refetch,
   } = useQuery({
     queryKey,
-    queryFn: () => fetchLiveNews(category, fetchSize, location, lang),
+    queryFn: async () => preserveNonemptyFeed(
+      await fetchLiveNews(category, fetchSize, location, lang),
+      readBrowserCache(category, location, lang),
+    ),
     initialData: cachedFeed || isDevMode ? immediateFeed : undefined,
     initialDataUpdatedAt: cachedFeed || isDevMode ? Date.now() : undefined,
-    staleTime: 10 * 60 * 1000,
+    staleTime: NEWS_REFRESH_MS,
+    refetchInterval: NEWS_REFRESH_MS,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -204,7 +212,7 @@ export function useNews({ category = "all", pageSize = 20, location = "India", l
   }, [refetch]);
 
   // Use either the fresh data or the immediate (cached/mock) data
-  const currentData = data || immediateFeed;
+  const currentData = preserveNonemptyFeed(data || immediateFeed, cachedFeed);
 
   // If live fetch returned empty and we have no cache, show mock only in dev mode
   const baseArticles = useMemo(
