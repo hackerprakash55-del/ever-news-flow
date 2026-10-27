@@ -20,6 +20,7 @@ import { saveProgress, getProgress } from "@/hooks/useReadingProgress";
 import { markArticleFinished, EmailCaptureToast } from "@/components/EmailCaptureToast";
 import { TranslatedArticleBody } from "@/components/TranslatedArticleBody";
 import { ArticleVerificationBlock, verificationLabel } from "@/components/ArticleVerificationBlock";
+import { useLanguage } from "@/lib/language";
 
 // ── Article lookup ─────────────────────────────────────────
 function useArticle(id: string): Article | null {
@@ -435,7 +436,9 @@ export default function ArticlePage() {
 
   // Lazy-expand short live articles into a full readable body.
   const [expandedBody, setExpandedBody] = useState<string | null>(null);
+  const [readingLanguage] = useLanguage();
   useEffect(() => {
+    if (readingLanguage !== "en-IN") return;
     if (!article || !article.id.startsWith("live-")) return;
     const existing = article.body || "";
     if (existing.split(/\s+/).length >= 120) return; // already a full body
@@ -458,7 +461,7 @@ export default function ArticlePage() {
       .then((d) => { if (!cancelled && d?.body && d.body.length > existing.length) setExpandedBody(d.body); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [article?.id]);
+  }, [article?.id, readingLanguage]);
 
   useEffect(() => {
     if (!user || !article) return;
@@ -518,7 +521,7 @@ export default function ArticlePage() {
 
   const verificationStatus = verificationLabel(article);
   const isLiveArticle = article.id.startsWith("live-");
-  const fullBody = expandedBody || article.body;
+  const fullBody = readingLanguage === "en-IN" ? expandedBody || article.body : article.body;
   const paragraphs = fullBody ? fullBody.split("\n\n").filter(Boolean) : [];
 
   // SEO fields
