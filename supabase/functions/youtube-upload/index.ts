@@ -60,8 +60,9 @@ Deno.serve(async (req) => {
       const result = await check.json();
       const replacement = result.items?.find((video: any) => video.id === item.youtube_video_id);
       const old = result.items?.find((video: any) => video.id === body.oldVideoId);
-      if (!old || !item.source_url || !old.snippet?.description?.includes(item.source_url) || old.snippet?.channelId !== replacement?.snippet?.channelId) return json({ error: "Old video does not match this story and channel" }, 409);
       if (replacement?.status?.uploadStatus !== "processed" || replacement?.snippet?.defaultLanguage !== "hi") return json({ error: "Replacement is not yet processed; old video kept" }, 409);
+      if (!old) return json({ success: true, oldAlreadyAbsent: true, replacementUrl: item.youtube_url });
+      if (!item.source_url || !old.snippet?.description?.includes(item.source_url) || old.snippet?.channelId !== replacement?.snippet?.channelId) return json({ error: "Old video does not match this story and channel" }, 409);
       const deleted = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(body.oldVideoId)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       if (!deleted.ok) return json({ error: "YouTube deletion needs channel permission. Reconnect YouTube and approve video management.", status: deleted.status }, deleted.status);
       await db.from("published_shorts").update({ status: "deleted", error_message: `Replaced by ${item.youtube_video_id}` }).eq("youtube_video_id", body.oldVideoId);
