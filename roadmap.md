@@ -1,9 +1,10 @@
 # GAINN Roadmap
 
 ## Source-backed growth pilot
-- [ ] Add an editor-reviewed story-to-Short queue with evidence links and approval gates, reusing existing publishing limits.
-- [ ] Verify candidate review and approval end-to-end with real source input.
-- [ ] Connect Instagram professional account publishing; requires account authorization.
+- [x] Add an editor-reviewed story-to-Short queue with evidence links and approval gates, reusing existing publishing limits; deployed review and publishing functions.
+- [x] Verify real cached story suggestions, live Hindi draft translation, and disabled unreviewed submission while signed in; 14 regression tests pass, build OK.
+- [ ] Verify a real approved story through rendering/upload; waits for editorial fact review and photo permission (no story falsely marked reviewed for testing).
+- [ ] Connect Instagram professional account publishing; authorization card declined, nothing connected or posted.
 
 ## Missing Shorts narration
 - [x] Upload four Hindi replacements: HdbNE2F0TZU, ClJl8HLYJRo, qMr28L2mvH4, k9z5RI5S7rE; audio validated, YouTube confirms processed; all four old IDs already absent (no deletion needed).

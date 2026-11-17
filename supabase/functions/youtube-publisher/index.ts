@@ -1,11 +1,11 @@
 // Called on a schedule by the GitHub Actions renderer.
-// action "next": picks (or creates) the next queued Short and returns its script + narration audio.
+// action "next": claims the next editor-approved Short and returns its script + narration audio.
 // action "fail": records a render failure.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { requireAdmin } from "../_shared/supa.ts";
 import { isRenderer, serviceClient } from "../_shared/youtube.ts";
 import { generateShortsNarration } from "../_shared/shorts-narration.ts";
-import { prepareHindiShort } from "../_shared/hindi-shorts.ts";
+import { prepareHindiShort, hasHindi } from "../_shared/hindi-shorts.ts";
 
 const DAILY_CAP = parseInt(Deno.env.get("DAILY_AUTO_PUBLISH_CAP") || "5");
 const json = (b: unknown, status = 200) =>
@@ -57,20 +57,21 @@ Deno.serve(async (req) => {
       .eq("status", "uploaded").gte("uploaded_at", since);
     if ((count ?? 0) >= DAILY_CAP) return json({ item: null, reason: `Daily limit of ${DAILY_CAP} reached` });
 
-    let { data: item } = await db.from("youtube_publish_queue").select("*")
+    let { data: item, error: queueError } = await db.from("youtube_publish_queue").select("*")
       .eq("status", "queued").not("candidate_id", "is", null).order("created_at").limit(1).maybeSingle();
+    if (queueError) throw queueError;
 
     if (!item) return json({ item: null, reason: "No editor-approved stories to publish" });
     const { data: candidate, error: candidateError } = await db.from("short_candidates").select("status").eq("id", item.candidate_id).maybeSingle();
     if (candidateError) throw candidateError;
     if (candidate?.status !== "approved") return json({ item: null, reason: "Editorial approval is required" });
+    if (!hasHindi(item.title) || !hasHindi(item.script)) return json({ item: null, reason: "Review final Hindi narration before publishing" });
+    const { data: claimed, error: claimError } = await db.from("youtube_publish_queue").update({ status: "rendering", updated_at: new Date().toISOString() }).eq("id", item.id).eq("status", "queued").select("id").maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimed) return json({ item: null, reason: "This story is already being rendered" });
 
     let audio: string;
     try {
-      const hindi = await prepareHindiShort(item.title, item.script, Deno.env.get("SARVAM_API_KEY"));
-      const { error } = await db.from("youtube_publish_queue").update(hindi).eq("id", item.id);
-      if (error) throw error;
-      item = { ...item, ...hindi };
       audio = await generateShortsNarration("गेन रिपोर्ट। " + item.script, "hi-IN", Deno.env.get("SARVAM_API_KEY"));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Narration failed; upload stopped.";
