@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Languages, Loader2 } from "lucide-react";
-import { useLanguage, translateTexts, LANGUAGES } from "@/lib/language";
+import { useLanguage, translateTexts, LANGUAGES, isAlreadyInLanguage } from "@/lib/language";
 import { Link } from "react-router-dom";
 
 interface Props {
@@ -40,7 +40,7 @@ export const TranslatedArticleBody = ({ headline, summary, paragraphs, between }
 
   const text = translated ?? source;
   const langLabel = LANGUAGES.find((l) => l.code === lang)?.native;
-  const translatedCount = translated?.filter((value, i) => value !== source[i]).length ?? 0;
+  const translatedCount = translated?.filter((value, i) => value !== source[i] || isAlreadyInLanguage(source[i], lang)).length ?? 0;
 
   return (
     <>
@@ -48,7 +48,7 @@ export const TranslatedArticleBody = ({ headline, summary, paragraphs, between }
         {text[0]}
       </h1>
 
-      {lang !== "en-IN" && (
+      {lang !== "en-IN" && !source.every((t) => !t || isAlreadyInLanguage(t, lang)) && (
         <div data-testid="translation-status" className="flex items-center gap-2 mb-4 text-xs font-mono text-muted-foreground">
           {loading
             ? <><Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> Translating to {langLabel}…</>

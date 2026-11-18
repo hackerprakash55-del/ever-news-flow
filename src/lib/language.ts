@@ -53,8 +53,25 @@ export function speechLocale(code: string): string {
 }
 
 /** Translate one or more strings with Sarvam. Falls back to the originals. */
+/** True when text is already written mostly in Devanagari (Hindi). */
+export function isAlreadyInLanguage(text: string, target: string): boolean {
+  if (target !== "hi-IN" || !text) return false;
+  const letters = text.match(/\p{L}/gu) ?? [];
+  if (!letters.length) return false;
+  const deva = letters.filter((c) => /[\u0900-\u097F]/.test(c)).length;
+  return deva / letters.length >= 0.5;
+}
+
 export async function translateTexts(texts: string[], target: string): Promise<string[]> {
   if (!texts.length || target === "en-IN") return texts;
+  const pending = texts.map((t, i) => (isAlreadyInLanguage(t, target) ? -1 : i)).filter((i) => i >= 0);
+  if (pending.length < texts.length) {
+    if (!pending.length) return texts;
+    const done = await translateTexts(pending.map((i) => texts[i]), target);
+    const out = [...texts];
+    pending.forEach((idx, j) => { out[idx] = done[j]; });
+    return out;
+  }
   const published = await readPublishedTranslations(texts, target);
   if (published.every((text) => text !== null)) return published.map((text, i) => text ?? texts[i]);
   const { data: { session } } = await supabase.auth.getSession();
