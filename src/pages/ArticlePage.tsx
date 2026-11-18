@@ -9,7 +9,8 @@ import {
   Shield, Clock, Globe, Tag, CheckCircle, ArrowLeft, Share2, Bookmark,
   BookmarkCheck, ChevronRight, ExternalLink, MapPin, Layers, TrendingUp, ChevronRight as Next,
 } from "lucide-react";
-import { Twitter, Linkedin, Link2 } from "lucide-react";
+import { Twitter, Linkedin, Link2, MessageCircle } from "lucide-react";
+import { whatsappShareUrl } from "@/data/localPages";
 import { Button } from "@/components/ui/button";
 import { useNews } from "@/hooks/useNews";
 import { FeedStatusBanner } from "@/components/FeedStatusBanner";
@@ -113,9 +114,19 @@ function ShareRail({ article }: { article: Article }) {
   const links = [
     { Icon: Twitter, label: "X", href: `https://twitter.com/intent/tweet?text=${xText}&url=${enc}&hashtags=GAINN,AINews` },
     { Icon: Linkedin, label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc}` },
+    { Icon: MessageCircle, label: "WhatsApp", href: whatsappShareUrl(article.headline, url) },
   ];
 
   return (
+    <>
+    <a
+      href={whatsappShareUrl(article.headline, url)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="lg:hidden fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg"
+    >
+      <MessageCircle className="w-4 h-4" /> Share on WhatsApp
+    </a>
     <div
       className={`hidden lg:flex fixed left-4 xl:left-8 top-1/2 -translate-y-1/2 z-40 flex-col gap-2 p-2 rounded-full transition-all duration-300 ${
         visible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3 pointer-events-none"
@@ -149,6 +160,7 @@ function ShareRail({ article }: { article: Article }) {
         <Link2 className="w-4 h-4" />
       </button>
     </div>
+    </>
   );
 }
 

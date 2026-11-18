@@ -37,3 +37,5 @@
 - OpenRouter deepseek free unavailable → text gen falls back to Lovable AI
 - News provider free tier limits Hindi live-feed refresh (cached stories)
 - Mock stories appear only on localhost dev preview when the live feed is unreachable; never in production
+
+- [x] City news pages (/local, 60 cities) and public alert pages (/alerts, 8 topics) with WhatsApp sharing

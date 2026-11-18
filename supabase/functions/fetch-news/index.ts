@@ -394,8 +394,10 @@ async function fetchDirectRssFeed(feedUrl: string, feedName: string, pageSize: n
   }
 }
 
-async function fetchPublicRss(category: string, location: string, pageSize: number, lang: string) {
-  const terms = lang === "hi"
+async function fetchPublicRss(category: string, location: string, pageSize: number, lang: string, query = "") {
+  const terms = query
+    ? `${query} ${location && location !== "India" ? location : "India"}`
+    : lang === "hi"
     ? (HINDI_QUERIES[category] || HINDI_QUERIES.all)
     : `${location || "India"} ${category === "all" ? "local news" : category}`;
   const locale = lang === "hi" ? "hi" : "en-IN";
@@ -726,7 +728,9 @@ serve(async (req) => {
     }
 
     // Direct RSS feed fetch promises (parallel)
-    for (const feed of lang === "hi" ? [] : DIRECT_RSS_FEEDS) {
+    // Topic searches and city pages need a targeted search, not the general national headline feeds.
+    const targeted = Boolean(searchQuery) || (location !== "India" && location !== "");
+    for (const feed of lang === "hi" || targeted ? [] : DIRECT_RSS_FEEDS) {
       fetchPromises.push(
         fetchDirectRssFeed(feed.url, feed.name, Math.ceil(pageSize / DIRECT_RSS_FEEDS.length))
           .then((articles) => {
@@ -738,8 +742,8 @@ serve(async (req) => {
       );
     }
     // Fetch actual Hindi reporting concurrently, not English RSS mislabeled as Hindi.
-    if (lang === "hi") {
-      fetchPromises.push(fetchPublicRss(category, location, pageSize, "hi").then((articles) => {
+    if (lang === "hi" || targeted) {
+      fetchPromises.push(fetchPublicRss(category, location, pageSize, lang, searchQuery).then((articles) => {
         directRssArticles = articles;
       }));
     }
@@ -799,7 +803,7 @@ serve(async (req) => {
       }
 
       // Fall back to Google News RSS
-      const rssArticles = await fetchPublicRss(category, location, pageSize, lang);
+      const rssArticles = await fetchPublicRss(category, location, pageSize, lang, searchQuery);
       if (rssArticles.length > 0) {
         console.log(`RSS fallback returned ${rssArticles.length} articles`);
         rawArticles = rssArticles.map((a: any) => ({

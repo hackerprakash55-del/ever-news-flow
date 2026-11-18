@@ -30,6 +30,8 @@ const PrimeTimeSchedulePage = lazy(() => import("./pages/PrimeTimeSchedulePage")
 const OAuthConsent     = lazy(() => import("./pages/OAuthConsent"));
 const NotFound         = lazy(() => import("./pages/NotFound"));
 const TrustPage        = lazy(() => import("./pages/TrustPage"));
+const LocalNewsPage    = lazy(() => import("./pages/LocalNewsPage"));
+const AlertsPage       = lazy(() => import("./pages/AlertsPage"));
 
 const queryClient = new QueryClient();
 
@@ -64,6 +66,10 @@ const App = () => (
                 <Route path="/video"      element={<AIVideoPage />} />
                 <Route path="/videos"     element={<VideoLibraryPage />} />
                 <Route path="/trending"   element={<TrendingPage />} />
+                <Route path="/local"       element={<LocalNewsPage />} />
+                <Route path="/local/:slug" element={<LocalNewsPage />} />
+                <Route path="/alerts"       element={<AlertsPage />} />
+                <Route path="/alerts/:slug" element={<AlertsPage />} />
                 <Route path="/shorts"     element={<ShortsPage />} />
                 <Route path="/shorts/:id" element={<ShortsPage />} />
                 <Route path="/admin/health" element={<AuthGuard><AdminHealthCheck /></AuthGuard>} />

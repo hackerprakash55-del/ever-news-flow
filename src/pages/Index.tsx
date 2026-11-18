@@ -30,6 +30,8 @@ const FOOTER_COLUMNS: { title: string; links: { label: string; href: string }[] 
     links: [
       { label: "Top Stories", href: "/" },
       { label: "Prime Time", href: "/prime-time" },
+      { label: "Local news", href: "/local" },
+      { label: "Alerts", href: "/alerts" },
       { label: "Shorts", href: "/shorts" },
       { label: "Video Library", href: "/videos" },
     ],

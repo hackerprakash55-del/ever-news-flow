@@ -36,6 +36,7 @@ interface UseNewsOptions {
   pageSize?: number;
   location?: string; // city / state / country string
   lang?: "en" | "hi"; // feed language (Hindi pulls Hindi-language Indian sources)
+  q?: string; // optional keyword search (used by alert topic pages)
 }
 
 interface NewsResult {
@@ -66,6 +67,7 @@ const NEWS_CACHE_PREFIX = "gainn-news-v1";
 const backgroundRefreshes = new Set<string>();
 
 function browserCacheKey(category: string, location: string, lang = "en") {
+  // location may carry a "|q=" suffix for keyword feeds, keeping caches separate
   return `${NEWS_CACHE_PREFIX}:${category}:${location}:${lang}`;
 }
 
@@ -90,7 +92,8 @@ function writeBrowserCache(category: string, location: string, data: FetchNewsDa
   }
 }
 
-async function fetchLiveNews(category: string, pageSize: number, location: string, lang = "en"): Promise<FetchNewsData> {
+async function fetchLiveNews(category: string, pageSize: number, locationKey: string, lang = "en"): Promise<FetchNewsData> {
+  const [location, q = ""] = locationKey.split("|q=");
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -104,6 +107,7 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   });
   if (location) params.set("location", location);
   if (lang === "hi") params.set("lang", "hi");
+  if (q) params.set("q", q);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 6_000);
@@ -148,13 +152,14 @@ async function fetchLiveNews(category: string, pageSize: number, location: strin
   };
   
   if (result.articles.length > 0) {
-    writeBrowserCache(category, location, result, lang);
+    writeBrowserCache(category, locationKey, result, lang);
   }
   
   return result;
 }
 
-export function useNews({ category = "all", pageSize = 20, location = "India", lang: requestedLang }: UseNewsOptions = {}): NewsResult {
+export function useNews({ category = "all", pageSize = 20, location: baseLocation = "India", lang: requestedLang, q }: UseNewsOptions = {}): NewsResult {
+  const location = q ? `${baseLocation}|q=${q}` : baseLocation;
   const [readingLanguage] = useLanguage();
   const lang = requestedLang ?? (readingLanguage === "hi-IN" ? "hi" : "en");
   const fetchSize = 30;
